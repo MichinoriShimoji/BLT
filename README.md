@@ -1,5 +1,8 @@
 # BLT — Browser-based Lightweight Toolkit for Editing Field Data
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20707256.svg)](https://doi.org/10.5281/zenodo.20707256)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 A simple, intuitive toolkit for transcription, annotation, glossing, and conversion.
 
 **BLT** is a single-file, fully client-side browser tool for field linguistics.
@@ -25,8 +28,15 @@ Download [`blt.html`](blt.html) and open it in a browser, or use the live versio
 
 ## Citation
 
-If you use BLT in your research, please cite it. See [`CITATION.cff`](CITATION.cff),
-or use the archived release DOI (added after the first Zenodo release).
+If you use BLT in your research, please cite the archived release:
+
+> Shimoji, Michinori. (2026). *BLT: Browser-based Lightweight Toolkit for Editing Field Data* (v1.0.1) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.20707256
+
+- **Concept DOI** (always the latest version): [10.5281/zenodo.20707256](https://doi.org/10.5281/zenodo.20707256)
+- **This version (v1.0.1)**: [10.5281/zenodo.20707257](https://doi.org/10.5281/zenodo.20707257)
+
+A machine-readable citation is in [`CITATION.cff`](CITATION.cff) (GitHub shows a
+"Cite this repository" button).
 
 ## License
 

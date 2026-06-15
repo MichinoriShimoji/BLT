@@ -15,9 +15,17 @@ authors:
     affiliation: "Kyushu University"
     # orcid: "https://orcid.org/0000-0000-0000-0000"  # ORCIDがあれば記入してください
 license: MIT
+doi: "10.5281/zenodo.20707256"
+identifiers:
+  - type: doi
+    value: "10.5281/zenodo.20707256"
+    description: "Concept DOI — always resolves to the latest version"
+  - type: doi
+    value: "10.5281/zenodo.20707257"
+    description: "DOI for version 1.0.1"
 repository-code: "https://github.com/MichinoriShimoji/BLT"
 url: "https://michinorishimoji.github.io/mshimoji.com/blt.html"
-version: "1.0.0"
+version: "1.0.1"
 date-released: "2026-06-16"
 keywords:
   - field linguistics

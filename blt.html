@@ -1,0 +1,2589 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BLT — Browser-based Lightweight Toolkit for Editing Field Data</title>
+<style>
+:root{
+  --bg:#eef1f6; --surface:#ffffff; --ink:#222730; --muted:#5f6672;
+  --line:#d8dde7; --accent:#234a86; --accent-soft:#e6ecf5; --accent-ink:#152e57;
+  --warn:#b4540f; --done:#2e7d5b; --sel:#f5b942;
+  --jp-serif:"Hiragino Mincho ProN","Yu Mincho","YuMincho","Noto Serif JP",serif;
+  --ui:system-ui,-apple-system,"Segoe UI","Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;
+  --ipa:"Charis SIL","Doulos SIL","Gentium Plus","DejaVu Sans","Segoe UI","Hiragino Sans",sans-serif;
+  --mono:ui-monospace,"SF Mono",Consolas,Menlo,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--ui);font-size:14px;line-height:1.55}
+header{background:var(--surface);border-bottom:1px solid var(--line);padding:10px 20px;position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+#brand{display:flex;align-items:center;gap:15px;flex:1;min-width:300px}
+#brand .logo{font-family:var(--jp-serif);font-weight:800;font-size:66px;line-height:.85;letter-spacing:.02em;
+  background:linear-gradient(135deg,#2a5499 0%,#21457f 55%,#152e57 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  padding-right:20px;border-right:3px solid #cdd7e6}
+#brand .bname{font-family:var(--jp-serif);font-size:15px;font-weight:600;color:var(--accent-ink);letter-spacing:.01em;line-height:1.25}
+#brand .btag{font-size:11.5px;color:var(--muted);margin-top:3px;line-height:1.3}
+.bcredit{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.3}
+.bcredit a{color:var(--accent);text-decoration:none;font-weight:600}
+.bcredit a:hover{text-decoration:underline}
+.bcredit .sep{margin:0 6px;color:var(--line)}
+.detbtn{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:var(--accent-ink);background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:6px 13px;cursor:pointer;list-style:none;box-shadow:0 1px 2px rgba(0,0,0,.06);user-select:none}
+.detbtn::-webkit-details-marker{display:none}
+.detbtn::before{content:"⚙";font-size:14px}
+.detbtn::after{content:"▸";font-size:11px;color:var(--muted);transition:transform .12s}
+.detbtn:hover{border-color:var(--accent);background:var(--accent-soft)}
+details[open] > .detbtn{background:var(--accent);border-color:var(--accent);color:#fff}
+details[open] > .detbtn::after{transform:rotate(90deg);color:#fff}
+#tabbar{display:flex;gap:4px;width:100%;border-top:1px solid var(--line);margin-top:8px;padding-top:7px}
+#tabbar .tab{font-size:14px;font-weight:600;padding:6px 18px;border:1px solid var(--line);border-bottom:none;border-radius:8px 8px 0 0;background:var(--bg);color:var(--muted);cursor:pointer;margin-bottom:-8px}
+#tabbar .tab.cur{background:var(--accent);border-color:var(--accent);color:#fff}
+/* 分析・辞書タブ */
+#anCols{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+#anIndexCol{flex:0 0 360px;min-width:280px}
+#anDictCol{flex:1;min-width:300px}
+.anindex{max-height:520px;overflow-y:auto;border:1px solid var(--line);border-radius:7px}
+.anrow{display:flex;align-items:baseline;gap:8px;padding:5px 9px;border-bottom:1px solid var(--line);cursor:pointer;font-size:13px}
+.anrow:hover{background:var(--accent-soft)}
+.anrow.cur{background:#fdf6e6;box-shadow:inset 3px 0 0 var(--accent)}
+.anrow .mh{font-family:var(--ipa);font-size:15px;font-weight:600;color:var(--accent-ink);min-width:0;flex:0 1 auto}
+.anrow .cnt{font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:auto;flex:none}
+.anrow .gl{font-size:11.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1 1 60px}
+.tybadge{font-size:10px;border-radius:4px;padding:0 5px;flex:none}
+.tybadge.root{background:#e7eef0;color:#37606e}
+.tybadge.affix{background:#f1e7f0;color:#7a4f72}
+.tybadge.clitic{background:var(--accent-soft);color:var(--accent-ink)}
+#anDict .dhead{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+#anDict .dhw{font-family:var(--ipa);font-size:24px;font-weight:700;color:var(--accent-ink)}
+#anDict .ddef{width:100%;min-height:52px;border:1px solid var(--line);border-radius:7px;padding:7px 9px;font-size:14px;font-family:var(--ipa);resize:vertical;margin:4px 0 10px}
+#anDict .dglosses{font-size:12.5px;color:var(--muted);margin-bottom:8px}
+.exitem{border:1px solid var(--line);border-radius:7px;padding:7px 9px;margin-bottom:7px}
+.exitem .exhead{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.exitem .exhead .rid{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.exitem .explay{font-size:11px;padding:1px 9px}
+.exitem .extrans{font-size:12.5px;color:var(--ink);margin-top:3px}
+.exig{display:flex;gap:10px;flex-wrap:wrap;font-family:var(--ipa)}
+.exig .w{display:flex;gap:3px}
+.exig .c{display:flex;flex-direction:column;font-size:13px;line-height:1.4}
+.exig .c .g{font-size:11px;color:var(--muted)}
+.exig .c.hit .m{color:var(--accent);font-weight:700;background:#fdf6e6;border-radius:3px}
+.exig .c.hit .g{color:var(--accent-ink);font-weight:600}
+#saveBar{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+#saveBar .lbl{font-size:11px;color:var(--muted)}
+#saveBar button{font-size:12px;padding:4px 10px}
+#saveBar button:disabled{opacity:.4}
+h1 small{font-family:var(--ui);font-size:11px;color:var(--muted);font-weight:400}
+main{max-width:1800px;margin:0 auto;padding:18px 20px 60px}
+/* パネル3（波形）＝注釈表の直上に固定（sticky）で埋め込み */
+#workArea{display:block}
+#waveCol{position:sticky;top:52px;z-index:15}
+#waveCol .card{box-shadow:0 3px 10px rgba(0,0,0,.10)}
+#waveCol .card h2{display:flex;align-items:center;gap:8px}
+#waveCol .card h2 .pipbtns{margin-left:auto;display:flex;gap:4px}
+#waveCol .card h2 button{font-size:11px;padding:1px 8px;cursor:pointer}
+#waveCol.min #cardWave>*:not(h2){display:none}
+/* コンパクトモード（自動取り込み後：パネル3を縮小してパネル4を広く） */
+#waveCol.compact3 #cardWave{padding:6px 12px}
+#waveCol.compact3 #cardWave h2{font-size:12px;margin:0 0 4px}
+#waveCol.compact3 #ovw{height:18px;margin-bottom:3px}
+#waveCol.compact3 #wave{height:96px}
+#waveCol.compact3 .wavebar{margin-top:4px;gap:4px}
+#waveCol.compact3 .wavebar button{font-size:11px;padding:2px 6px}
+#waveCol.compact3 #spkBar .note{display:none}
+#waveCol.compact3 #spkBar{margin-top:3px}
+#waveCol.compact3 .helpbtn{display:none}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:16px 18px;margin-bottom:14px}
+.card h2{font-size:13px;color:var(--accent-ink);margin:0 0 10px;letter-spacing:.06em}
+.steplabel{display:inline-block;background:var(--accent);color:#fff;font-size:10.5px;border-radius:4px;padding:1px 7px;margin-right:8px;vertical-align:1px}
+.filebox{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px}
+.filebox .fname{font-family:var(--mono);font-size:12.5px;color:var(--muted)}
+.filebox .fname.ok{color:var(--done)}
+button{font-family:var(--ui);font-size:13px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:6px;padding:6px 14px;cursor:pointer}
+button:hover{border-color:var(--accent);color:var(--accent-ink)}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button.primary:hover{background:var(--accent-ink);color:#fff}
+button:disabled{opacity:.45;cursor:default}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+input[type=number]{border:1px solid var(--line);border-radius:6px;padding:5px 8px;font-size:13px;font-family:var(--ui);background:var(--surface)}
+input[type=range]{accent-color:var(--accent)}
+.optrow{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
+.optrow label{font-size:12px;color:var(--muted)}
+.optrow .opt{display:flex;align-items:center;gap:6px}
+.note{font-size:12px;color:var(--muted)}
+.hidden{display:none}
+/* 読み込み進捗バー */
+.lbar{height:8px;border-radius:5px;background:var(--line);overflow:hidden}
+.lbar i{display:block;height:100%;background:var(--accent);width:0;border-radius:5px;transition:width .12s}
+.lbar.indet i{width:38%!important;animation:lindet 1.05s ease-in-out infinite}
+@keyframes lindet{0%{margin-left:-38%}100%{margin-left:100%}}
+/* 説明ポップアップ */
+.helpbtn{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--muted);font-size:11px;font-weight:600;padding:0;margin-left:7px;cursor:pointer;vertical-align:1px}
+.helpbtn:hover{border-color:var(--accent);color:var(--accent-ink)}
+#helpModal{display:none;position:fixed;inset:0;background:rgba(20,28,25,.40);z-index:60;align-items:center;justify-content:center;padding:20px}
+#helpModal.show{display:flex}
+#helpModal .helpbox{background:var(--surface);border-radius:10px;max-width:680px;width:100%;max-height:72vh;overflow-y:auto;padding:16px 20px 18px;box-shadow:0 12px 40px rgba(0,0,0,.25)}
+#helpModal .helphead{display:flex;align-items:center;margin:0 0 8px}
+#helpModal .helphead b{font-size:14px;color:var(--accent-ink)}
+#helpModal .helphead button{margin-left:auto;border:none;background:none;font-size:15px;color:var(--muted);cursor:pointer;padding:2px 6px}
+#helpModal .note{font-size:13px;line-height:1.8;color:var(--ink)}
+.helpsrc{display:none}
+code{background:var(--accent-soft);padding:1px 5px;border-radius:4px;font-size:12px}
+/* waveform */
+#ovw{display:block;width:100%;height:34px;border:1px solid var(--line);border-radius:6px;cursor:pointer;margin-bottom:5px;background:#fff}
+#wave{display:block;width:100%;height:150px;border:1px solid var(--line);border-radius:6px;background:#fff;touch-action:none}
+.wavebar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px}
+.wavebar button{font-size:12px;padding:3px 9px}
+.wavebar .sep{width:1px;height:18px;background:var(--line)}
+#waveCol .card{padding:10px 14px}
+#segInfo{font-size:12px;color:var(--muted);font-family:var(--mono)}
+#missNote{display:flex;align-items:flex-start;gap:10px;background:#fdecea;border:1px solid #d92626;color:#8f1d1d;border-radius:7px;padding:7px 11px;font-size:12.5px;line-height:1.5;margin:0 0 7px}
+#missNote.hidden{display:none}
+#missNote button{flex:none;border:none;background:none;color:#8f1d1d;font-size:13px;padding:0 4px;cursor:pointer;margin-left:auto}
+#missCtl{display:inline-flex;flex-direction:column;align-items:center;gap:3px;border:1px solid var(--line);border-radius:8px;padding:5px 9px;background:var(--surface)}
+#missCtl.hot{border-color:#d92626;background:#fdf3f2}
+/* パネル4上部：左コントロール＋右の文脈ウィンドウ */
+#annoCtlRow{display:flex;gap:14px;align-items:stretch;flex-wrap:wrap}
+#annoCtlLeft{flex:1 1 360px;min-width:0}
+#ctxPane{flex:1 1 320px;min-width:0;display:flex;flex-direction:column;border:1px solid var(--line);border-radius:8px;background:#fafbfa;overflow:hidden}
+#ctxHead{display:flex;align-items:center;gap:6px;padding:4px 8px;border-bottom:1px solid var(--line);background:var(--surface)}
+#ctxHead select{font-size:12px}
+.ctxbody{flex:1;overflow-y:auto;max-height:118px;min-height:60px;padding:7px 9px;font-family:var(--ipa);font-size:14px;line-height:1.95}
+.ctxrec{cursor:pointer;padding:1px 3px;border-radius:3px;white-space:nowrap}
+.ctxrec:hover{background:var(--accent-soft)}
+.ctxrec.cur{background:#fdf6e6;box-shadow:inset 0 0 0 1.5px var(--sel);font-weight:600}
+.ctxempty{color:#c4ccc8;font-size:11px}
+.ctxbreak{color:var(--accent);font-weight:700;margin:0 2px}
+.spkchip{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);border-radius:13px;padding:2px 5px 2px 9px;font-size:12px;background:var(--surface);cursor:pointer}
+.spkchip .dot{width:9px;height:9px;border-radius:50%}
+.spkchip.active{border-width:2px;font-weight:600;padding:1px 4px 1px 8px}
+.spkchip .x{border:none;background:none;color:var(--muted);font-size:11px;padding:0 2px;cursor:pointer}
+.spkchip .x:hover{color:var(--warn)}
+#missCount{font-size:11.5px;color:var(--muted);font-weight:600}
+#missCtl.hot #missCount{color:#d92626}
+.missrow{display:flex;gap:5px;align-items:center;justify-content:center}
+.missrow button{font-size:12px;padding:2px 9px}
+#btnMissNext.hot,#btnMissPrev.hot{background:#d92626;border-color:#d92626;color:#fff;font-weight:600}
+#btnMissNext.hot:hover,#btnMissPrev.hot:hover{background:#b51f1f;color:#fff}
+#btnMissAdd:not(:disabled){border-color:var(--done);color:var(--done);font-weight:600}
+#btnMissIgnore:not(:disabled){border-color:#d92626;color:#d92626}
+/* palette: 編集時だけ画面下に出る入力パネル */
+#paletteCard{position:fixed;left:auto;right:0;bottom:0;width:var(--palw,100%);z-index:30;margin:0;border-radius:8px 0 0 0;border:none;border-top:2px solid var(--accent);border-left:2px solid var(--accent);box-shadow:0 -4px 14px rgba(0,0,0,.12);padding:8px 18px 10px 22px;max-height:42vh;overflow-y:auto;transform:translateY(105%);transition:transform .16s ease}
+#paletteCard.show{transform:none}
+#palResize{position:absolute;left:0;top:0;bottom:0;width:12px;cursor:ew-resize;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+#palResize::before{content:"⋮⋮";font-size:11px;letter-spacing:-2px;writing-mode:vertical-rl}
+#palResize:hover{background:var(--accent-soft)}
+#palette{display:flex;flex-direction:column;gap:3px}
+.pgroup{display:flex;align-items:center;flex-wrap:wrap;gap:2px}
+.glabel{font-size:10.5px;color:var(--muted);width:80px;flex:none}
+.pgroup button{font-family:var(--ipa);font-size:18px;line-height:1.25;padding:2px 6px;min-width:32px;border-radius:4px}
+.pgroup button.comb{font-size:24px;line-height:1;padding:0 6px 3px;min-width:38px}
+.pgroup button:hover{background:var(--accent-soft)}
+/* table */
+table{border-collapse:collapse;width:100%;background:var(--surface)}
+th,td{border:1px solid var(--line);padding:4px 8px;text-align:left;vertical-align:top;font-size:13px}
+th{font-size:10.5px;color:var(--muted);background:#f4f6f5;letter-spacing:.05em}
+td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+td[contenteditable]{cursor:text;min-width:50px}
+td[contenteditable]:focus{outline:2px solid var(--accent);outline-offset:-2px;background:#fbfdfc}
+td[data-k=text]{font-family:var(--ipa);font-size:15.5px;min-width:200px}
+td[data-k=note]{min-width:120px}
+td[data-k=id]{font-family:var(--mono);font-size:12.5px}
+tr.selrow td{background:#fdf6e6}
+.rowbtn{padding:1px 8px;font-size:11px}
+/* interlinear gloss */
+tr.glossrow td{background:#f6faf8;padding:6px 8px}
+.ilg{display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.ilg-lbl{display:flex;flex-direction:column;flex:none}
+.ilg-lbl div{height:26px;line-height:26px;font-size:9.5px;color:var(--muted);letter-spacing:.04em}
+.ilg-word{display:flex;gap:3px;padding:0 8px 0 0;border-right:1px dotted var(--line)}
+.ilg-word:last-child{border-right:none}
+.ilg-col{display:flex;flex-direction:column;gap:2px}
+.ilg-m{height:24px;line-height:24px;font-family:var(--ipa);font-size:14.5px;color:var(--accent-ink);padding:0 4px;border-bottom:1px solid var(--line);white-space:nowrap}
+.ilg-g,.ilg-p{min-width:36px;height:24px;line-height:22px;border:1px dashed var(--line);border-radius:4px;padding:0 4px;font-size:12.5px;cursor:text;white-space:nowrap}
+.ilg-p{color:var(--muted);font-size:11.5px}
+.ilg-g:focus,.ilg-p:focus{outline:2px solid var(--accent);outline-offset:-1px;background:#fff;border-style:solid}
+.ilg-g.ro{background:#f4f1f1;color:var(--accent-ink);cursor:default;font-size:10.5px;font-weight:600;border-style:dotted;text-align:center}
+.tline{display:flex;align-items:center;gap:8px;margin-top:5px}
+.tlbl{flex:none;min-width:60px;font-size:10.5px;color:var(--muted);text-align:right}
+.tval{flex:1;min-height:24px;line-height:22px;border:1px dashed var(--line);border-radius:4px;padding:0 6px;font-size:13px;cursor:text;background:#fff}
+.tval:focus{outline:2px solid var(--accent);outline-offset:-1px;border-style:solid}
+#tierChips{display:flex;gap:5px;flex-wrap:wrap}
+.tierchip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:14px;padding:2px 6px 2px 11px;font-size:12px;background:var(--surface)}
+.tierchip .tp{color:var(--muted);font-size:10.5px}
+.tierchip button{border:none;padding:0 4px;font-size:11px;color:var(--muted);border-radius:50%}
+.tierchip button:hover{color:var(--warn)}
+.btns{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<header>
+  <div id="brand">
+    <span class="logo">BLT</span>
+    <div>
+      <div class="bname">Browser-based Lightweight Toolkit for Editing Field Data</div>
+      <div class="btag">A simple, intuitive toolkit for transcription, annotation, glossing, and conversion.</div>
+      <div class="bcredit"><a href="https://michinorishimoji.github.io/mshimoji.com/" target="_blank" rel="noopener">下地理則の研究室</a><span class="sep">|</span>© 2026 Michinori Shimoji</div>
+    </div>
+  </div>
+  <div id="saveBar">
+    <span class="lbl">保存：</span>
+    <button type="button" id="hdrEaf" disabled>EAF</button>
+    <button type="button" id="hdrTsv" disabled>TSV</button>
+    <button type="button" id="hdrJson" disabled>JSON</button>
+    <button type="button" id="hdrZip" disabled>WAV ZIP</button>
+    <button type="button" id="hdrProj" class="primary" disabled>プロジェクト途中保存</button>
+  </div>
+  <div id="tabbar">
+    <button type="button" class="tab cur" data-tab="anno">注釈</button>
+    <button type="button" class="tab" data-tab="analysis">分析・辞書</button>
+  </div>
+</header>
+<main>
+
+<div id="tabAnno">
+<div class="card" id="cardFile">
+  <h2><span class="steplabel">1</span>WAVファイルを選ぶ<button type="button" class="helpbtn" data-help="helpFile" data-title="ファイルの読み込みについて">?</button></h2>
+  <div class="helpsrc" id="helpFile">
+    <div class="note">音声は非圧縮WAV（PCM）を想定しています。ファイルはブラウザの外に送信されず、すべて手元のPC内で処理されます。音声ファイル自体が書き換えられることはありません。<br><br>「途中保存したプロジェクト（.json）を読み込む」は、<b>先に同じWAVを読み込んでから</b>使ってください（プロジェクトには音声そのものは含まれません）。</div>
+  </div>
+  <div class="filebox">
+    <button onclick="wavInput.click()">音声ファイル（WAV・PCM）を選択</button>
+    <input type="file" id="wavInput" accept=".wav,audio/wav,audio/x-wav" hidden>
+    <span class="fname" id="wavName">未選択</span>
+  </div>
+  <div id="loadProg" class="hidden" style="margin:4px 0 8px">
+    <div id="loadBar" class="lbar"><i id="loadBarFill"></i></div>
+    <div id="loadProgText" class="note" style="margin-top:4px"></div>
+  </div>
+  <div class="filebox">
+    <button onclick="projInput.click()">途中保存したプロジェクト（.json）を読み込む</button>
+    <input type="file" id="projInput" accept=".json,application/json" hidden>
+    <button onclick="eafInput.click()">ELANの.eafを読み込む</button>
+    <input type="file" id="eafInput" accept=".eaf,.xml,text/xml" hidden>
+    <span class="note">※どちらも先に対応するWAVを読み込んでから</span>
+  </div>
+</div>
+
+<div class="card hidden" id="cardSeg">
+  <h2><span class="steplabel">2</span>区間を作る（手動 または 自動検出）<button type="button" class="helpbtn" data-help="helpSeg" data-title="区間の作り方（手動・自動検出）">?</button></h2>
+  <div class="helpsrc" id="helpSeg">
+    <div class="note"><b>手動：</b>下の波形の何もない所をドラッグして範囲を選び、<b>Enterで確定</b>すると区間になります。<b>自動：</b>有音の塊（ごく短い無音を含む）を検出して一括で区間にします（あとから手動で修正できます）。<br><br>自動検出は、録音のノイズ床と音声レベルからしきい値を自動推定し、開始は高め・終了は低めの二重しきい値（ヒステリシス）で「有音の塊」を検出します。「最小無音長」未満のごく短い無音は途切れと見なさず、またいで1つの区間にします（既定: 有音が0.5秒以上続く塊のみ）。自動検出をやり直しても、入力済みの注釈は時間の重なりで引き継がれます。</div>
+  </div>
+  <div class="optrow">
+    <button class="primary" id="btnDetect">自動検出を実行</button>
+    <button id="btnDetectView">表示範囲だけ検出</button>
+    <div class="opt"><label><input type="checkbox" id="thrAuto" checked> しきい値を自動推定</label></div>
+    <div class="opt"><label>しきい値</label>
+      <input type="range" id="thrDb" min="-70" max="-15" value="-40" step="1" style="width:140px" disabled>
+      <span class="note" id="thrDbVal" style="font-family:var(--mono)">自動</span>
+    </div>
+    <div class="opt"><label>最小無音長（ms）</label><input type="number" id="minSil" value="250" min="30" step="10" style="width:80px"></div>
+    <div class="opt"><label>最小区間長（ms）</label><input type="number" id="minSeg" value="500" min="20" step="50" style="width:80px"></div>
+    <div class="opt"><label>前後余白（ms）</label><input type="number" id="padMs" value="60" min="0" step="10" style="width:80px"></div>
+    <button id="btnClear">全区間をクリア</button>
+  </div>
+</div>
+
+<div id="workArea">
+<div id="waveCol">
+<div class="card hidden" id="cardWave">
+  <h2><span class="steplabel">3</span>波形（区切りの確認・修正）<button type="button" class="helpbtn" data-help="helpWave" data-title="波形の操作方法">?</button><span class="pipbtns"><button type="button" id="btnWaveSize" title="波形を大きく／小さく">⤢ 大きく</button><button type="button" id="pipMin" title="最小化／復元">－</button></span></h2>
+  <div class="helpsrc" id="helpWave">
+    <div class="note"><b>話者（オーバーラップ対応）：</b>「＋話者」で話者を追加し、チップで選んだ話者が「アクティブ話者」になります。新しく作る区間はアクティブ話者のものになり、<b>別話者どうしの区間は時刻が重なってもOK</b>です（同じ話者内の重なりは不可）。波形下部に話者ごとのレーンが並び、各レコードは自分の話者のレーンに表示されます。レーンのブロックをクリックするとその話者・レコードが選べます。spk列でも話者を変更できます。EAFは話者ごとに <code>text@話者</code> などのレイヤー（PARTICIPANT付き）に分けて書き出すので、ELANで重複発話が正しく開けます。<br><br><b>赤い帯</b>＝どの区間にも入っていない有音（取りこぼし候補）。◀ ▶で候補へジャンプすると仮選択になるので、「確認再生」で聞いて<b>「✓ 区間に追加」でレコード化</b>（Enterでも可）、対象外なら<b>「無視」で件数から除外</b>できます（無視はプロジェクト保存に記録されます）。<br><br>クリック＝再生カーソルを置く（<b>Space＝カーソルから再生／一時停止</b>）<br>何もない所をドラッグ＝範囲を選択 → <b>Enterで区間として確定</b>（Escで取消。確定前も端の調整や▶試聴ができます）<br>区間の端をドラッグ＝境界の移動（選択中はオレンジのつまみ）<br>区間内をダブルクリック＝分割<br>横スクロール（またはShift＋ホイール）＝横移動、縦ホイール＝ズーム<br><br>「選択レコードを削除」は区間の指定と注釈を削除するだけで、音声データ自体は変更されません。</div>
+  </div>
+  <div id="missNote" class="hidden"><span id="missNoteText"></span><button type="button" id="missNoteClose" title="閉じる">✕</button></div>
+  <canvas id="ovw"></canvas>
+  <canvas id="wave"></canvas>
+  <div class="wavebar" id="spkBar" style="margin-top:5px">
+    <span class="note">話者：</span>
+    <span id="spkChips" style="display:inline-flex;gap:4px;flex-wrap:wrap"></span>
+    <button id="btnAddSpk" title="話者を追加">＋話者</button>
+    <span class="note" style="margin-left:4px">新しいレコードは選択中の話者になります。別話者どうしの区間は時刻が重なってもOKです。</span>
+  </div>
+  <div class="wavebar">
+    <button id="btnRedetect" title="パネル1・2（ファイル選択・自動区切り設定）を再表示します">⟳ 自動区切りをやり直し</button>
+    <span class="sep"></span>
+    <button id="btnZoomIn">拡大 ＋</button>
+    <button id="btnZoomOut">縮小 −</button>
+    <button id="btnZoomFit">全体表示</button>
+    <span class="sep"></span>
+    <button id="btnPlaySel">▶ 選択区間を再生</button>
+    <button id="btnPlayCur">▶ カーソルから再生</button>
+    <button id="btnStop">■ 停止</button>
+    <span class="sep"></span>
+    <button id="btnMergePrev">← 前と結合</button>
+    <button id="btnMergeNext">次と結合 →</button>
+    <button id="btnDelete" title="区間の指定と注釈（レコード）を削除します。音声データ自体は変更されません">選択レコードを削除</button>
+    <span class="sep"></span>
+    <label class="note" style="display:flex;align-items:center;gap:4px"><input type="checkbox" id="chkMissed" checked> 取りこぼし表示</label>
+    <div id="missCtl">
+      <div id="missCount">⚠ 取りこぼし 0件</div>
+      <div class="missrow">
+        <button id="btnMissPrev" title="前の候補へ" disabled>◀</button>
+        <button id="btnMissPlay" title="表示中の候補（仮選択）を再生" disabled>確認再生</button>
+        <button id="btnMissNext" title="次の候補へ" disabled>▶</button>
+      </div>
+      <div class="missrow">
+        <button id="btnMissAdd" title="この候補を区間（アノテーション用レコード）として追加する" disabled>✓ 区間に追加</button>
+        <button id="btnMissIgnore" title="この候補を件数から除外する" disabled>無視</button>
+      </div>
+    </div>
+    <span class="sep"></span>
+    <span id="segInfo"></span>
+    <span id="curT" class="note" style="font-family:var(--mono);margin-left:auto"></span>
+  </div>
+</div>
+
+<div class="card hidden" id="cardAnnoCtl">
+  <h2><span class="steplabel">4</span>注釈を付ける<button type="button" class="helpbtn" data-help="helpAnno" data-title="注釈の付け方・層の使い方">?</button></h2>
+  <div class="helpsrc" id="helpAnno">
+    <div class="note">セルをクリックして編集。textやグロスのセルを編集し始めると<b>IPAパレットが画面下に表示</b>され、記号をクリックでカーソル位置に挿入できます。text欄でEnter＝次の行へ。開始・終了（秒）も直接編集できます。<br><br>morph層を使うと、text中のハイフン（-）・イコール（=）・プラス（+）で<b>形態素が自動分割</b>され、morphを親とする層（既定で gloss・pos）に形態素ごとに入力できます（Enter＝次の形態素へ）。層は自由に追加でき、親に「区間」を選ぶと区間ごとの欄、「morph」やその子を選ぶと形態素ごとの欄になります。<br><br>表層形と基底形が乖離する場合（例: text <code>kaita</code> ／ 基底形 <code>kak-ta</code>）は、基底形用の区間層（例: <code>udl</code>）を追加して「morphの親」をその層に切り替えると、その欄の区切り記号で形態素分割されます。<br><br>「表示レイヤー」で特定の層だけに絞った表示にできます（データは保持されます）。レコードは5件ずつ表示され、◀ ▶で移動します。</div>
+  </div>
+  <div id="annoCtlRow">
+   <div id="annoCtlLeft">
+    <div class="optrow" style="margin:0 0 6px">
+      <label style="font-size:13px;color:var(--ink)"><b>層構成：</b></label>
+      <select id="tierPreset" style="font-size:13px">
+        <option value="basic">text＋trans</option>
+        <option value="standard">text＋morph＋gloss＋trans</option>
+        <option value="udl">text＋udl＋morph＋gloss＋trans（基底形から分割）</option>
+        <option value="custom" disabled>カスタム（独自の構成）</option>
+      </select>
+      <span class="sep" style="width:1px;height:20px;background:var(--line)"></span>
+      <input type="text" id="newTierName" placeholder="さらに層を追加（名前）" style="width:130px;border:1px solid var(--line);border-radius:6px;padding:5px 8px;font-size:13px">
+      <select id="newTierParent"></select>
+      <button id="btnAddTier">＋ 追加</button>
+    </div>
+    <div id="tierChips" style="margin:0 0 8px"></div>
+    <details style="margin:0 0 8px">
+      <summary class="detbtn">詳細設定（morphの分割元・境界コーディング）</summary>
+      <div class="optrow" id="morphSrcRow" style="margin:8px 0 6px">
+        <label class="note">morphをどの層から分割するか（表層と基底形が異なる場合のみ）</label>
+        <select id="morphSrc" title="形態素分割のもとになる層"></select>
+      </div>
+      <div class="optrow" style="margin:6px 0 0">
+        <label style="font-size:13px;color:var(--ink)" title="ピリオドを文境界とし、形態素ごとに BOS/EOS/I を自動コーディング"><input type="checkbox" id="chkBdr"> 文境界をコーディング（bdr層・ピリオド基準）</label>
+        <label style="font-size:13px;color:var(--ink)" title="空白と = を語境界とし、形態素ごとに BOW/EOW/I を自動コーディング"><input type="checkbox" id="chkWbdr"> 語境界をコーディング（wbdr層・空白/= 基準）</label>
+      </div>
+    </details>
+    <div class="optrow" style="margin:0">
+      <label class="note">表示レイヤー</label>
+      <select id="viewLayer"></select>
+      <span class="sep" style="width:1px;height:20px;background:var(--line)"></span>
+      <button id="btnPgPrev" disabled>◀ 前の5件</button>
+      <span id="pgInfo" class="note" style="font-family:var(--mono)">0件</span>
+      <button id="btnPgNext" disabled>次の5件 ▶</button>
+    </div>
+   </div>
+   <div id="ctxPane">
+    <div id="ctxHead">
+      <span class="note">文脈表示：</span><select id="ctxLayer"></select>
+      <span class="note" style="margin-left:auto">クリックでそのレコードへ</span>
+    </div>
+    <div id="ctxBody" class="ctxbody"><span class="note">レコードを作ると、ここに連続表示されます。</span></div>
+   </div>
+  </div>
+</div>
+</div><!-- /waveCol（ここまで上部固定） -->
+
+<div id="tableCol">
+<div class="card" id="paletteCard">
+  <div id="palResize" title="ドラッグでIPAパネルの幅を調節"></div>
+  <div id="palette"></div>
+</div>
+
+<div class="card hidden" id="cardTable">
+  <table>
+    <thead id="tbHead"></thead>
+    <tbody id="tb"></tbody>
+  </table>
+  <div class="btns" style="margin-top:8px">
+    <button id="btnRenumber">IDを連番で振り直す</button>
+  </div>
+</div>
+</div><!-- /tableCol -->
+</div><!-- /workArea -->
+
+<div class="card hidden" id="cardExport">
+  <h2><span class="steplabel">5</span>書き出し<button type="button" class="helpbtn" data-help="helpExport" data-title="書き出し形式について">?</button></h2>
+  <div class="helpsrc" id="helpExport">
+    <div class="note">EAFは <code>ID</code>・<code>text</code>・<code>trans</code>＋追加した層がELANの親子構造つきで書き出されます（<code>trans</code>＝textのSymbolic Association、<code>morph</code>＝text（またはudl）のSymbolic Subdivision、その他のカスタム層＝選んだ親へのSymbolic Association。LINGUISTIC_TYPEとCONSTRAINT宣言も同梱）。WAVと同じフォルダに置けばELANでそのまま開けます。<br><br>TSV / JSONにも全層が含まれます（morph系の層はグロス行 例: <code>go-EP-PST</code> に合成）。ZIPには各区間のWAVと <code>manifest.csv</code> が入ります。<br><br>「プロジェクト途中保存」は区間・注釈・層構成・無視リストをJSONで保存します。再開するときは、同じWAVを読み込んでからこのJSONを読み込んでください。</div>
+  </div>
+  <div class="btns">
+    <button class="primary" id="dlEaf">EAF（ELAN用）</button>
+    <button class="primary" id="dlTsv">TSV（Excel対応）</button>
+    <button class="primary" id="dlJson">JSON</button>
+    <button class="primary" id="dlIndigo" title="電子辞書ツール InDIGO 用のフラットJSON（gloss/posを形態素に整列、start_time/end_time/speaker/audio_file 付き）">InDIGO用JSON</button>
+    <button class="primary" id="dlZip">切り出しWAVのZIP</button>
+    <span class="sep"></span>
+    <button id="dlProj">プロジェクトを途中保存（.json）</button>
+  </div>
+</div>
+</div><!-- /tabAnno -->
+
+<div id="tabAnalysis" class="hidden">
+  <div class="card">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px">
+      <h2 style="margin:0">集計</h2>
+      <button class="primary" id="dlDict" style="margin-left:auto">辞書をHTML＋音声でダウンロード（ZIP）</button>
+    </div>
+    <div id="anStats" class="note">まず「注釈」タブで音声・注釈を読み込んでください。</div>
+  </div>
+  <div class="card">
+    <div id="anCols">
+      <div id="anIndexCol">
+        <h2>形態素リスト</h2>
+        <div class="optrow" style="margin:0 0 7px">
+          <input type="text" id="anSearch" placeholder="検索（形態素・グロス）" style="flex:1;min-width:120px;border:1px solid var(--line);border-radius:6px;padding:5px 8px;font-size:13px">
+          <select id="anType"><option value="all">全種類</option><option value="root">語根</option><option value="affix">接辞</option><option value="clitic">接語</option></select>
+          <select id="anPos"><option value="all">全品詞</option></select>
+          <select id="anSort"><option value="freq">頻度順</option><option value="alpha">字順</option><option value="type">種類順（語根→接辞→接語）</option><option value="pos">品詞順</option></select>
+        </div>
+        <div id="anIndex" class="anindex"></div>
+      </div>
+      <div id="anDictCol">
+        <h2>辞書・用例</h2>
+        <div id="anDict" class="note">左の形態素を選ぶと、語義の編集と用例（音声付き）が表示されます。</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="helpModal"><div class="helpbox"><div class="helphead"><b id="helpTitle"></b><button type="button" id="helpClose" title="閉じる">✕</button></div><div id="helpBody"></div></div></div>
+
+<audio id="player" hidden></audio>
+
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+
+/* ---------- 状態 ---------- */
+let wavFile=null, wavInfo=null;     // PCM情報（切り出し用）
+let env=null;                        // {rate, rms, mn, mx, dur} 解析用エンベロープ
+let segs=[];                         // {t0,t1,id,spk,text,note,tv}（秒）
+let sel=-1;
+let view={t0:0,t1:1};
+const FR=200;                        // エンベロープ解像度（フレーム/秒）
+
+/* ---------- 話者（オーバーラップ対応：話者ごとにトラック） ---------- */
+let speakers=['A'], activeSpk='A';   // 話者リストと、新規レコードの話者
+const SPK_COLORS=['#234a86','#b4540f','#2e9e8a','#8a4fb0','#a8852a','#318a5a','#b02e6a'];
+function spkColor(id){const i=Math.max(0,speakers.indexOf(id));return SPK_COLORS[i%SPK_COLORS.length]}
+function ensureSpk(id){if(id&&!speakers.includes(id))speakers.push(id)}
+// 同じ話者の区間とだけ重なりを判定（別話者との重なりは許す）
+function overlapsSameSpk(t0,t1,spk,exceptIdx){
+  return segs.some((s,i)=>i!==exceptIdx&&s.spk===spk&&s.t0<t1-1e-9&&s.t1>t0+1e-9);
+}
+// 同じ話者の前後の境界（端ドラッグの可動範囲）
+function spkBounds(i){
+  const cur=segs[i]; let lo=0, hi=env.dur;
+  segs.forEach((s,j)=>{
+    if(j===i||s.spk!==cur.spk)return;
+    if(s.t1<=cur.t0+1e-9)lo=Math.max(lo,s.t1);
+    if(s.t0>=cur.t1-1e-9)hi=Math.min(hi,s.t0);
+  });
+  return [lo,hi];
+}
+function renderSpkBar(){
+  const wrap=$('spkChips');if(!wrap)return;
+  wrap.innerHTML=speakers.map(id=>{
+    const n=segs.filter(s=>s.spk===id).length;
+    return '<span class="spkchip'+(id===activeSpk?' active':'')+'" data-spk="'+escHtml(id)
+      +'" style="'+(id===activeSpk?'border-color:'+spkColor(id)+';':'')+'">'
+      +'<span class="dot" style="background:'+spkColor(id)+'"></span>'+escHtml(id)
+      +'<span class="note" style="font-size:10px">'+n+'</span>'
+      +(speakers.length>1?'<button type="button" class="x" data-delspk="'+escHtml(id)+'" title="この話者を削除">✕</button>':'')
+      +'</span>';
+  }).join('');
+}
+function setActiveSpk(id){if(speakers.includes(id)){activeSpk=id;renderSpkBar()}}
+$('spkChips').addEventListener('click',e=>{
+  const del=e.target.closest('[data-delspk]');
+  if(del){
+    const id=del.dataset.delspk;
+    const cnt=segs.filter(s=>s.spk===id).length;
+    if(cnt&&!confirm('話者「'+id+'」のレコードが '+cnt+' 件あります。これらを残りの話者に付け替えて、話者を削除しますか？'))return;
+    speakers=speakers.filter(x=>x!==id);
+    const fallback=speakers[0];
+    segs.forEach(s=>{if(s.spk===id)s.spk=fallback});
+    if(activeSpk===id)activeSpk=fallback;
+    renderSpkBar();afterSegChange();
+    return;
+  }
+  const chip=e.target.closest('[data-spk]');
+  if(chip)setActiveSpk(chip.dataset.spk);
+});
+$('btnAddSpk').addEventListener('click',()=>{
+  const name=(prompt('追加する話者のID（例: B, 話者2, INT …）','')||'').trim();
+  if(!name)return;
+  if(speakers.includes(name)){alert('「'+name+'」は既にあります');setActiveSpk(name);return}
+  speakers.push(name);activeSpk=name;
+  renderSpkBar();draw();drawOvw();
+});
+
+/* ---------- ファイル読み込み ---------- */
+$('wavInput').addEventListener('change',ev=>{const f=ev.target.files[0];if(f)loadFile(f)});
+$('projInput').addEventListener('change',async ev=>{
+  const f=ev.target.files[0];if(!f)return;
+  try{
+    const p=JSON.parse(await f.text());
+    if(!p.segs)throw new Error('プロジェクトファイルではありません');
+    if(!env){alert('先にWAVファイルを読み込んでください');return}
+    if(p.wavName&&wavFile&&p.wavName!==wavFile.name&&!confirm('保存時のWAV名（'+p.wavName+'）と現在のWAV（'+wavFile.name+'）が違います。読み込みますか？'))return;
+    speakers=Array.isArray(p.speakers)&&p.speakers.length?p.speakers.slice():['A'];
+    segs=p.segs.map(s=>{
+      const o={t0:+s.t0,t1:+s.t1,id:s.id||'',spk:s.spk||speakers[0],text:s.text||'',note:s.note||'',tv:(s.tv&&typeof s.tv==='object')?s.tv:{}};
+      if(Array.isArray(s.morphs))o.morphs=s.morphs.map(x=>String(x==null?'':x));
+      // 旧形式（gloss/pos配列）からの引き継ぎ
+      if(Array.isArray(s.gloss))o.tv.gloss=o.tv.gloss||s.gloss.map(x=>x||'');
+      if(Array.isArray(s.pos))o.tv.pos=o.tv.pos||s.pos.map(x=>x||'');
+      ensureSpk(o.spk);   // 保存リストに無い話者IDも拾う
+      return o;
+    });
+    activeSpk=speakers[0];renderSpkBar();
+    tiersDef=Array.isArray(p.tiersDef)?p.tiersDef.filter(t=>t&&t.name):[];
+    morphSrc=typeof p.morphSrc==='string'?p.morphSrc:'text';
+    // glossOn は morph親の層の有無から refreshTierUI で導出する
+    // 旧形式: glossOn=true なのに morph親の層定義がなければ gloss・pos を補う
+    if(p.glossOn&&!tiersDef.some(t=>t.parent==='morph'))tiersDef.push({name:'gloss',parent:'morph'},{name:'pos',parent:'morph'});
+    refreshTierUI();
+    ignoredMiss=(p.ignoredMiss||[]).map(g=>({t0:+g.t0,t1:+g.t1}));
+    lexicon=(p.lexicon&&typeof p.lexicon==='object')?p.lexicon:{};
+    sel=-1;afterSegChange();
+  }catch(e){alert('読み込めませんでした：'+e.message)}
+  ev.target.value='';
+});
+
+/* ---------- ELAN .eaf の取り込み ---------- */
+$('eafInput').addEventListener('change',async ev=>{
+  const f=ev.target.files[0];if(!f)return;
+  if(!env){alert('先にWAVファイルを読み込んでください');ev.target.value='';return}
+  try{ importEaf(await f.text()); }
+  catch(e){alert('.eafを取り込めませんでした：'+e.message)}
+  ev.target.value='';
+});
+function importEaf(xmlText){
+  const doc=new DOMParser().parseFromString(xmlText,'text/xml');
+  if(doc.querySelector('parsererror'))throw new Error('XMLを解析できません');
+  // 時間スロット
+  const slot={};
+  doc.querySelectorAll('TIME_ORDER > TIME_SLOT').forEach(s=>{const v=s.getAttribute('TIME_VALUE');if(v!=null)slot[s.getAttribute('TIME_SLOT_ID')]=+v});
+  // 言語タイプ（時間整列か・制約）
+  const ltype={};
+  doc.querySelectorAll('LINGUISTIC_TYPE').forEach(t=>ltype[t.getAttribute('LINGUISTIC_TYPE_ID')]={align:t.getAttribute('TIME_ALIGNABLE')==='true',cons:t.getAttribute('CONSTRAINTS')||''});
+  // 全TIER
+  const tiers=[...doc.querySelectorAll('TIER')].map(t=>{
+    const anns=[];
+    t.querySelectorAll('ALIGNABLE_ANNOTATION').forEach(a=>anns.push({kind:'al',id:a.getAttribute('ANNOTATION_ID'),t0:slot[a.getAttribute('TIME_SLOT_REF1')],t1:slot[a.getAttribute('TIME_SLOT_REF2')],val:(a.querySelector('ANNOTATION_VALUE')?.textContent||'').trim()}));
+    t.querySelectorAll('REF_ANNOTATION').forEach(a=>anns.push({kind:'ref',id:a.getAttribute('ANNOTATION_ID'),ref:a.getAttribute('ANNOTATION_REF'),prev:a.getAttribute('PREVIOUS_ANNOTATION'),val:(a.querySelector('ANNOTATION_VALUE')?.textContent||'').trim()}));
+    const ty=ltype[t.getAttribute('LINGUISTIC_TYPE_REF')]||{};
+    return {id:t.getAttribute('TIER_ID'),parent:t.getAttribute('PARENT_REF'),part:t.getAttribute('PARTICIPANT'),
+      align:ty.align,cons:ty.cons,anns};
+  });
+  const byId={}; tiers.forEach(t=>byId[t.id]=t);
+  const childrenOf={}; tiers.forEach(t=>{if(t.parent)(childrenOf[t.parent]=childrenOf[t.parent]||[]).push(t)});
+  const lname=id=>String(id).split('@')[0];   // @話者 を外したレイヤー名
+  const spkOf=t=>{const m=String(t.id).match(/@(.+)$/);return m?m[1]:(t.part?t.part.split(/\s+/)[0]:null)};
+  // テキスト層＝時間整列・親なし・子を持つ（topic等の独立層は子を持たない）
+  const rootAligned=tiers.filter(t=>!t.parent&&t.align!==false&&t.anns.some(a=>a.kind==='al'));
+  const textTiers=rootAligned.filter(t=>(childrenOf[t.id]||[]).length>0||/^text/i.test(t.id));
+  if(!textTiers.length)throw new Error('テキスト層（時間整列）が見つかりません');
+  const indepTiers=rootAligned.filter(t=>!textTiers.includes(t));   // topic など独立した時間整列層
+  // morph層＝Symbolic_Subdivision
+  const isMorphTier=t=>t.cons==='Symbolic_Subdivision';
+  // 各テキスト層→話者→レコード
+  const newSpeakers=[], recs=[], recByAid={};
+  let spkAuto=64;
+  textTiers.forEach(tt=>{
+    let spk=spkOf(tt); if(!spk)spk=String.fromCharCode(++spkAuto);
+    if(!newSpeakers.includes(spk))newSpeakers.push(spk);
+    tt.anns.filter(a=>a.kind==='al'&&a.t0!=null&&a.t1!=null).forEach(a=>{
+      const r={aid:a.id,t0:a.t0/1000,t1:a.t1/1000,spk,text:a.val,note:'',tv:{},_textTier:tt.id};
+      recs.push(r);recByAid[a.id]=r;
+    });
+  });
+  // レイヤー定義を集める
+  const segLayers=new Set(), morphLayers=new Set();
+  let transTierId=null;
+  // テキストの直接の子（区間系）。translation系のひとつを trans に
+  textTiers.forEach(tt=>{
+    (childrenOf[tt.id]||[]).forEach(ct=>{
+      if(isMorphTier(ct))return;   // morphは別処理
+      const nm=lname(ct.id);
+      if(!transTierId&&/^(translation|trans|free|訳)$/i.test(nm)){transTierId=ct.id;}
+    });
+  });
+  // 区間系の子層を割り当て
+  textTiers.forEach(tt=>{
+    (childrenOf[tt.id]||[]).forEach(ct=>{
+      if(isMorphTier(ct))return;
+      const nm=lname(ct.id);
+      ct.anns.forEach(a=>{const r=recByAid[a.ref];if(!r)return;
+        if(ct.id===transTierId)r.note=a.val; else {r.tv[nm]=a.val; if(a.val)segLayers.add(nm);}
+      });
+    });
+  });
+  // morph層（テキストの Symbolic_Subdivision の子）
+  const morphAidInfo={};   // morph注釈id -> {rec, idx}
+  let morphParentLevel='text';
+  textTiers.forEach(tt=>{
+    (childrenOf[tt.id]||[]).filter(isMorphTier).forEach(mt=>{
+      // 親注釈ごとに PREVIOUS で順序付け
+      const byParent={};
+      mt.anns.forEach(a=>{(byParent[a.ref]=byParent[a.ref]||[]).push(a)});
+      Object.keys(byParent).forEach(pid=>{
+        const arr=byParent[pid], next={}; arr.forEach(a=>{if(a.prev)next[a.prev]=a});
+        const start=arr.find(a=>!a.prev)||arr[0]; const ordered=[]; let cur=start, guard=0;
+        while(cur&&guard++<9999){ordered.push(cur);cur=next[cur.id]}
+        if(ordered.length!==arr.length){ordered.length=0;arr.forEach(a=>ordered.push(a))}
+        const r=recByAid[pid]; if(!r)return;
+        r.morphs=ordered.map(a=>a.val);
+        ordered.forEach((a,idx)=>morphAidInfo[a.id]={r,idx});
+      });
+      // morphの子（morph系層: gloss/pos等）
+      (childrenOf[mt.id]||[]).forEach(gt=>{
+        const nm=lname(gt.id); morphLayers.add(nm);
+        gt.anns.forEach(a=>{const m=morphAidInfo[a.ref];if(m){m.r.tv[nm]=m.r.tv[nm]||[];m.r.tv[nm][m.idx]=a.val}});
+      });
+    });
+  });
+  // 独立した時間整列層（topic等）→ 区間系層に重なりで割り当て
+  indepTiers.forEach(it=>{
+    const nm=lname(it.id), tos=it.anns.filter(a=>a.kind==='al'&&a.t0!=null);
+    if(!tos.length)return;
+    recs.forEach(r=>{const c=(r.t0+r.t1)/2*1000;const hit=tos.find(a=>c>=a.t0&&c<=a.t1);if(hit&&hit.val){r.tv[nm]=hit.val;segLayers.add(nm)}});
+  });
+  // 反映
+  recs.sort((a,b)=>a.t0-b.t0);
+  if(!recs.length)throw new Error('注釈区間が見つかりません');
+  speakers=newSpeakers.length?newSpeakers:['A']; activeSpk=speakers[0];
+  morphSrc='text';   // glossOn は morph親の層（下のtiersDef）から refreshTierUI で導出
+  tiersDef=[...morphLayers].map(n=>({name:n,parent:'morph'}))
+    .concat([...segLayers].map(n=>({name:n,parent:'seg'})));
+  const base=(wavFile?wavFile.name.replace(/\.wav$/i,''):'eaf').replace(/[\\\/:*?"<>|\s]+/g,'_');
+  const wsuf=String(recs.length).length>3?String(recs.length).length:3;
+  segs=recs.map((r,i)=>{
+    const o={t0:+r.t0.toFixed(3),t1:+r.t1.toFixed(3),id:base+'_'+String(i+1).padStart(wsuf,'0'),
+      spk:r.spk,text:r.text,note:r.note,tv:r.tv};
+    if(Array.isArray(r.morphs)&&r.morphs.length)o.morphs=r.morphs;
+    return o;
+  });
+  ignoredMiss=[]; sel=-1;
+  renderSpkBar(); refreshTierUI(); afterSegChange();
+  alert('EAFを取り込みました：'+segs.length+'区間 / 話者 '+speakers.join('・')
+    +(tiersDef.length?'\n層: '+tiersDef.map(t=>t.name).join('・'):'')
+    +(segs.some(s=>Array.isArray(s.morphs)&&s.morphs.length)?'\n（形態素は元の区切りを保持しています）':''));
+}
+
+// 進捗バー
+function showLoad(text,pct,indet){
+  $('loadProg').classList.remove('hidden');
+  $('loadBar').classList.toggle('indet',!!indet);
+  if(!indet)$('loadBarFill').style.width=Math.max(0,Math.min(100,pct))+'%';
+  $('loadProgText').textContent=text;
+}
+function hideLoad(){$('loadProg').classList.add('hidden')}
+// FileReaderで読み込み（進捗付き）
+function readArrayBuffer(file,onProg){
+  return new Promise((res,rej)=>{
+    const fr=new FileReader();
+    fr.onprogress=e=>{if(e.lengthComputable&&onProg)onProg(e.loaded/e.total)};
+    fr.onload=()=>res(fr.result);
+    fr.onerror=()=>rej(fr.error||new Error('ファイルを読み込めませんでした'));
+    fr.readAsArrayBuffer(file);
+  });
+}
+const nextFrame=()=>new Promise(r=>setTimeout(r,0));
+
+async function loadFile(f){
+  wavFile=f;
+  $('wavName').textContent=f.name+'（'+(f.size/1048576).toFixed(1)+' MB）';
+  $('wavName').classList.remove('ok');
+  showLoad('読み込み中… 0%',0,false);
+  try{
+    wavInfo=await parseWav(f);
+    // ① ファイル読み込み（進捗を 0〜70% に割り当て）
+    const ab=await readArrayBuffer(f,p=>showLoad('読み込み中… '+Math.round(p*100)+'%　('+(f.size/1048576).toFixed(0)+' MB)',p*70,false));
+    // ② デコード（進捗不明なのでアニメーション表示）
+    showLoad('音声をデコード中…',70,true);await nextFrame();
+    const ctx=new (window.AudioContext||window.webkitAudioContext)();
+    const buf=await ctx.decodeAudioData(ab);
+    ctx.close&&ctx.close();
+    // ③ 波形を解析（同期処理なので、ラベルを描画してから実行）
+    showLoad('波形を解析中…',90,true);await nextFrame();
+    buildEnvelope(buf);
+    $('player').src&&URL.revokeObjectURL($('player').src);
+    $('player').src=URL.createObjectURL(f);
+    $('wavName').textContent=f.name+'　'+wavInfo.rate+' Hz / '+wavInfo.bits+' bit / '+wavInfo.ch+'ch / '+env.dur.toFixed(1)+' 秒';
+    $('wavName').classList.add('ok');
+    ['cardFile','cardSeg','cardWave','cardAnnoCtl','cardTable','cardExport'].forEach(id=>$(id).classList.remove('hidden'));
+    setWaveCompact(false);   // 検出するまではフル表示
+    document.querySelectorAll('#saveBar button').forEach(b=>b.disabled=false);
+    view={t0:0,t1:Math.min(15,env.dur)};
+    speakers=['A'];activeSpk='A';renderSpkBar();
+    segs=[];sel=-1;pend=null;cursorT=null;ignoredMiss=[];lexicon={};anSel=null;afterSegChange();
+    hideLoad();
+  }catch(e){
+    wavInfo=null;env=null;
+    hideLoad();
+    $('wavName').textContent='読み込み失敗';
+    alert('音声ファイルを読み込めませんでした：'+e.message);
+  }
+}
+function buildEnvelope(buf){
+  const n=buf.length, ch=buf.numberOfChannels;
+  const mono=new Float32Array(n);
+  for(let c=0;c<ch;c++){const d=buf.getChannelData(c);for(let i=0;i<n;i++)mono[i]+=d[i]/ch}
+  const fl=Math.max(1,Math.round(buf.sampleRate/FR));
+  const m=Math.ceil(n/fl);
+  const rms=new Float32Array(m), mn=new Float32Array(m), mx=new Float32Array(m);
+  for(let k=0;k<m;k++){
+    let s=0,lo=1,hi=-1;
+    const a=k*fl, b=Math.min(n,a+fl);
+    for(let i=a;i<b;i++){const v=mono[i];s+=v*v;if(v<lo)lo=v;if(v>hi)hi=v}
+    rms[k]=Math.sqrt(s/(b-a));mn[k]=lo;mx[k]=hi;
+  }
+  // 平滑化エンベロープ（±2フレーム＝25msの移動平均）。検出のチャタつきを抑える
+  const srms=new Float32Array(m), W=2;
+  for(let k=0;k<m;k++){
+    let s=0,c=0;
+    for(let j=Math.max(0,k-W);j<=Math.min(m-1,k+W);j++){s+=rms[j];c++}
+    srms[k]=s/c;
+  }
+  env={rate:FR,rms,srms,mn,mx,dur:buf.duration};
+}
+
+/* ---------- 自動トークン化 ---------- */
+let thrShowUntil=0,thrTimer=null;
+$('thrDb').addEventListener('input',()=>{
+  $('thrDbVal').textContent=$('thrDb').value+' dB';
+  thrShowUntil=Date.now()+2000;draw();
+  clearTimeout(thrTimer);thrTimer=setTimeout(()=>draw(),2100);
+});
+$('thrAuto').addEventListener('change',()=>{
+  const auto=$('thrAuto').checked;
+  $('thrDb').disabled=auto;
+  $('thrDbVal').textContent=auto?'自動':$('thrDb').value+' dB';
+  if(!auto){thrShowUntil=Date.now()+2000;draw();clearTimeout(thrTimer);thrTimer=setTimeout(()=>draw(),2100)}
+});
+$('btnDetect').addEventListener('click',()=>detect());
+$('btnClear').addEventListener('click',()=>{
+  if(!segs.length)return;
+  if(!confirm('現在の'+segs.length+'区間（注釈も含む）をすべて削除します。よろしいですか？'))return;
+  segs=[];sel=-1;afterSegChange();
+});
+
+// RMS分布からしきい値（dB）を自動推定：ノイズ床（下位15%）と音声レベル（上位5%）の間に置く
+function autoThrDb(i0,i1){
+  const db=v=>20*Math.log10(v+1e-9);
+  const arr=[];
+  const step=Math.max(1,Math.floor((i1-i0)/20000));   // 長い録音はサンプリングして高速化
+  for(let i=i0;i<i1;i+=step)arr.push(env.srms[i]);
+  if(!arr.length)return -40;
+  arr.sort((x,y)=>x-y);
+  const noise=db(arr[Math.floor(arr.length*0.15)]);
+  const speech=db(arr[Math.floor(arr.length*0.95)]);
+  let thr;
+  if(speech-noise<10)thr=noise+8;            // 音声とノイズの差が小さい録音はノイズ床基準
+  else thr=noise+(speech-noise)*0.35;        // 通常はノイズ床と音声レベルの間
+  return Math.min(-15,Math.max(-65,thr));
+}
+// [a,b]秒の範囲内だけを対象に有音区間（ごく短い無音を含む塊）を検出して返す
+function runDetect(a,b){
+  const r=env.srms, i0=Math.max(0,Math.floor(a*FR)), i1=Math.min(r.length,Math.ceil(b*FR));
+  // しきい値：自動推定 or スライダー
+  let thrDb;
+  if($('thrAuto').checked){
+    thrDb=autoThrDb(i0,i1);
+    $('thrDb').value=Math.round(thrDb);
+    $('thrDbVal').textContent=Math.round(thrDb)+' dB（自動）';
+  }else{
+    thrDb=+$('thrDb').value;
+  }
+  // ヒステリシス：開始は高め（+3dB）、終了は低め（-3dB）
+  const hi=Math.pow(10,(thrDb+3)/20), lo=Math.pow(10,(thrDb-3)/20);
+  const minSil=(+$('minSil').value||250)/1000, minSeg=(+$('minSeg').value||500)/1000, pad=(+$('padMs').value||0)/1000;
+  // 有声区間の抽出（hiで立ち上がり、loを下回るまで継続）
+  let runs=[],s=-1;
+  for(let i=i0;i<=i1;i++){
+    const v=i<i1?r[i]:0;
+    if(s<0){if(v>hi)s=i}
+    else if(v<lo){runs.push([s,i]);s=-1}
+  }
+  // 立ち上がりを低しきい値まで遡って拡張（語頭の弱い子音を取りこぼさない）
+  runs.forEach(x=>{while(x[0]>i0&&r[x[0]-1]>lo)x[0]--});
+  // 短い無音をまたいで結合（有音の塊にまとめる）
+  const merged=[];
+  runs.forEach(x=>{
+    if(merged.length&&(x[0]-merged[merged.length-1][1])/FR<minSil)merged[merged.length-1][1]=x[1];
+    else merged.push(x.slice());
+  });
+  // 短すぎる塊を除外 → 秒に変換して余白
+  const out=merged.filter(x=>(x[1]-x[0])/FR>=minSeg).map(x=>({
+    t0:Math.max(a,x[0]/FR-pad), t1:Math.min(b,x[1]/FR+pad), id:'',spk:activeSpk,text:'',note:'',tv:{}
+  }));
+  // 余白で重なったら隣と分け合う
+  for(let i=1;i<out.length;i++){
+    if(out[i].t0<out[i-1].t1){const mid=(out[i].t0+out[i-1].t1)/2;out[i-1].t1=mid;out[i].t0=mid}
+  }
+  return out;
+}
+// [a,b]秒の範囲の区間を自動検出の結果で置き換える（範囲外の区間・注釈は保持）
+function applyDetect(a,b){
+  if(!env)return;
+  // 自動検出はアクティブ話者のレコードだけを対象に置き換える（他話者は保持）
+  const inRange=s=>s.t1>a&&s.t0<b&&s.spk===activeSpk;
+  const affected=segs.filter(inRange);
+  const hasAnno=affected.some(s=>s.text||s.note);
+  const spkNote=speakers.length>1?'話者「'+activeSpk+'」の':'';
+  if(affected.length&&!confirm(hasAnno
+    ?spkNote+'範囲内の'+affected.length+'区間は置き換えられ、入力済みの注釈は新しい区間と時間が重なるものに引き継がれます。よろしいですか？'
+    :spkNote+'範囲内の'+affected.length+'区間を自動検出の結果で置き換えます。よろしいですか？'))return;
+  const fresh=runDetect(a,b);
+  // 注釈の引き継ぎ（重なり最大の旧区間から）
+  if(hasAnno){
+    fresh.forEach(ns=>{
+      let best=null,bestOv=0;
+      affected.forEach(os=>{
+        const ov=Math.min(ns.t1,os.t1)-Math.max(ns.t0,os.t0);
+        if(ov>bestOv){bestOv=ov;best=os}
+      });
+      if(best&&bestOv>0){ns.text=best.text;ns.note=best.note;if(best.id)ns.id=best.id}
+    });
+  }
+  segs=segs.filter(s=>!inRange(s)).concat(fresh);
+  if(a<=0&&b>=env.dur-1e-9)renumber(false);
+  afterSegChange();
+  hideSetup();   // 検出が走ったらセットアップを隠してクリーンに
+  sel=fresh.length?segs.indexOf(fresh[0]):(segs.length?Math.min(Math.max(sel,0),segs.length-1):-1);
+  afterSelChange();
+  if(missed.length){
+    // 取りこぼしがあれば、最初の候補を仮選択でアクティブにした状態で開始（窓は約1分）
+    showMissNote();
+    focusMiss(missed[0]);
+  }else{
+    $('missNote').classList.add('hidden');
+    // 取りこぼしなしなら、最初の区間の少し手前から20秒の窓にする
+    if(fresh.length){
+      const span=Math.min(env.dur,20);
+      const t0=Math.max(0,Math.min(env.dur-span,fresh[0].t0-1));
+      view={t0,t1:t0+span};
+      draw();drawOvw();
+    }
+  }
+}
+function detect(){applyDetect(0,env?env.dur:0)}
+
+$('btnDetectView').addEventListener('click',()=>{
+  if(!env)return;
+  applyDetect(Math.max(0,view.t0),Math.min(env.dur,view.t1));
+});
+// パネル3のコンパクト表示（自動取り込み後に縮小。トグルで拡大も可）
+function setWaveCompact(on){
+  $('waveCol').classList.toggle('compact3',on);
+  $('btnWaveSize').textContent=on?'⤢ 大きく':'⤡ 小さく';
+  if(env){draw();drawOvw()}
+}
+$('btnWaveSize').addEventListener('click',()=>setWaveCompact(!$('waveCol').classList.contains('compact3')));
+// パネル1・2（セットアップ）の表示／非表示。作業を始めたら隠してクリーンに、やり直しボタンで再表示
+function hideSetup(){$('cardFile').classList.add('hidden');$('cardSeg').classList.add('hidden');setWaveCompact(true)}
+function showSetup(){
+  $('cardFile').classList.remove('hidden');$('cardSeg').classList.remove('hidden');
+  $('cardSeg').scrollIntoView({block:'center',behavior:'smooth'});
+}
+$('btnRedetect').addEventListener('click',showSetup);
+
+/* ---------- 取りこぼし検出（区間に入っていない有音部分） ---------- */
+let missed=[], ignoredMiss=[];   // ignoredMiss: 「無視」で件数から除外した範囲
+function computeMissed(){
+  missed=[];
+  if(!env)return;
+  const thrDb=$('thrAuto').checked?autoThrDb(0,env.srms.length):+$('thrDb').value;
+  const hi=Math.pow(10,(thrDb+3)/20), lo=Math.pow(10,(thrDb-3)/20);
+  const r=env.srms, minSil=(+$('minSil').value||250)/1000;
+  // 有音ラン抽出（自動検出と同じ基準）＋小無音の架橋
+  let runs=[],s=-1;
+  for(let i=0;i<=r.length;i++){
+    const v=i<r.length?r[i]:0;
+    if(s<0){if(v>hi)s=i}
+    else if(v<lo){runs.push([s,i]);s=-1}
+  }
+  runs.forEach(x=>{while(x[0]>0&&r[x[0]-1]>lo)x[0]--});
+  const merged=[];
+  runs.forEach(x=>{
+    if(merged.length&&(x[0]-merged[merged.length-1][1])/FR<minSil)merged[merged.length-1][1]=x[1];
+    else merged.push(x.slice());
+  });
+  // 既存区間と「無視」済み範囲でカバーされている部分を除いた残りが「取りこぼし候補」
+  const blockers=segs.concat(ignoredMiss);
+  merged.forEach(x=>{
+    let parts=[[x[0]/FR,x[1]/FR]];
+    blockers.forEach(sg=>{
+      parts=parts.flatMap(([a,b])=>{
+        if(sg.t1<=a||sg.t0>=b)return [[a,b]];
+        const o=[];
+        if(sg.t0>a)o.push([a,sg.t0]);
+        if(sg.t1<b)o.push([sg.t1,b]);
+        return o;
+      });
+    });
+    parts.forEach(([a,b])=>{if(b-a>=0.15)missed.push({t0:a,t1:b})});
+  });
+  missed.sort((a,b)=>a.t0-b.t0);
+  updateMissUI();
+}
+function updateMissUI(){
+  const b=$('btnMissNext'), p=$('btnMissPrev');
+  $('missCount').textContent='⚠ 取りこぼし '+missed.length+'件';
+  $('missCtl').classList.toggle('hot',missed.length>0);
+  b.disabled=p.disabled=!missed.length;
+  b.classList.toggle('hot',missed.length>0);
+  p.classList.toggle('hot',missed.length>0);
+  // バナーの件数をライブ更新し、0件になったら自動で消す
+  if(!missed.length)$('missNote').classList.add('hidden');
+  else if(!$('missNote').classList.contains('hidden'))renderMissNoteText();
+}
+function renderMissNoteText(){
+  const ms=+$('minSeg').value||500;
+  $('missNoteText').innerHTML='<b>注意：</b>区間化されなかった有音が <b>'+missed.length+'件</b> あります（最小区間長 '+ms+'ms 未満の短い有音など、取りこぼしの可能性）。赤い帯が該当箇所です。◀ ▶で順に移動し、「確認再生」で聞いて、レコードにするなら<b>「✓ 区間に追加」</b>（Enterでも可）、対象外なら<b>「無視」</b>で除外してください。';
+}
+function showMissNote(){
+  renderMissNoteText();
+  $('missNote').classList.remove('hidden');
+}
+$('missNoteClose').addEventListener('click',()=>$('missNote').classList.add('hidden'));
+$('chkMissed').addEventListener('change',()=>{draw();drawOvw()});
+// 候補を仮選択にして表示（取りこぼしチェック時の窓は約1分）
+function focusMiss(m){
+  pend={t0:m.t0,t1:m.t1};   // 仮選択にして、Enter／「✓区間に追加」でそのまま区間化できるように
+  sel=-1;
+  const span=Math.min(env.dur,60);
+  const t0=Math.max(0,Math.min(env.dur-span,(m.t0+m.t1)/2-span/2));
+  view={t0,t1:t0+span};
+  afterSelChange();drawOvw();
+}
+function gotoMiss(dir){
+  if(!missed.length||!env)return;
+  const c=pend?(Math.min(pend.t0,pend.t1)+Math.max(pend.t0,pend.t1))/2:(view.t0+view.t1)/2;
+  let m;
+  if(dir>0){
+    // 現在位置より後の最初の候補（なければ先頭に戻る）
+    m=missed.find(x=>x.t0>c+0.01)||missed[0];
+  }else{
+    // 現在位置より前の最後の候補（なければ末尾に戻る）
+    const before=missed.filter(x=>x.t1<c-0.01);
+    m=before.length?before[before.length-1]:missed[missed.length-1];
+  }
+  focusMiss(m);
+}
+$('btnMissNext').addEventListener('click',()=>gotoMiss(1));
+$('btnMissPrev').addEventListener('click',()=>gotoMiss(-1));
+// 確認再生：表示中の仮選択（取りこぼし候補）をその場で再生
+$('btnMissPlay').addEventListener('click',()=>{
+  if(!pend)return;
+  playRange(Math.min(pend.t0,pend.t1),Math.max(pend.t0,pend.t1));
+});
+// ✓区間に追加：候補をレコード化（Enterと同じ）して、次の候補へ
+$('btnMissAdd').addEventListener('click',()=>{
+  if(!pend)return;
+  confirmPend();
+  if(!pend&&missed.length)gotoMiss(1);   // 追加できたら次の候補へ自動移動
+});
+// 「無視」：表示中の候補を件数から除外し、次の候補へ
+$('btnMissIgnore').addEventListener('click',()=>{
+  if(!pend)return;
+  const a=Math.min(pend.t0,pend.t1), b=Math.max(pend.t0,pend.t1);
+  const m=missed.find(x=>x.t0<b&&x.t1>a);
+  if(!m)return;
+  ignoredMiss.push({t0:m.t0,t1:m.t1});
+  pend=null;
+  computeMissed();
+  if(missed.length)$('btnMissNext').click();
+  else{draw();drawOvw()}
+});
+function renumber(keepCustom){
+  const base=(wavFile?wavFile.name.replace(/\.wav$/i,''):'token').replace(/[\\\/:*?"<>|\s]+/g,'_');
+  const w=String(segs.length).length>3?String(segs.length).length:3;
+  segs.forEach((s,i)=>{if(!keepCustom||!s.id)s.id=base+'_'+String(i+1).padStart(w,'0')});
+}
+$('btnRenumber').addEventListener('click',()=>{renumber(false);renderTable();});
+
+function fillIds(){
+  // 空のIDに、既存の連番の続きを割り当てる（手動作成・分割で出来た区間用）
+  const base=(wavFile?wavFile.name.replace(/\.wav$/i,''):'token').replace(/[\\\/:*?"<>|\s]+/g,'_');
+  let mx=0;
+  segs.forEach(s=>{const m=s.id&&s.id.match(/_(\d+)$/);if(m)mx=Math.max(mx,+m[1])});
+  segs.forEach(s=>{if(!s.id)s.id=base+'_'+String(++mx).padStart(3,'0')});
+}
+function afterSegChange(){
+  segs.sort((a,b)=>a.t0-b.t0);
+  fillIds();
+  computeMissed();
+  if(typeof computeBoundaries==='function')computeBoundaries();
+  renderSpkBar();
+  renderTable();renderContext();draw();drawOvw();updateInfo();
+}
+function updateInfo(){
+  $('segInfo').textContent=segs.length+'区間'+(sel>=0&&segs[sel]?('　選択: #'+(sel+1)+' '+segs[sel].t0.toFixed(3)+'–'+segs[sel].t1.toFixed(3)+'s'):'');
+}
+
+/* ---------- 波形描画 ---------- */
+const wave=$('wave'), ovw=$('ovw');
+function fitCanvas(c){
+  const dpr=window.devicePixelRatio||1;
+  const w=c.clientWidth,h=c.clientHeight;
+  if(c.width!==w*dpr||c.height!==h*dpr){c.width=w*dpr;c.height=h*dpr}
+  const g=c.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);
+  return [g,w,h];
+}
+const tx=t=>(t-view.t0)/(view.t1-view.t0)*wave.clientWidth;
+const xt=x=>view.t0+x/wave.clientWidth*(view.t1-view.t0);
+
+const RULER_H=16, BAND_H=21, MONO='10px Menlo, Consolas, monospace';
+function niceStep(raw){
+  const p=Math.pow(10,Math.floor(Math.log10(raw)));
+  for(const m of [1,2,5,10])if(m*p>=raw)return m*p;
+  return 10*p;
+}
+function fmtTick(t,step){
+  if(step>=1){
+    const m=Math.floor(t/60),s=Math.round(t-m*60);
+    return m?m+':'+String(s).padStart(2,'0'):s+'s';
+  }
+  return t.toFixed(step>=0.1?1:step>=0.01?2:3);
+}
+function drawMiniWave(g,w,h,t0,t1,color){
+  const cy=h/2, amp=h/2*0.9, span=t1-t0;
+  g.fillStyle=color;
+  for(let x=0;x<w;x++){
+    const f0=Math.floor((t0+span*x/w)*FR), f1=Math.max(f0+1,Math.floor((t0+span*(x+1)/w)*FR));
+    if(f0>=env.mn.length)break;
+    let lo=1,hi=-1;
+    for(let f=f0;f<Math.min(f1,env.mn.length);f++){if(env.mn[f]<lo)lo=env.mn[f];if(env.mx[f]>hi)hi=env.mx[f]}
+    if(hi<lo)continue;
+    g.fillRect(x,cy-hi*amp,1,Math.max(1,(hi-lo)*amp));
+  }
+}
+function hexA(hex,a){const n=parseInt(hex.slice(1),16);return 'rgba('+(n>>16&255)+','+(n>>8&255)+','+(n&255)+','+a+')'}
+function laneH(){return speakers.length>1?17:BAND_H}
+function bandH(){return laneH()*speakers.length}
+function draw(){
+  const [g,w,h]=fitCanvas(wave);
+  if(!env)return;
+  const LH=laneH(), BH=bandH();
+  const wy0=RULER_H, wy1=h-BH, cy=(wy0+wy1)/2, amp=(wy1-wy0)/2*0.92;
+  const span=view.t1-view.t0;
+  // 背景（目盛り帯・波形・話者レーン）
+  g.fillStyle='#ffffff';g.fillRect(0,0,w,h);
+  g.fillStyle='#eef2f0';g.fillRect(0,0,w,RULER_H);g.fillRect(0,wy1,w,BH);
+  g.strokeStyle='#d3dad6';g.beginPath();g.moveTo(0,wy0+.5);g.lineTo(w,wy0+.5);g.moveTo(0,wy1+.5);g.lineTo(w,wy1+.5);g.stroke();
+  // 話者レーンの区切り線とラベル
+  const laneY=id=>wy1+speakers.indexOf(id)*LH;
+  if(speakers.length>1){
+    g.font=MONO;
+    speakers.forEach((id,li)=>{
+      const y=wy1+li*LH;
+      if(li>0){g.strokeStyle='#dde2ea';g.beginPath();g.moveTo(0,y+.5);g.lineTo(w,y+.5);g.stroke()}
+      g.fillStyle=id===activeSpk?spkColor(id):'#8da39b';
+      g.fillText(id,3,y+LH/2+3);
+    });
+  }
+  // 時間目盛り＋縦グリッド
+  const step=niceStep(span/Math.max(2,w/90));
+  g.font=MONO;
+  for(let t=Math.ceil(view.t0/step-1e-9)*step;t<=view.t1+1e-9;t+=step){
+    const x=Math.round(tx(t))+.5;
+    g.strokeStyle='#e7ece9';g.beginPath();g.moveTo(x,wy0);g.lineTo(x,wy1);g.stroke();
+    g.strokeStyle='#8da39b';g.beginPath();g.moveTo(x,RULER_H-6);g.lineTo(x,RULER_H);g.stroke();
+    g.fillStyle='#5e6c67';g.fillText(fmtTick(t,step),x+4,RULER_H-7);
+  }
+  // 中心線と波形
+  g.strokeStyle='#dde2ea';g.beginPath();g.moveTo(0,cy+.5);g.lineTo(w,cy+.5);g.stroke();
+  g.fillStyle='#828891';
+  for(let x=0;x<w;x++){
+    const f0=Math.floor((view.t0+span*x/w)*FR), f1=Math.max(f0+1,Math.floor((view.t0+span*(x+1)/w)*FR));
+    if(f0>=env.mn.length)break;
+    let lo=1,hi=-1;
+    for(let f=f0;f<Math.min(f1,env.mn.length);f++){if(env.mn[f]<lo)lo=env.mn[f];if(env.mx[f]>hi)hi=env.mx[f]}
+    if(hi<lo)continue;
+    g.fillRect(x,cy-hi*amp,1,Math.max(1,(hi-lo)*amp));
+  }
+  // しきい値の目安線（スライダー操作直後のみ表示）
+  if(Date.now()<thrShowUntil){
+    const thr=Math.pow(10,(+$('thrDb').value)/20);
+    g.strokeStyle='#b4540f';g.setLineDash([5,4]);g.beginPath();
+    g.moveTo(0,cy-thr*amp);g.lineTo(w,cy-thr*amp);
+    g.moveTo(0,cy+thr*amp);g.lineTo(w,cy+thr*amp);
+    g.stroke();g.setLineDash([]);
+    g.fillStyle='#b4540f';g.fillText('しきい値 '+$('thrDb').value+' dB',6,Math.max(wy0+12,cy-thr*amp-5));
+  }
+  // 区間（メイン領域は薄く話者色で塗り、レーンにブロック）
+  g.font=MONO;
+  segs.forEach((s,i)=>{
+    if(s.t1<view.t0||s.t0>view.t1)return;
+    const x0=tx(s.t0),x1=tx(s.t1),seld=i===sel,col=spkColor(s.spk);
+    g.fillStyle=seld?'rgba(245,185,66,.20)':hexA(col,.07);
+    g.fillRect(x0,wy0,x1-x0,wy1-wy0);
+    g.strokeStyle=seld?'#d99a14':col;g.lineWidth=seld?2:1;
+    g.beginPath();g.moveTo(x0+.5,wy0);g.lineTo(x0+.5,h);g.moveTo(x1-.5,wy0);g.lineTo(x1-.5,h);g.stroke();g.lineWidth=1;
+    // 話者レーンのブロック＋番号・ID
+    const ly=laneY(s.spk);
+    g.fillStyle=seld?'#f5b942':col;
+    g.fillRect(x0+1,ly+2,Math.max(2,x1-x0-2),LH-4);
+    if(x1-x0>22){
+      g.save();g.beginPath();g.rect(x0+1,ly,x1-x0-2,LH);g.clip();
+      g.fillStyle=seld?'#5d4203':'#fff';
+      const label=(x1-x0>80&&s.id)?(i+1)+'  '+s.id:String(i+1);
+      g.fillText(label,x0+6,ly+LH/2+3);
+      g.restore();
+    }
+    if(seld){
+      [[x0],[x1]].forEach(([x])=>{
+        g.fillStyle='#d99a14';g.fillRect(x-4,cy-11,8,22);
+        g.strokeStyle='#fff';g.strokeRect(x-3.5,cy-10.5,7,21);
+      });
+    }
+  });
+  // 取りこぼし候補（区間に入っていない有音）を強い赤で表示
+  if($('chkMissed').checked){
+    missed.forEach(m=>{
+      if(m.t1<view.t0||m.t0>view.t1)return;
+      const x0=tx(m.t0), wMis=Math.max(2,tx(m.t1)-x0);
+      g.fillStyle='rgba(217,38,38,.30)';
+      g.fillRect(x0,wy0,wMis,wy1-wy0);
+      g.fillStyle='#d92626';
+      g.fillRect(x0,wy0+1,wMis,5);
+      g.fillRect(x0+1,wy1+2,Math.max(2,wMis-2),BH-4);   // 話者レーン全体に赤ブロック（どの話者にも未割当）
+      if(wMis>18){
+        g.fillStyle='#fff';
+        g.fillText('！',x0+5,wy1+BH/2+3);
+      }
+    });
+  }
+  // 「確認再生」「✓区間に追加」は仮選択があれば有効、「無視」は仮選択が取りこぼし候補に重なっているときだけ有効
+  {
+    const p=pend?{a:Math.min(pend.t0,pend.t1),b:Math.max(pend.t0,pend.t1)}:null;
+    $('btnMissPlay').disabled=$('btnMissAdd').disabled=!p;
+    $('btnMissIgnore').disabled=!(p&&missed.some(m=>m.t0<p.b&&m.t1>p.a));
+  }
+  // 選択中ラバーバンド／Enter確定待ちの仮選択
+  const rub=(drag&&drag.mode==='create')?{t0:drag.ta,t1:drag.tb}:pend;
+  if(rub){
+    const a=Math.min(rub.t0,rub.t1),b=Math.max(rub.t0,rub.t1);
+    const x0=tx(a),x1=tx(b);
+    g.fillStyle='rgba(245,185,66,.25)';g.fillRect(x0,wy0,x1-x0,wy1-wy0);
+    g.strokeStyle='#d99a14';g.setLineDash(drag?[]:[6,4]);
+    g.strokeRect(x0+.5,wy0+.5,Math.max(1,x1-x0),wy1-wy0-1);
+    g.setLineDash([]);
+    g.fillStyle='#9a6b07';
+    g.fillText(a.toFixed(2)+' – '+b.toFixed(2)+' 秒（長さ '+(b-a).toFixed(2)+'）',x0+6,wy0+16);
+    if(!drag){
+      g.fillText('Enterで確定 ／ Escで取消',x0+6,wy0+32);
+      g.fillStyle='#d99a14';
+      g.fillRect(x0-4,cy-11,8,22);g.fillRect(x1-4,cy-11,8,22);
+      g.strokeStyle='#fff';g.strokeRect(x0-3.5,cy-10.5,7,21);g.strokeRect(x1-3.5,cy-10.5,7,21);
+    }
+  }
+  // 再生カーソル
+  if(cursorT!=null&&cursorT>=view.t0&&cursorT<=view.t1){
+    const x=Math.round(tx(cursorT))+.5;
+    g.strokeStyle='#39424d';g.beginPath();g.moveTo(x,RULER_H);g.lineTo(x,h);g.stroke();
+    g.fillStyle='#39424d';
+    g.beginPath();g.moveTo(x-5,RULER_H);g.lineTo(x+5,RULER_H);g.lineTo(x,RULER_H+7);g.closePath();g.fill();
+  }
+  drawPlayhead(g,h);
+}
+function drawPlayhead(g,h){
+  const p=$('player');
+  if(p.paused||p.currentTime<view.t0||p.currentTime>view.t1)return;
+  const x=tx(p.currentTime);
+  g.strokeStyle='#b4540f';g.lineWidth=2;
+  g.beginPath();g.moveTo(x,RULER_H);g.lineTo(x,h);g.stroke();g.lineWidth=1;
+}
+function drawOvw(){
+  const [g,w,h]=fitCanvas(ovw);
+  if(!env)return;
+  g.fillStyle='#ffffff';g.fillRect(0,0,w,h);
+  drawMiniWave(g,w,h-8,0,env.dur,'#aab2bf');
+  // 区間マーカー（話者色）
+  segs.forEach((s,i)=>{
+    g.fillStyle=i===sel?'#d99a14':hexA(spkColor(s.spk),.65);
+    g.fillRect(s.t0/env.dur*w,h-7,Math.max(1.5,(s.t1-s.t0)/env.dur*w),6);
+  });
+  // 取りこぼしマーカー（上端の赤）
+  if($('chkMissed').checked){
+    g.fillStyle='#d92626';
+    missed.forEach(m=>g.fillRect(m.t0/env.dur*w,1,Math.max(2,(m.t1-m.t0)/env.dur*w),5));
+  }
+  // 表示範囲外を減光し、表示範囲を枠で示す
+  const vx0=view.t0/env.dur*w, vx1=view.t1/env.dur*w;
+  g.fillStyle='rgba(40,50,46,.13)';
+  g.fillRect(0,0,vx0,h);g.fillRect(vx1,0,w-vx1,h);
+  g.strokeStyle='#d99a14';g.lineWidth=2;
+  g.strokeRect(vx0+1,1,Math.max(4,vx1-vx0-2),h-2);
+  g.lineWidth=1;
+}
+
+/* ---------- 波形操作 ---------- */
+let drag=null, pend=null;   // pend: Enter確定待ちの選択範囲 {t0,t1}
+let cursorT=null, downX=null;   // cursorT: 再生カーソル位置（秒）
+const evX=(e,c)=>e.clientX-c.getBoundingClientRect().left;
+function confirmPend(){
+  if(!pend)return;
+  let t0=Math.min(pend.t0,pend.t1), t1=Math.max(pend.t0,pend.t1);
+  // 同じ話者の区間と重なる部分だけ切り詰める（別話者とは重なってよい）
+  segs.forEach(s=>{
+    if(s.spk!==activeSpk)return;
+    if(s.t0<=t0&&s.t1>t0)t0=s.t1;
+    if(s.t0<t1&&s.t1>=t1)t1=s.t0;
+  });
+  if(t1-t0<0.03||overlapsSameSpk(t0,t1,activeSpk)){alert('同じ話者「'+activeSpk+'」の区間と重なるため確定できません');return}
+  const ns={t0,t1,id:'',spk:activeSpk,text:'',note:'',tv:{}};
+  segs.push(ns);
+  pend=null;
+  segs.sort((a,b)=>a.t0-b.t0);
+  sel=segs.indexOf(ns);
+  afterSegChange();
+  hideSetup();   // 手動でも区間を作ったらセットアップを隠す
+}
+window.addEventListener('keydown',e=>{
+  if(e.isComposing||e.keyCode===229)return;   // IME変換中は無視
+  if(e.key==='Escape'&&$('helpModal').classList.contains('show')){
+    e.preventDefault();$('helpModal').classList.remove('show');return;   // 説明ポップアップを閉じる方を優先
+  }
+  if(e.key!=='Enter'&&e.key!=='Escape')return;
+  const ae=document.activeElement;
+  // 入力欄・編集セルの中では通常のEnter動作を優先（ボタンにフォーカスが残っていても仮選択の確定を優先する）
+  if(ae&&(ae.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)))return;
+  if(!pend)return;
+  e.preventDefault();   // フォーカス中のボタンがEnterで再発動するのも防ぐ
+  if(e.key==='Enter')confirmPend();
+  else{pend=null;draw()}
+});
+// spk を指定するとその話者のレコードだけを対象に当たり判定（メイン領域はアクティブ話者のみ）
+function hitTest(x,spk){
+  const idxs=segs.map((s,i)=>i).filter(i=>spk==null||segs[i].spk===spk);
+  for(const i of idxs){
+    const x0=tx(segs[i].t0),x1=tx(segs[i].t1);
+    if(Math.abs(x-x0)<=6)return {mode:'edge0',i};
+    if(Math.abs(x-x1)<=6)return {mode:'edge1',i};
+  }
+  for(const i of idxs){
+    if(x>=tx(segs[i].t0)&&x<=tx(segs[i].t1))return {mode:'inside',i};
+  }
+  return {mode:'empty'};
+}
+// ポインタのY座標から、どの話者レーンか（バンド外なら null）
+function laneSpkAt(y){
+  const h=wave.clientHeight, wy1=h-bandH();
+  if(y<wy1)return null;
+  const li=Math.min(speakers.length-1,Math.max(0,Math.floor((y-wy1)/laneH())));
+  return speakers[li];
+}
+wave.addEventListener('pointerdown',e=>{
+  if(!env)return;
+  wave.setPointerCapture(e.pointerId);
+  const x=evX(e,wave), y=e.clientY-wave.getBoundingClientRect().top;
+  downX=x;
+  // 確定待ち選択の端をつかむ（最優先）
+  if(pend){
+    const p0=tx(Math.min(pend.t0,pend.t1)), p1=tx(Math.max(pend.t0,pend.t1));
+    if(Math.abs(x-p0)<=6){drag={mode:'pend0'};return}
+    if(Math.abs(x-p1)<=6){drag={mode:'pend1'};return}
+  }
+  // レーン内なら、その話者を対象に。メイン領域はアクティブ話者を対象に。
+  const laneSpk=laneSpkAt(y);
+  const targetSpk=laneSpk||activeSpk;
+  if(laneSpk)setActiveSpk(laneSpk);
+  const hit=hitTest(x,targetSpk);
+  if(hit.mode==='edge0'||hit.mode==='edge1'){sel=hit.i;setActiveSpk(segs[hit.i].spk);drag={mode:hit.mode,i:hit.i}}
+  else if(hit.mode==='inside'){sel=hit.i;setActiveSpk(segs[hit.i].spk);drag=null;pend=null;rowIntoView(hit.i)}
+  else {pend=null;drag={mode:'create',ta:xt(x),tb:xt(x)}}
+  afterSelChange();
+});
+wave.addEventListener('pointermove',e=>{
+  if(!env)return;
+  const x=evX(e,wave);
+  $('curT').textContent='カーソル位置 '+Math.max(0,Math.min(env.dur,xt(x))).toFixed(3)+' 秒';
+  if(!drag){
+    let cur=null;
+    if(pend){
+      const p0=tx(Math.min(pend.t0,pend.t1)), p1=tx(Math.max(pend.t0,pend.t1));
+      if(Math.abs(x-p0)<=6||Math.abs(x-p1)<=6)cur='ew-resize';
+    }
+    if(!cur){
+      const y=e.clientY-wave.getBoundingClientRect().top;
+      const hit=hitTest(x,laneSpkAt(y)||activeSpk);
+      cur=(hit.mode==='edge0'||hit.mode==='edge1')?'ew-resize':(hit.mode==='inside'?'pointer':'crosshair');
+    }
+    wave.style.cursor=cur;
+    return;
+  }
+  const t=Math.max(0,Math.min(env.dur,xt(x)));
+  if(drag.mode==='create'){drag.tb=t;draw();return}
+  if(drag.mode==='pend0'||drag.mode==='pend1'){
+    const a=Math.min(pend.t0,pend.t1), b=Math.max(pend.t0,pend.t1);
+    if(drag.mode==='pend0')pend={t0:Math.min(t,b-0.02),t1:b};
+    else pend={t0:a,t1:Math.max(t,a+0.02)};
+    draw();return;
+  }
+  const s=segs[drag.i], [lo,hi]=spkBounds(drag.i);
+  if(drag.mode==='edge0')s.t0=Math.max(lo,Math.min(s.t1-0.02,t));
+  else s.t1=Math.min(hi,Math.max(s.t0+0.02,t));
+  draw();updateInfo();updateRowTimes(drag.i);
+});
+wave.addEventListener('pointerup',e=>{
+  const x=evX(e,wave);
+  const isClick=downX!=null&&Math.abs(x-downX)<3;   // ほぼ動かなければクリック扱い
+  downX=null;
+  if(drag&&drag.mode==='create'){
+    const t0=Math.min(drag.ta,drag.tb), t1=Math.max(drag.ta,drag.tb);
+    pend=(!isClick&&t1-t0>=0.03)?{t0,t1}:null;   // Enterで確定するまでは仮選択
+    if(isClick)cursorT=Math.max(0,Math.min(env.dur,xt(x)));
+    drag=null;draw();return;
+  }
+  if(drag)drawOvw();
+  if(isClick){cursorT=Math.max(0,Math.min(env.dur,xt(x)));draw()}
+  drag=null;
+});
+wave.addEventListener('dblclick',e=>{
+  const x=evX(e,wave), y=e.clientY-wave.getBoundingClientRect().top;
+  const hit=hitTest(x,laneSpkAt(y)||activeSpk);
+  if(hit.mode!=='inside'&&hit.mode!=='edge0'&&hit.mode!=='edge1')return;
+  const i=hit.i, t=xt(x), s=segs[i];
+  if(t-s.t0<0.02||s.t1-t<0.02)return;
+  segs.splice(i+1,0,{t0:t,t1:s.t1,id:'',spk:s.spk,text:'',note:'',tv:{}});
+  s.t1=t;
+  sel=i+1;afterSegChange();
+});
+wave.addEventListener('wheel',e=>{
+  if(!env)return;e.preventDefault();
+  const span=view.t1-view.t0;
+  const horiz=Math.abs(e.deltaX)>Math.abs(e.deltaY);
+  if(horiz||e.shiftKey){
+    // 横スクロール（トラックパッドの横スワイプ／Shift＋ホイール）＝横移動
+    const d=span*((horiz?e.deltaX:e.deltaY)/wave.clientWidth)*1.5;
+    const t0=Math.max(0,Math.min(env.dur-span,view.t0+d));
+    view={t0,t1:t0+span};
+  }else{
+    // 縦ホイールのみズーム
+    const c=xt(evX(e,wave)), f=e.deltaY>0?1.25:0.8;
+    let ns=Math.min(env.dur,Math.max(0.05,span*f));
+    let t0=c-(c-view.t0)*ns/span;
+    t0=Math.max(0,Math.min(env.dur-ns,t0));
+    view={t0,t1:t0+ns};
+  }
+  draw();drawOvw();
+},{passive:false});
+ovw.addEventListener('pointerdown',e=>{ovwSeek(e);ovw.setPointerCapture(e.pointerId);ovw.onpointermove=ovwSeek});
+ovw.addEventListener('pointerup',()=>ovw.onpointermove=null);
+function ovwSeek(e){
+  if(!env)return;
+  const span=view.t1-view.t0;
+  let c=evX(e,ovw)/ovw.clientWidth*env.dur;
+  let t0=Math.max(0,Math.min(env.dur-span,c-span/2));
+  view={t0,t1:t0+span};draw();drawOvw();
+}
+$('btnZoomIn').addEventListener('click',()=>zoomCenter(0.6));
+$('btnZoomOut').addEventListener('click',()=>zoomCenter(1.7));
+$('btnZoomFit').addEventListener('click',()=>{view={t0:0,t1:env.dur};draw();drawOvw()});
+function zoomCenter(f){
+  const c=(view.t0+view.t1)/2, ns=Math.min(env.dur,Math.max(0.05,(view.t1-view.t0)*f));
+  let t0=Math.max(0,Math.min(env.dur-ns,c-ns/2));
+  view={t0,t1:t0+ns};draw();drawOvw();
+}
+// 波形カードのsticky位置をヘッダーの高さに追従させる
+function syncStickyTop(){
+  $('waveCol').style.top=(document.querySelector('header').offsetHeight+4)+'px';
+}
+syncStickyTop();
+window.addEventListener('resize',()=>{syncStickyTop();if(env){draw();drawOvw()}});
+
+/* ---------- 説明ポップアップ ---------- */
+document.addEventListener('click',e=>{
+  const hb=e.target.closest('.helpbtn');
+  if(hb){
+    const src=$(hb.dataset.help);
+    $('helpTitle').textContent=hb.dataset.title||'説明';
+    $('helpBody').innerHTML=src?src.innerHTML:'';
+    $('helpModal').classList.add('show');
+    return;
+  }
+  if(e.target.id==='helpModal'||e.target.id==='helpClose')$('helpModal').classList.remove('show');
+});
+
+/* ---------- 波形ワイプ（PiP）の移動・最小化 ---------- */
+$('pipMin').addEventListener('click',e=>{
+  e.stopPropagation();
+  const col=$('waveCol');
+  col.classList.toggle('min');
+  $('pipMin').textContent=col.classList.contains('min')?'＋':'－';
+  if(!col.classList.contains('min')&&env){draw();drawOvw()}
+});
+
+/* ---------- 選択区間の操作 ---------- */
+function afterSelChange(){
+  // 選択レコードが別ページにあれば自動でページを切り替える
+  if(sel>=0){
+    const p=Math.floor(sel/PAGE);
+    if(p!==page){page=p;renderTable()}
+  }
+  document.querySelectorAll('#tb tr').forEach(tr=>tr.classList.toggle('selrow',+tr.dataset.i===sel));
+  document.querySelectorAll('#ctxBody .ctxrec').forEach(r=>{
+    const on=+r.dataset.i===sel;r.classList.toggle('cur',on);if(on)r.scrollIntoView({block:'nearest'});
+  });
+  draw();updateInfo();
+}
+// 表から選択・再生したとき、波形の窓をその区間中心の20秒にする
+function focusSeg(i){
+  const s=segs[i];
+  if(!s||!env)return;
+  const span=Math.min(env.dur,Math.max(20,(s.t1-s.t0)+2));   // 基本20秒（区間が長ければ全体＋余白）
+  const c=(s.t0+s.t1)/2;
+  const t0=Math.max(0,Math.min(env.dur-span,c-span/2));
+  view={t0,t1:t0+span};
+  draw();drawOvw();
+}
+$('btnDelete').addEventListener('click',()=>{
+  if(sel<0)return;
+  const s=segs[sel];
+  if((s.text||s.note)&&!confirm('注釈が入っています。削除しますか？'))return;
+  segs.splice(sel,1);sel=Math.min(sel,segs.length-1);afterSegChange();
+});
+$('btnMergePrev').addEventListener('click',()=>mergeSel(-1));
+$('btnMergeNext').addEventListener('click',()=>mergeSel(1));
+function mergeSel(dir){
+  if(sel<0)return;
+  const j=sel+dir;
+  if(j<0||j>=segs.length)return;
+  const a=segs[Math.min(sel,j)], b=segs[Math.max(sel,j)];
+  a.t1=b.t1;
+  a.text=[a.text,b.text].filter(Boolean).join(' ');
+  a.note=[a.note,b.note].filter(Boolean).join(' / ');
+  segs.splice(Math.max(sel,j),1);
+  sel=Math.min(sel,j);afterSegChange();
+}
+
+/* ---------- 再生 ---------- */
+const player=$('player');
+let playEnd=null,rafId=null;
+function playRange(t0,t1){
+  player.currentTime=t0;
+  playEnd=t1;
+  player.play().catch(()=>{});
+}
+function playSeg(i){
+  if(i<0||!segs[i])return;
+  playRange(segs[i].t0,segs[i].t1);
+}
+player.addEventListener('play',()=>{
+  cancelAnimationFrame(rafId);
+  const loop=()=>{
+    if(playEnd!==null&&player.currentTime>=playEnd){player.pause();playEnd=null}
+    draw();
+    if(!player.paused)rafId=requestAnimationFrame(loop);
+  };
+  rafId=requestAnimationFrame(loop);
+});
+player.addEventListener('pause',()=>{cancelAnimationFrame(rafId);draw()});
+$('btnPlaySel').addEventListener('click',()=>{
+  if(pend)playRange(Math.min(pend.t0,pend.t1),Math.max(pend.t0,pend.t1));
+  else playSeg(sel);
+});
+function playFromCursor(){
+  if(!env)return;
+  player.currentTime=cursorT!=null?cursorT:view.t0;
+  playEnd=null;   // 区間末尾で止まらず流し聴き
+  player.play().catch(()=>{});
+}
+$('btnPlayCur').addEventListener('click',playFromCursor);
+$('btnStop').addEventListener('click',()=>{player.pause();playEnd=null});
+// Space＝カーソル位置から再生／一時停止（停止位置にカーソルが移る）
+window.addEventListener('keydown',e=>{
+  if(e.isComposing||e.keyCode===229)return;   // IME変換中は無視
+  if(e.key!==' '&&e.code!=='Space')return;
+  const ae=document.activeElement;
+  if(ae&&(ae.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)))return;
+  if(!env)return;
+  e.preventDefault();
+  if(ae&&ae.tagName==='BUTTON')ae.blur();   // Spaceでボタンが再発動しないように
+  if(!player.paused){cursorT=player.currentTime;player.pause()}
+  else playFromCursor();
+});
+
+/* ---------- 注釈テーブル ---------- */
+function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')}
+
+/* ---------- カスタム層・インターリニアグロス ---------- */
+let glossOn=false;
+let tiersDef=[];   // {name, parent}  parent: 'seg'|'morph'|他の層名
+let page=0, viewLayer='all', ctxLayer='text';   // 注釈表のページ・表示レイヤー抽出・文脈ウィンドウのレイヤー
+const PAGE=5;
+let morphSrc='text';   // morph層の親＝形態素分割のもとになる層（'text'＝テクスト、または区間系カスタム層名）
+function morphSrcText(s){return morphSrc==='text'?s.text:String((s.tv||{})[morphSrc]||'')}
+
+// 層構成プリセット（text・transは表の固定列。レイヤー名は text/udl/morph/gloss/pos/trans で統一）
+const PRESETS={
+  basic:{glossOn:false,morphSrc:'text',tiers:[]},
+  standard:{glossOn:true,morphSrc:'text',tiers:[{name:'gloss',parent:'morph'}]},
+  udl:{glossOn:true,morphSrc:'udl',tiers:[{name:'udl',parent:'seg'},{name:'gloss',parent:'morph'}]}
+};
+function detectPreset(){
+  const sig=tiersDef.map(t=>t.name+':'+t.parent).join(',');
+  for(const [k,p] of Object.entries(PRESETS)){
+    if(p.glossOn===glossOn&&p.morphSrc===morphSrc&&p.tiers.map(t=>t.name+':'+t.parent).join(',')===sig)return k;
+  }
+  return 'custom';
+}
+$('tierPreset').addEventListener('change',()=>{
+  const p=PRESETS[$('tierPreset').value];
+  if(!p){$('tierPreset').value=detectPreset();return}
+  // 新構成に含まれない層に入力済みデータがあれば確認
+  const newNames=p.tiers.map(t=>t.name);
+  const losing=tiersDef.filter(t=>!newNames.includes(t.name)&&segs.some(s=>{
+    const v=(s.tv||{})[t.name];
+    return Array.isArray(v)?v.some(x=>x):!!v;
+  }));
+  if(losing.length&&!confirm('層「'+losing.map(t=>t.name).join('・')+'」の入力内容は表に表示されなくなります（プロジェクト保存のデータには残ります）。層構成を変更しますか？')){
+    $('tierPreset').value=detectPreset();return;
+  }
+  morphSrc=p.morphSrc;
+  tiersDef=p.tiers.map(t=>({name:t.name,parent:t.parent}));
+  refreshTierUI();renderTable();
+});
+const RESERVED=['ID','id','spk','text','trans','morph','bdr','wbdr'];   // 固定列・派生層・境界層と同名は不可
+
+// 層の粒度を親をたどって解決する
+function tierLevel(name){
+  let cur=tiersDef.find(t=>t.name===name), hop=0;
+  while(cur&&hop++<20){
+    if(cur.parent==='morph')return 'morph';
+    if(cur.parent==='seg')return 'seg';
+    cur=tiersDef.find(t=>t.name===cur.parent);
+  }
+  return 'seg';
+}
+function morphTiers(){return tiersDef.filter(t=>tierLevel(t.name)==='morph')}
+function segTiers(){return tiersDef.filter(t=>tierLevel(t.name)==='seg')}
+// 親→子の順に並べる（EAF出力用）
+function tiersInOrder(){
+  const placed=[], names=new Set(['seg','morph']);
+  let rest=tiersDef.slice(), guard=0;
+  while(rest.length&&guard++<100){
+    rest=rest.filter(t=>{
+      if(names.has(t.parent)){placed.push(t);names.add(t.name);return false}
+      return true;
+    });
+  }
+  return placed.concat(rest);
+}
+function refreshTierUI(){
+  glossOn=morphTiers().length>0;   // morph親の層が1つでもあればmorph分割ON（独立チェックは廃止）
+  // 親の選択肢
+  $('newTierParent').innerHTML='<option value="seg">親：区間（text直下）</option>'
+    +'<option value="morph">親：morph（形態素ごと）</option>'
+    +tiersDef.map(t=>'<option value="'+escHtml(t.name)+'">親：'+escHtml(t.name)+'</option>').join('');
+  // morph層の親（分割元）の選択肢＝text＋区間系カスタム層
+  const ms=$('morphSrc');
+  ms.innerHTML='<option value="text">text（表層形）</option>'
+    +segTiers().map(t=>'<option value="'+escHtml(t.name)+'">'+escHtml(t.name)+'</option>').join('');
+  ms.value=(morphSrc!=='text'&&segTiers().some(t=>t.name===morphSrc))?morphSrc:'text';
+  morphSrc=ms.value;
+  // 選べる区間層があり、morphを使っているときだけ「分割元」を表示（textだけなら選択肢がなく無意味）
+  $('morphSrcRow').style.display=(glossOn&&segTiers().length>0)?'':'none';
+  // 表示レイヤーの選択肢（text・trans＋morph＋カスタム層）
+  const vl=$('viewLayer');
+  vl.innerHTML='<option value="all">すべてのレイヤー</option>'
+    +'<option value="spk">spk（話者）のみ</option>'
+    +'<option value="text">text のみ</option>'
+    +'<option value="trans">trans のみ</option>'
+    +(glossOn?'<option value="morph">morph のみ</option>':'')
+    +tiersDef.map(t=>'<option value="'+escHtml(t.name)+'">'+escHtml(t.name)+' のみ</option>').join('');
+  vl.value=[...vl.options].some(o=>o.value===viewLayer)?viewLayer:'all';
+  viewLayer=vl.value;
+  // 文脈ウィンドウのレイヤー選択肢（text・trans・spk・morph＋カスタム層。1レイヤー指定のみ）
+  const cl=$('ctxLayer');
+  cl.innerHTML='<option value="text">text</option>'
+    +'<option value="trans">trans</option>'
+    +(speakers.length>1?'<option value="spk">spk（話者）</option>':'')
+    +(glossOn?'<option value="morph">morph</option>':'')
+    +tiersDef.map(t=>'<option value="'+escHtml(t.name)+'">'+escHtml(t.name)+'</option>').join('');
+  cl.value=[...cl.options].some(o=>o.value===ctxLayer)?ctxLayer:'text';
+  ctxLayer=cl.value;
+  // プリセット表示を現在の構成に同期
+  $('tierPreset').value=detectPreset();
+  // チップ
+  $('tierChips').innerHTML=tiersDef.map((t,k)=>'<span class="tierchip">'+escHtml(t.name)
+    +'<span class="tp">← '+escHtml(t.parent==='seg'?'区間':t.parent)+'</span>'
+    +'<button type="button" data-del="'+k+'" title="この層を削除">✕</button></span>').join('');
+  // 境界コーディングのチェックボックスを層の有無に同期
+  if($('chkBdr'))$('chkBdr').checked=tiersDef.some(t=>t.name==='bdr');
+  if($('chkWbdr'))$('chkWbdr').checked=tiersDef.some(t=>t.name==='wbdr');
+}
+$('tierChips').addEventListener('click',e=>{
+  const k=e.target.dataset.del;if(k===undefined)return;
+  const t=tiersDef[+k];
+  if(tiersDef.some(x=>x.parent===t.name)){alert('「'+t.name+'」を親にしている層があるため削除できません。先に子の層を削除してください');return}
+  const hasData=segs.some(s=>{
+    const v=(s.tv||{})[t.name];
+    return Array.isArray(v)?v.some(x=>x):!!v;
+  });
+  if(hasData&&!confirm('「'+t.name+'」には入力済みのデータがあります。層を削除しますか？（データは書き出されなくなります）'))return;
+  tiersDef.splice(+k,1);
+  refreshTierUI();renderTable();
+});
+$('btnAddTier').addEventListener('click',()=>{
+  const name=$('newTierName').value.trim();
+  if(!name){alert('層の名前を入力してください');return}
+  if(RESERVED.includes(name)){alert('「'+name+'」は予約された名前（ID・text・trans・morph）のため層名に使えません');return}
+  if(tiersDef.some(t=>t.name===name)){alert('「'+name+'」という層は既にあります');return}
+  const parent=$('newTierParent').value;
+  tiersDef.push({name,parent});   // morph親の層を足せば refreshTierUI で glossOn が立つ
+  $('newTierName').value='';
+  refreshTierUI();renderTable();
+});
+$('morphSrc').addEventListener('change',()=>{
+  morphSrc=$('morphSrc').value;
+  refreshTierUI();renderTable();
+});
+refreshTierUI();
+
+// テクストを空白で単語に、- = + で形態素に分割（区切り記号は後続形態素の頭に付く）
+function morphSplit(text){
+  return String(text||'').trim().split(/\s+/).filter(Boolean)
+    .map(wd=>wd.split(/(?=[-=+])/).filter(Boolean));
+}
+// 明示的な形態素（EAF取り込みなど）があればそれを使い、なければテキストから機械分割
+function hasExplicitMorphs(s){return Array.isArray(s.morphs)&&s.morphs.length>0}
+function flatMorphs(s){return hasExplicitMorphs(s)?s.morphs.slice():morphSplit(morphSrcText(s)).flat()}
+function morphLineOf(s){
+  if(hasExplicitMorphs(s))return s.morphs.join('-');
+  return morphSplit(morphSrcText(s)).map(w=>w.join('')).join(' ');
+}
+// morph系の層を1行に合成（例: go-EP-PST）。明示形態素なら "-" 連結、機械分割なら区切り記号を踏襲
+function ilgLineOf(s,f){
+  if(hasExplicitMorphs(s)){
+    const arr=(s.tv||{})[f]||[];
+    return s.morphs.map((m,k)=>arr[k]||'').join('-');
+  }
+  let k=0;
+  return morphSplit(morphSrcText(s)).map(w=>w.map((m,j)=>{
+    const sep=/^[-=+]/.test(m)?m[0]:'-';
+    const v=(((s.tv||{})[f])||[])[k++]||'';
+    return (j?sep:'')+v;
+  }).join('')).join(' ');
+}
+function tierRowsOn(){return glossOn||segTiers().length>0}
+
+/* ---------- 文・語境界のコーディング（bdr / wbdr 層） ---------- */
+const hasBdr=()=>tiersDef.some(t=>t.name==='bdr');
+const hasWbdr=()=>tiersDef.some(t=>t.name==='wbdr');
+const isEosMorph=m=>/[.．。!?！？]$/.test(String(m||''));
+// 各形態素の直前にあった区切り文字列（テキストに対して flatMorphs を整列して復元）
+function morphDelims(s){
+  const ms=flatMorphs(s).map(m=>String(m).replace(/^[-=+]+/,''));   // 機械分割の頭の区切りは外す
+  const text=String(morphSrcText(s)||'');
+  const out=[]; let pos=0;
+  for(const m of ms){
+    let before='';
+    while(pos<text.length&&/[\s=+\-]/.test(text[pos])){before+=text[pos++]}
+    if(text.substr(pos,m.length)===m){pos+=m.length}
+    else{const idx=text.indexOf(m,pos);if(idx>=0){before+=text.slice(pos,idx);pos=idx+m.length}}
+    out.push(before);
+  }
+  return out;
+}
+// 語境界（空白・=）。形態素ごとに BOW / EOW / I（単独形態素語は BOW）
+function wbdrCodes(s){
+  const ms=flatMorphs(s), before=morphDelims(s), wb=d=>/[\s=]/.test(d||'');
+  return ms.map((m,i)=>{
+    const start=i===0||wb(before[i]);
+    const end=i===ms.length-1||wb(before[i+1]);
+    return start?'BOW':end?'EOW':'I';
+  });
+}
+// bdrは話者ごとの形態素ストリームを時間順にたどる（文はレコードをまたぐことがある）
+function computeBoundaries(){
+  if(hasWbdr())segs.forEach(s=>{s.tv=s.tv||{};s.tv.wbdr=wbdrCodes(s)});
+  if(hasBdr()){
+    speakers.forEach(spk=>{
+      let atStart=true;   // 文頭か
+      segs.filter(x=>x.spk===spk).forEach(s=>{   // segs は t0 昇順
+        s.tv=s.tv||{}; const ms=flatMorphs(s), codes=[];
+        ms.forEach(m=>{
+          const eos=isEosMorph(m);
+          codes.push(atStart?'BOS':eos?'EOS':'I');   // 文頭優先（単独文は BOS）
+          atStart=eos;   // ピリオドで終わったら次は文頭
+        });
+        s.tv.bdr=codes;
+      });
+    });
+  }
+}
+// チェックで層を追加／削除（morph系・読み取り専用の自動コーディング層）
+function toggleBoundary(name,on){
+  const exists=tiersDef.some(t=>t.name===name);
+  if(on&&!exists){
+    tiersDef.push({name,parent:'morph'});   // morph親なので refreshTierUI で glossOn が立つ
+  }else if(!on&&exists){
+    tiersDef=tiersDef.filter(t=>t.name!==name);
+    segs.forEach(s=>{if(s.tv)delete s.tv[name]});
+  }
+  refreshTierUI();computeBoundaries();renderTable();renderContext();
+}
+$('chkBdr').addEventListener('change',()=>toggleBoundary('bdr',$('chkBdr').checked));
+$('chkWbdr').addEventListener('change',()=>toggleBoundary('wbdr',$('chkWbdr').checked));
+
+/* ---------- 文脈ウィンドウ（レコードを連結表示） ---------- */
+function layerValueOf(s,layer){
+  if(layer==='text')return s.text;
+  if(layer==='trans')return s.note;
+  if(layer==='spk')return s.spk||'';
+  if(layer==='morph')return morphLineOf(s);
+  const t=tiersDef.find(x=>x.name===layer);
+  if(!t)return s.text;
+  return tierLevel(t.name)==='morph'?ilgLineOf(s,layer):((s.tv||{})[layer]||'');
+}
+function renderContext(){
+  const box=$('ctxBody');if(!box)return;
+  if(!segs.length){box.innerHTML='<span class="note">レコードを作ると、ここに連続表示されます。</span>';return}
+  const bdrViz=hasBdr();   // 文境界コーディング中は文末で区切って表示
+  box.innerHTML=segs.map((s,i)=>{
+    const v=layerValueOf(s,ctxLayer);
+    const col=speakers.length>1?spkColor(s.spk):'';
+    const disp=v?escHtml(v):'<span class="ctxempty">·'+(i+1)+'</span>';
+    let html='<span class="ctxrec'+(i===sel?' cur':'')+'" data-i="'+i+'" title="#'+(i+1)+(speakers.length>1?(' '+escHtml(s.spk)):'')+'"'
+      +(col?' style="border-bottom:2px solid '+col+'"':'')+'>'+disp+'</span>';
+    // 文末（最後の形態素が EOS、または単独文の BOS でピリオド終わり）で区切りを入れる
+    if(bdrViz){
+      const bc=(s.tv||{}).bdr||[]; const ms=flatMorphs(s);
+      const endsSentence=ms.length&&(bc[ms.length-1]==='EOS'||(bc[ms.length-1]==='BOS'&&isEosMorph(ms[ms.length-1])));
+      if(endsSentence)html+='<span class="ctxbreak">‖</span><br>';
+    }
+    return html;
+  }).join(' ');
+  const cur=box.querySelector('.ctxrec.cur');if(cur)cur.scrollIntoView({block:'nearest'});
+}
+$('ctxLayer').addEventListener('change',()=>{ctxLayer=$('ctxLayer').value;renderContext()});
+$('ctxBody').addEventListener('click',e=>{
+  const r=e.target.closest('.ctxrec');if(!r)return;
+  const i=+r.dataset.i;if(isNaN(i)||!segs[i])return;
+  sel=i;setActiveSpk(segs[i].spk);afterSelChange();focusSeg(i);
+});
+
+/* ---------- 表示レイヤーの抽出とページング（5件/ページ） ---------- */
+function visCols(){
+  return {spk:viewLayer==='all'||viewLayer==='spk',
+          text:viewLayer==='all'||viewLayer==='text',
+          trans:viewLayer==='all'||viewLayer==='trans'};
+}
+function colCount(){const v=visCols();return 6+(v.spk?1:0)+(v.text?1:0)+(v.trans?1:0)}
+// サブ行（グロス行）を表示するか
+function subrowOn(){
+  if(viewLayer==='text'||viewLayer==='trans'||viewLayer==='spk')return false;
+  if(viewLayer==='all')return tierRowsOn();
+  if(viewLayer==='morph')return glossOn;
+  const t=tiersDef.find(x=>x.name===viewLayer);
+  if(!t)return false;
+  return tierLevel(t.name)==='morph'?glossOn:true;
+}
+function glossRowHtml(s,i){
+  const tv=s.tv||{};
+  let inner='';
+  const tline=t=>'<div class="tline"><span class="tlbl">'+escHtml(t.name)+'</span>'
+    +'<div class="tval" contenteditable="true" data-t="'+escHtml(t.name)+'">'+escHtml(tv[t.name]||'')+'</div></div>';
+  // morphの分割元になっている層はグリッドの上に表示（全レイヤー表示時のみ）
+  const srcTier=morphSrc!=='text'?segTiers().find(t=>t.name===morphSrc):null;
+  if(viewLayer==='all'&&glossOn&&srcTier)inner+=tline(srcTier);
+  // ILGグリッド（morph＋morph系の層。抽出時は該当層だけに絞る）
+  const showIlg=glossOn&&(viewLayer==='all'||viewLayer==='morph'||morphTiers().some(t=>t.name===viewLayer));
+  if(showIlg){
+    let mts=morphTiers();
+    if(viewLayer==='morph')mts=[];
+    else if(viewLayer!=='all')mts=mts.filter(t=>t.name===viewLayer);
+    // 明示形態素があればフラット表示、なければテキストを単語＋形態素にグループ表示
+    const words=hasExplicitMorphs(s)?[s.morphs]:morphSplit(morphSrcText(s));
+    let k=0;
+    const cols=words.map(ws=>'<div class="ilg-word">'+ws.map(m=>{
+      const mi=k++;
+      return '<div class="ilg-col"><div class="ilg-m">'+escHtml(m)+'</div>'
+        +mts.map(t=>{const ro=(t.name==='bdr'||t.name==='wbdr');
+          return '<div class="ilg-g'+(ro?' ro':'')+'"'+(ro?'':' contenteditable="true"')+' data-f="'+escHtml(t.name)+'" data-mi="'+mi+'" title="'+escHtml(t.name)+(ro?'（自動コーディング）':'')+'">'+escHtml(((tv[t.name])||[])[mi]||'')+'</div>';}).join('')
+        +'</div>';
+    }).join('')+'</div>').join('');
+    inner+='<div class="ilg"><div class="ilg-lbl"><div>morph</div>'+mts.map(t=>'<div>'+escHtml(t.name)+'</div>').join('')+'</div>'
+      +(k?cols:'<span class="note">'+escHtml(morphSrc==='text'?'text':morphSrc)+' を入力すると形態素に分割されます（- ＝ ＋ が区切り）</span>')
+      +'</div>';
+  }
+  // 区間系の層（抽出時は該当層だけ）
+  let sts=segTiers().filter(t=>!(viewLayer==='all'&&glossOn&&srcTier&&t.name===srcTier.name));
+  if(viewLayer!=='all')sts=sts.filter(t=>t.name===viewLayer);
+  inner+=sts.map(tline).join('');
+  return '<tr class="glossrow" data-i="'+i+'"><td colspan="2"></td><td colspan="'+(colCount()-2)+'">'+inner+'</td></tr>';
+}
+function updatePager(){
+  const n=segs.length;
+  const start=n?page*PAGE+1:0, end=Math.min(n,page*PAGE+PAGE);
+  $('pgInfo').textContent=n?(start+'–'+end+' / '+n+'件'):'0件';
+  $('btnPgPrev').disabled=page<=0;
+  $('btnPgNext').disabled=(page+1)*PAGE>=n;
+}
+function renderTable(){
+  const tb=$('tb');
+  page=Math.max(0,Math.min(page,Math.max(0,Math.ceil(segs.length/PAGE)-1)));
+  const v=visCols(), start=page*PAGE, end=Math.min(segs.length,start+PAGE);
+  $('tbHead').innerHTML='<tr><th>#</th><th>再生</th><th>ID</th>'
+    +(v.spk?'<th>spk</th>':'')
+    +(v.text?'<th>text</th>':'')+(v.trans?'<th>trans</th>':'')
+    +'<th>開始（秒）</th><th>終了（秒）</th><th></th></tr>';
+  tb.innerHTML=segs.slice(start,end).map((s,k)=>{
+    const i=start+k;
+    let h='<tr data-i="'+i+'"'+(i===sel?' class="selrow"':'')+'>'
+      +'<td class="num">'+(i+1)+'</td>'
+      +'<td><button type="button" class="rowbtn play">▶</button></td>'
+      +'<td contenteditable="true" data-k="id">'+escHtml(s.id)+'</td>'
+      +(v.spk?'<td contenteditable="true" data-k="spk" title="話者ID">'+escHtml(s.spk||'')+'</td>':'')
+      +(v.text?'<td contenteditable="true" data-k="text">'+escHtml(s.text)+'</td>':'')
+      +(v.trans?'<td contenteditable="true" data-k="note">'+escHtml(s.note)+'</td>':'')
+      +'<td contenteditable="true" data-k="t0" class="num">'+s.t0.toFixed(3)+'</td>'
+      +'<td contenteditable="true" data-k="t1" class="num">'+s.t1.toFixed(3)+'</td>'
+      +'<td><button type="button" class="rowbtn del" title="このレコード（区間指定と注釈）を削除します。音声は変更されません">✕</button></td></tr>';
+    if(subrowOn())h+=glossRowHtml(s,i);
+    return h;
+  }).join('');
+  updatePager();
+}
+$('btnPgPrev').addEventListener('click',()=>{page--;renderTable()});
+$('btnPgNext').addEventListener('click',()=>{page++;renderTable()});
+$('viewLayer').addEventListener('change',()=>{viewLayer=$('viewLayer').value;renderTable()});
+function rowIntoView(i){
+  const tr=$('tb').querySelector('tr[data-i="'+i+'"]');
+  if(tr)tr.scrollIntoView({block:'nearest',behavior:'smooth'});
+}
+function updateRowTimes(i){
+  const tr=$('tb').querySelector('tr[data-i="'+i+'"]:not(.glossrow)');
+  if(!tr)return;
+  tr.querySelector('[data-k="t0"]').textContent=segs[i].t0.toFixed(3);
+  tr.querySelector('[data-k="t1"]').textContent=segs[i].t1.toFixed(3);
+}
+$('tb').addEventListener('click',e=>{
+  const tr=e.target.closest('tr');if(!tr)return;
+  const i=+tr.dataset.i;if(isNaN(i))return;
+  if(e.target.classList.contains('play')){sel=i;afterSelChange();focusSeg(i);playSeg(i);return}
+  if(e.target.classList.contains('del')){
+    const s=segs[i];
+    if((s.text||s.note)&&!confirm('注釈が入っています。削除しますか？'))return;
+    segs.splice(i,1);sel=-1;afterSegChange();return;
+  }
+  if(sel!==i){sel=i;afterSelChange();focusSeg(i)}
+});
+// セル編集でフォーカスが別の行に移ったときも、選択と波形の窓を追従させる
+$('tb').addEventListener('focusin',e=>{
+  const tr=e.target.closest('tr');if(!tr)return;
+  const i=+tr.dataset.i;
+  if(isNaN(i)||i===sel)return;
+  sel=i;afterSelChange();focusSeg(i);
+});
+$('tb').addEventListener('focusout',e=>{
+  // グロス・品詞セル
+  const gp=e.target.closest('[data-f]');
+  if(gp){
+    const gi=+gp.closest('tr').dataset.i, gs=segs[gi], f=gp.dataset.f, mi=+gp.dataset.mi;
+    if(gs){gs.tv=gs.tv||{};gs.tv[f]=gs.tv[f]||[];gs.tv[f][mi]=gp.textContent.replace(/ /g,' ').trim()}
+    return;
+  }
+  // 区間系のカスタム層のセル
+  const tp=e.target.closest('[data-t]');
+  if(tp){
+    const gi2=+tp.closest('tr').dataset.i, gs2=segs[gi2];
+    if(gs2){
+      gs2.tv=gs2.tv||{};gs2.tv[tp.dataset.t]=tp.textContent.replace(/\u00a0/g,' ').trim();
+      // morph\u306e\u5206\u5272\u5143\u304c\u5909\u308f\u3063\u305f\u3089\u5f62\u614b\u7d20\u5206\u5272\u3092\u3084\u308a\u76f4\u3059
+      if(glossOn&&tp.dataset.t===morphSrc){
+        const gr2=$('tb').querySelector('tr.glossrow[data-i="'+gi2+'"]');
+        if(gr2)gr2.outerHTML=glossRowHtml(gs2,gi2);
+      }
+    }
+    return;
+  }
+  const td=e.target.closest('td[contenteditable]');if(!td)return;
+  const tr=td.closest('tr'), i=+tr.dataset.i, k=td.dataset.k, s=segs[i];
+  if(!s)return;
+  const v=td.textContent.replace(/ /g,' ').trim();
+  if(k==='t0'||k==='t1'){
+    const num=parseFloat(v);
+    if(isFinite(num)){
+      if(k==='t0')s.t0=Math.max(0,Math.min(s.t1-0.02,num));
+      else s.t1=Math.min(env.dur,Math.max(s.t0+0.02,num));
+    }
+    td.textContent=(k==='t0'?s.t0:s.t1).toFixed(3);
+    draw();drawOvw();updateInfo();
+  }else if(k==='spk'){
+    const newSpk=v||speakers[0];
+    if(newSpk!==s.spk){
+      if(overlapsSameSpk(s.t0,s.t1,newSpk,i)){
+        alert('話者「'+newSpk+'」の区間と時刻が重なるため、この話者には変更できません');
+        td.textContent=s.spk;return;
+      }
+      ensureSpk(newSpk);s.spk=newSpk;setActiveSpk(newSpk);
+      computeMissed();draw();drawOvw();renderSpkBar();
+    }
+    td.textContent=s.spk;
+  }else{
+    s[k]=v;
+    // テクストが変わったら形態素分割をやり直してグロス行を更新
+    if(k==='text'&&tierRowsOn()){
+      // 境界コーディング中は文がレコードをまたぐので全体を再計算・再描画
+      if(hasBdr()||hasWbdr()){computeBoundaries();renderTable();renderContext()}
+      else{const gr=$('tb').querySelector('tr.glossrow[data-i="'+i+'"]');if(gr)gr.outerHTML=glossRowHtml(s,i)}
+    }
+  }
+});
+// セル編集後に文脈ウィンドウを更新（値更新ハンドラの後に走らせる）
+$('tb').addEventListener('focusout',()=>setTimeout(renderContext,0));
+$('tb').addEventListener('keydown',e=>{
+  if(e.isComposing||e.keyCode===229)return;   // 日本語入力（IME）の変換確定Enterは無視
+  // morph系のセル: Enter＝次の形態素の同じ欄へ／区間系のセル: Enter＝次の区間の同じ層へ
+  const gp=e.target.closest('[data-f],[data-t]');
+  if(gp){
+    if(e.key==='Enter'){
+      e.preventDefault();
+      const attr=gp.hasAttribute('data-f')?'data-f':'data-t';
+      const all=[...$('tb').querySelectorAll('['+attr+'="'+gp.getAttribute(attr)+'"]')];
+      const next=all[all.indexOf(gp)+1];
+      if(next)next.focus();else gp.blur();
+    }
+    if(e.key==='Escape')gp.blur();
+    return;
+  }
+  const td=e.target.closest('td[contenteditable]');if(!td)return;
+  if(e.key==='Enter'){
+    e.preventDefault();
+    const i=+td.closest('tr').dataset.i;
+    let next=$('tb').querySelector('tr[data-i="'+(i+1)+'"]:not(.glossrow)');
+    if(!next&&i+1<segs.length){
+      // 次のレコードが別ページ → ページを送ってから同じ列へ
+      page=Math.floor((i+1)/PAGE);renderTable();
+      next=$('tb').querySelector('tr[data-i="'+(i+1)+'"]:not(.glossrow)');
+    }
+    if(next){const c=next.querySelector('[data-k="'+td.dataset.k+'"]');c&&c.focus()}
+    else td.blur();
+  }
+  if(e.key==='Escape')td.blur();
+});
+
+/* ---------- IPAパレット ---------- */
+const IPA={
+  '母音':'i y ɨ ʉ ɯ u ɪ ʏ ʊ e ø ɘ ɵ ɤ o ə ɛ œ ɜ ɞ ʌ ɔ æ ɐ a ɶ ɑ ɒ',
+  '子音':'ʈ ɖ ɟ ɡ ɢ ʔ ɱ ɳ ɲ ŋ ɴ ʙ ʀ ɾ ɽ ɸ β θ ð ʃ ʒ ʂ ʐ ɕ ʑ ç ʝ ɣ χ ʁ ħ ʕ ɦ ɬ ɮ ʋ ɹ ɻ ɰ ɭ ʎ ʟ ɺ ʍ ɥ ʜ ʢ ʡ ɧ ɓ ɗ ʄ ɠ ʛ ʘ ǀ ǃ ǂ ǁ',
+  '超分節・声調':'ˈ ˌ ː ˑ . ‿ | ‖ ↗ ↘ ˥ ˦ ˧ ˨ ˩ ꜜ ꜛ',
+  '補助記号':'̥ ̬ ʰ ̤ ̰ ̼ ̪ ̺ ̻ ̹ ̜ ̟ ̠ ̈ ̽ ̩ ̯ ˞ ʷ ʲ ˠ ˤ ̴ ̝ ̞ ̘ ̙ ̃ ̚ ⁿ ˡ'
+};
+const isComb=ch=>/[̀-ͯ᪰-᫿⃐-⃿]/.test(ch);
+$('palette').innerHTML=Object.entries(IPA).map(([g,chars])=>
+  '<div class="pgroup"><span class="glabel">'+g+'</span>'+
+  chars.split(' ').filter(Boolean).map(ch=>
+    '<button type="button"'+(isComb(ch)||g==='補助記号'?' class="comb"':'')+' data-ch="'+ch+'">'+(isComb(ch)?'◌'+ch:ch)+'</button>'
+  ).join('')+'</div>'
+).join('');
+// IPAを使うセル（テクスト・morph系・区間系の層）の編集中だけ画面下に表示する
+const IPA_CELLS='[data-k="text"],[data-f],[data-t]';
+let palHideTimer=null;
+// IPAパネルの幅を左端ドラッグで調節（右端固定、幅＝画面右端からの距離）
+(()=>{
+  const card=$('paletteCard'), handle=$('palResize');
+  let drag=false;
+  const saved=parseInt(localStorage.getItem('palw')||'',10);
+  if(saved>=320)card.style.setProperty('--palw',saved+'px');
+  const apply=px=>{
+    const w=Math.max(320,Math.min(window.innerWidth,px));
+    card.style.setProperty('--palw',w+'px');
+    if(card.classList.contains('show'))document.body.style.paddingBottom=(card.offsetHeight+14)+'px';
+  };
+  handle.addEventListener('pointerdown',e=>{drag=true;handle.setPointerCapture(e.pointerId);e.preventDefault()});
+  window.addEventListener('pointermove',e=>{if(drag)apply(window.innerWidth-e.clientX)});
+  window.addEventListener('pointerup',()=>{
+    if(!drag)return;drag=false;
+    const w=card.getBoundingClientRect().width;
+    if(w>=window.innerWidth-4)localStorage.removeItem('palw');else localStorage.setItem('palw',Math.round(w));
+  });
+})();
+function showPalette(){
+  clearTimeout(palHideTimer);
+  $('paletteCard').classList.add('show');
+  document.body.style.paddingBottom=($('paletteCard').offsetHeight+14)+'px';
+}
+function hidePalette(){
+  $('paletteCard').classList.remove('show');
+  document.body.style.paddingBottom='';
+}
+document.addEventListener('focusin',e=>{
+  const cell=e.target.closest&&e.target.closest('#tb [contenteditable]');
+  if(cell&&cell.matches(IPA_CELLS)){
+    showPalette();
+    setTimeout(()=>{try{cell.scrollIntoView({block:'nearest'})}catch(_){}} ,60);
+  }
+});
+document.addEventListener('focusout',()=>{
+  clearTimeout(palHideTimer);
+  palHideTimer=setTimeout(()=>{
+    const ae=document.activeElement;
+    const still=ae&&ae.closest&&ae.closest('#tb [contenteditable]');
+    if(!(still&&still.matches&&still.matches(IPA_CELLS)))hidePalette();
+  },150);
+});
+$('palette').addEventListener('mousedown',e=>{if(e.target.hasAttribute('data-ch'))e.preventDefault()});
+$('palette').addEventListener('click',e=>{
+  if(!e.target.hasAttribute('data-ch'))return;
+  const s=document.getSelection(), node=s.anchorNode;
+  const el=node&&(node.nodeType===1?node:node.parentElement);
+  if(!el||!el.closest('[contenteditable]')){alert('先に挿入先のセル（text欄など）をクリックしてください');return}
+  document.execCommand('insertText',false,e.target.getAttribute('data-ch'));
+});
+
+/* ---------- WAV解析・切り出し（PCM） ---------- */
+function str4(dv,o){return String.fromCharCode(dv.getUint8(o),dv.getUint8(o+1),dv.getUint8(o+2),dv.getUint8(o+3))}
+async function parseWav(file){
+  if(file.size<44)throw new Error('ファイルが小さすぎます');
+  const head=new DataView(await file.slice(0,12).arrayBuffer());
+  if(str4(head,0)!=='RIFF'||str4(head,8)!=='WAVE')throw new Error('WAVファイルではありません。WAV（PCM）に変換してからご利用ください');
+  let off=12,fmtBytes=null,dataOff=null,dataSize=null,info={};
+  while(off+8<=file.size){
+    const ch=new DataView(await file.slice(off,off+8).arrayBuffer());
+    const id=str4(ch,0),size=ch.getUint32(4,true);
+    if(id==='fmt '){
+      fmtBytes=new Uint8Array(await file.slice(off+8,off+8+size).arrayBuffer());
+      const f=new DataView(fmtBytes.buffer);
+      info={format:f.getUint16(0,true),ch:f.getUint16(2,true),rate:f.getUint32(4,true),block:f.getUint16(12,true),bits:f.getUint16(14,true)};
+    }else if(id==='data'){dataOff=off+8;dataSize=size;break}
+    off+=8+size+(size%2);
+  }
+  if(!fmtBytes||dataOff===null)throw new Error('fmt/dataチャンクが見つかりません');
+  if(![1,3,0xFFFE].includes(info.format))throw new Error('非圧縮PCMのWAVのみ対応しています（形式コード: '+info.format+'）');
+  if(dataSize===0xFFFFFFFF||dataOff+dataSize>file.size)dataSize=file.size-dataOff;
+  return {...info,fmtBytes,dataOff,dataSize,file};
+}
+async function clipWav(w,t0,t1){
+  const toByte=t=>Math.floor(Math.max(0,t)*w.rate)*w.block;
+  let s=Math.min(toByte(t0),w.dataSize), e=Math.min(toByte(t1),w.dataSize);
+  if(e<=s)e=Math.min(s+w.block,w.dataSize);
+  const pcm=new Uint8Array(await w.file.slice(w.dataOff+s,w.dataOff+e).arrayBuffer());
+  const fmtLen=w.fmtBytes.length;
+  const out=new Uint8Array(12+8+fmtLen+(fmtLen%2)+8+pcm.length);
+  const dv=new DataView(out.buffer);
+  const wr4=(o,s4)=>{for(let i=0;i<4;i++)out[o+i]=s4.charCodeAt(i)};
+  wr4(0,'RIFF');dv.setUint32(4,out.length-8,true);wr4(8,'WAVE');
+  wr4(12,'fmt ');dv.setUint32(16,fmtLen,true);out.set(w.fmtBytes,20);
+  const dpos=20+fmtLen+(fmtLen%2);
+  wr4(dpos,'data');dv.setUint32(dpos+4,pcm.length,true);out.set(pcm,dpos+8);
+  return out;
+}
+
+/* ---------- ZIP (無圧縮STORE) ---------- */
+const CRC_T=(()=>{const t=new Uint32Array(256);for(let i=0;i<256;i++){let c=i;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[i]=c}return t})();
+function crc32(buf){let c=0xFFFFFFFF;for(let i=0;i<buf.length;i++)c=CRC_T[(c^buf[i])&0xFF]^(c>>>8);return (c^0xFFFFFFFF)>>>0}
+function dosDateTime(){
+  const d=new Date();
+  return {t:(d.getHours()<<11)|(d.getMinutes()<<5)|(d.getSeconds()>>1),
+          d:(((d.getFullYear()-1980)&0x7F)<<9)|((d.getMonth()+1)<<5)|d.getDate()};
+}
+class ZipWriter{
+  constructor(){this.parts=[];this.central=[];this.offset=0;this.count=0}
+  add(name,data){
+    const nb=new TextEncoder().encode(name), crc=crc32(data), {t,d}=dosDateTime();
+    const lh=new Uint8Array(30+nb.length), dv=new DataView(lh.buffer);
+    dv.setUint32(0,0x04034b50,true);dv.setUint16(4,20,true);dv.setUint16(6,0x0800,true);dv.setUint16(8,0,true);
+    dv.setUint16(10,t,true);dv.setUint16(12,d,true);dv.setUint32(14,crc,true);
+    dv.setUint32(18,data.length,true);dv.setUint32(22,data.length,true);
+    dv.setUint16(26,nb.length,true);dv.setUint16(28,0,true);
+    lh.set(nb,30);
+    this.parts.push(lh,data);
+    const ch=new Uint8Array(46+nb.length), cv=new DataView(ch.buffer);
+    cv.setUint32(0,0x02014b50,true);cv.setUint16(4,20,true);cv.setUint16(6,20,true);cv.setUint16(8,0x0800,true);cv.setUint16(10,0,true);
+    cv.setUint16(12,t,true);cv.setUint16(14,d,true);cv.setUint32(16,crc,true);
+    cv.setUint32(20,data.length,true);cv.setUint32(24,data.length,true);
+    cv.setUint16(28,nb.length,true);cv.setUint32(42,this.offset,true);
+    ch.set(nb,46);
+    this.central.push(ch);
+    this.offset+=lh.length+data.length;this.count++;
+  }
+  blob(){
+    const cdStart=this.offset, cdLen=this.central.reduce((a,c)=>a+c.length,0);
+    const eo=new Uint8Array(22), ev=new DataView(eo.buffer);
+    ev.setUint32(0,0x06054b50,true);ev.setUint16(8,this.count,true);ev.setUint16(10,this.count,true);
+    ev.setUint32(12,cdLen,true);ev.setUint32(16,cdStart,true);
+    return new Blob([...this.parts,...this.central,eo],{type:'application/zip'});
+  }
+}
+
+/* ---------- 書き出し ---------- */
+const baseName=()=>(wavFile?wavFile.name.replace(/\.wav$/i,''):'tokens');
+function dl(name,content,type){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(content instanceof Blob?content:new Blob([content],{type}));
+  a.download=name;a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),10000);
+}
+function escXml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+$('dlEaf').addEventListener('click',()=>{
+  if(!segs.length)return;
+  const wavName=wavFile?wavFile.name:'audio.wav';
+  let ts=[],tsId={};
+  const slot=ms=>{const k='ts'+(ts.length+1);ts.push('<TIME_SLOT TIME_SLOT_ID="'+k+'" TIME_VALUE="'+ms+'"/>');return k};
+  segs.forEach((s,i)=>{tsId[i]=[slot(Math.round(s.t0*1000)),slot(Math.round(s.t1*1000))]});
+  let aid=0;
+  const nid=()=>'a'+(++aid);
+  const multi=speakers.length>1;   // 2人以上なら話者ごとに tier を分け、@話者 とPARTICIPANTを付与
+  // 1つの話者（=レコード部分集合）に対する tier 群を組み立てる
+  function buildGroup(recs, suffix, participant){
+    const P=participant?(' PARTICIPANT="'+escXml(participant)+'"'):'';
+    const tn=base=>escXml(base+suffix);
+    let out='';
+    // 時間整列 tier（ID・text）
+    const aligned=(tierId,getVal)=>{
+      const ids={};
+      out+='<TIER LINGUISTIC_TYPE_REF="default-lt"'+P+' TIER_ID="'+tn(tierId)+'">\n'
+        +recs.map(({s,gi})=>{const id=nid();ids[gi]=id;
+          return '  <ANNOTATION><ALIGNABLE_ANNOTATION ANNOTATION_ID="'+id+'" TIME_SLOT_REF1="'+tsId[gi][0]+'" TIME_SLOT_REF2="'+tsId[gi][1]+'"><ANNOTATION_VALUE>'+escXml(getVal(s))+'</ANNOTATION_VALUE></ALIGNABLE_ANNOTATION></ANNOTATION>';
+        }).join('\n')+'\n</TIER>\n';
+      return ids;
+    };
+    aligned('ID',s=>s.id);
+    const textIds=aligned('text',s=>s.text);
+    const segLevelIds={'text':textIds}, morphLevelIds={};
+    // text系（区間ごと）の Symbolic Association
+    const assoc=(tierId,parentName,parentIds,getVal)=>{
+      const ids={};
+      let o='<TIER LINGUISTIC_TYPE_REF="assoc-lt"'+P+' PARENT_REF="'+tn(parentName)+'" TIER_ID="'+tn(tierId)+'">\n';
+      recs.forEach(({s,gi})=>{const id=nid();ids[gi]=id;
+        o+='  <ANNOTATION><REF_ANNOTATION ANNOTATION_ID="'+id+'" ANNOTATION_REF="'+parentIds[gi]+'"><ANNOTATION_VALUE>'+escXml(getVal(s))+'</ANNOTATION_VALUE></REF_ANNOTATION></ANNOTATION>\n';
+      });
+      out+=o+'</TIER>\n';
+      return ids;
+    };
+    segLevelIds['trans']=assoc('trans','text',textIds,s=>s.note);
+    if(!multi)segLevelIds['spk']=assoc('spk','text',textIds,s=>s.spk||'');   // 単一話者のときだけ spk 層を残す
+    tiersInOrder().forEach(t=>{
+      if(tierLevel(t.name)!=='seg')return;
+      const parentName=t.parent==='seg'?'text':t.parent;
+      const parentIds=segLevelIds[parentName];if(!parentIds)return;
+      segLevelIds[t.name]=assoc(t.name,parentName,parentIds,s=>(s.tv||{})[t.name]||'');
+    });
+    // morph層＝分割元の Symbolic Subdivision
+    if(glossOn){
+      const srcName=morphSrc==='text'?'text':morphSrc;
+      const srcIds=segLevelIds[srcName]||textIds;
+      const morphFlat=[];
+      let mt='<TIER LINGUISTIC_TYPE_REF="morph-lt"'+P+' PARENT_REF="'+tn(srcName)+'" TIER_ID="'+tn('morph')+'">\n';
+      recs.forEach(({s,gi})=>{
+        let prev=null;
+        flatMorphs(s).forEach(m=>{const id=nid();morphFlat.push({gi,id});
+          mt+='  <ANNOTATION><REF_ANNOTATION ANNOTATION_ID="'+id+'" ANNOTATION_REF="'+srcIds[gi]+'"'+(prev?' PREVIOUS_ANNOTATION="'+prev+'"':'')+'><ANNOTATION_VALUE>'+escXml(m)+'</ANNOTATION_VALUE></REF_ANNOTATION></ANNOTATION>\n';
+          prev=id;
+        });
+      });
+      out+=mt+'</TIER>\n';
+      morphLevelIds['morph']=morphFlat;
+      tiersInOrder().forEach(t=>{
+        if(tierLevel(t.name)!=='morph')return;
+        const parentName=t.parent==='morph'?'morph':t.parent;
+        const parentIds=morphLevelIds[parentName];if(!parentIds)return;
+        const myIds=[], cnt={};
+        let o='<TIER LINGUISTIC_TYPE_REF="assoc-lt"'+P+' PARENT_REF="'+tn(parentName)+'" TIER_ID="'+tn(t.name)+'">\n';
+        parentIds.forEach(({gi,id:pid})=>{const k=cnt[gi]=(cnt[gi]||0);cnt[gi]++;
+          const v=(((segs[gi].tv||{})[t.name])||[])[k]||'';const id=nid();myIds.push({gi,id});
+          o+='  <ANNOTATION><REF_ANNOTATION ANNOTATION_ID="'+id+'" ANNOTATION_REF="'+pid+'"><ANNOTATION_VALUE>'+escXml(v)+'</ANNOTATION_VALUE></REF_ANNOTATION></ANNOTATION>\n';
+        });
+        out+=o+'</TIER>\n';
+        morphLevelIds[t.name]=myIds;
+      });
+    }
+    return out;
+  }
+  const recOf=spk=>segs.map((s,gi)=>({s,gi})).filter(r=>r.s.spk===spk);
+  let tiers;
+  if(multi)tiers=speakers.map(spk=>buildGroup(recOf(spk),'@'+spk,spk)).join('');
+  else tiers=buildGroup(segs.map((s,gi)=>({s,gi})),'','');
+  // LINGUISTIC_TYPEとCONSTRAINTはELAN互換のため常にすべて宣言する
+  let types='<LINGUISTIC_TYPE GRAPHIC_REFERENCES="false" LINGUISTIC_TYPE_ID="default-lt" TIME_ALIGNABLE="true"/>'
+    +'\n<LINGUISTIC_TYPE CONSTRAINTS="Symbolic_Subdivision" GRAPHIC_REFERENCES="false" LINGUISTIC_TYPE_ID="morph-lt" TIME_ALIGNABLE="false"/>'
+    +'\n<LINGUISTIC_TYPE CONSTRAINTS="Symbolic_Association" GRAPHIC_REFERENCES="false" LINGUISTIC_TYPE_ID="assoc-lt" TIME_ALIGNABLE="false"/>';
+  let constraints='\n<CONSTRAINT DESCRIPTION="Time subdivision of parent annotation\'s time interval, no time gaps allowed within this interval" STEREOTYPE="Time_Subdivision"/>'
+    +'\n<CONSTRAINT DESCRIPTION="Symbolic subdivision of a parent annotation. Annotations refering to the same parent are ordered" STEREOTYPE="Symbolic_Subdivision"/>'
+    +'\n<CONSTRAINT DESCRIPTION="1-1 association with a parent annotation" STEREOTYPE="Symbolic_Association"/>'
+    +'\n<CONSTRAINT DESCRIPTION="Time alignable annotations within the parent annotation\'s time interval, gaps are allowed" STEREOTYPE="Included_In"/>';
+  const eaf='<?xml version="1.0" encoding="UTF-8"?>\n'
+    +'<ANNOTATION_DOCUMENT AUTHOR="" DATE="'+new Date().toISOString().slice(0,19)+'+00:00" FORMAT="3.0" VERSION="3.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.mpi.nl/tools/elan/EAFv3.0.xsd">\n'
+    +'<HEADER MEDIA_FILE="" TIME_UNITS="milliseconds">\n'
+    +'  <MEDIA_DESCRIPTOR MEDIA_URL="file:///'+escXml(wavName)+'" MIME_TYPE="audio/x-wav" RELATIVE_MEDIA_URL="./'+escXml(wavName)+'"/>\n'
+    +'</HEADER>\n'
+    +'<TIME_ORDER>\n  '+ts.join('\n  ')+'\n</TIME_ORDER>\n'
+    +tiers+'\n'
+    +types+constraints+'\n'
+    +'</ANNOTATION_DOCUMENT>\n';
+  dl(baseName()+'.eaf',eaf,'application/xml');
+});
+$('dlTsv').addEventListener('click',()=>{
+  const san=s=>String(s).replace(/[\t\r\n]+/g,' ');
+  const mts=glossOn?morphTiers():[], sts=segTiers();
+  const head=['ID','spk','text'].concat(glossOn?['morph']:[]).concat(mts.map(t=>t.name)).concat(sts.map(t=>t.name)).concat(['trans','開始（秒）','終了（秒）']);
+  const lines=[head.join('\t')];
+  segs.forEach(s=>{
+    const cols=[san(s.id),san(s.spk||''),san(s.text)]
+      .concat(glossOn?[san(morphLineOf(s))]:[])
+      .concat(mts.map(t=>san(ilgLineOf(s,t.name))))
+      .concat(sts.map(t=>san((s.tv||{})[t.name]||'')))
+      .concat([san(s.note),s.t0.toFixed(3),s.t1.toFixed(3)]);
+    lines.push(cols.join('\t'));
+  });
+  dl(baseName()+'_tokens.tsv','\ufeff'+lines.join('\r\n'),'text/tab-separated-values');
+});
+// 通常の注釈JSON（BLT形式：層は tiers に構造化して保持）
+$('dlJson').addEventListener('click',()=>{
+  const out=segs.map(s=>{
+    const o={id:s.id,spk:s.spk||'',text:s.text,trans:s.note,start:+s.t0.toFixed(3),end:+s.t1.toFixed(3)};
+    if(glossOn||tiersDef.length){
+      o.tiers={};
+      if(glossOn){
+        const m=flatMorphs(s);
+        o.morphs=m;
+        morphTiers().forEach(t=>{
+          o.tiers[t.name]={cells:m.map((_,k)=>(((s.tv||{})[t.name])||[])[k]||''),line:ilgLineOf(s,t.name)};
+        });
+      }
+      segTiers().forEach(t=>{o.tiers[t.name]=(s.tv||{})[t.name]||''});
+    }
+    return o;
+  });
+  dl(baseName()+'_tokens.json',JSON.stringify(out,null,2),'application/json');
+});
+// InDIGO（電子辞書生成）用JSON：各文をフラット構造（gloss/posは形態素に整列した配列）で
+$('dlIndigo').addEventListener('click',()=>{
+  const base=baseName(), w=String(segs.length).length>3?String(segs.length).length:3;
+  const out=segs.map((s,i)=>{
+    const m=flatMorphs(s);
+    const cells=name=>m.map((_,k)=>(((s.tv||{})[name])||[])[k]||'');
+    return {text:s.text, morphs:m, gloss:cells('gloss'), pos:cells('pos'),
+      trans:s.note, speaker:s.spk||'',
+      start_time:+s.t0.toFixed(3), end_time:+s.t1.toFixed(3),
+      audio_file:base+'_'+String(i+1).padStart(w,'0')+'.wav'};
+  });
+  dl(base+'_indigo.json',JSON.stringify(out,null,2),'application/json');
+});
+$('dlProj').addEventListener('click',()=>{
+  dl(baseName()+'_project.json',JSON.stringify({wavName:wavFile?wavFile.name:'',glossOn,morphSrc,tiersDef,speakers,segs,ignoredMiss,lexicon},null,1),'application/json');
+});
+// ヘッダーの保存バー（書き出しカードと同じ処理を呼ぶ）
+[['hdrEaf','dlEaf'],['hdrTsv','dlTsv'],['hdrJson','dlJson'],['hdrZip','dlZip'],['hdrProj','dlProj']]
+  .forEach(([a,b])=>$(a).addEventListener('click',()=>$(b).click()));
+$('dlZip').addEventListener('click',async()=>{
+  if(!wavInfo||!segs.length)return;
+  const btn=$('dlZip');btn.disabled=true;btn.textContent='切り出し中…';
+  try{
+    const zip=new ZipWriter();
+    const csv=[['ファイル名','ID','spk','text','trans','開始（秒）','終了（秒）']];
+    const used={};
+    for(let k=0;k<segs.length;k++){
+      const s=segs[k];
+      let fn=(s.id||'token_'+(k+1)).replace(/[\\\/:*?"<>|\s]+/g,'_')||'token_'+(k+1);
+      if(used[fn])fn+='_'+(++used[fn]);else used[fn]=1;
+      zip.add(fn+'.wav',await clipWav(wavInfo,s.t0,s.t1));
+      csv.push([fn+'.wav',s.id,s.spk||'',s.text,s.note,s.t0.toFixed(3),s.t1.toFixed(3)]);
+      btn.textContent='切り出し中… '+(k+1)+'/'+segs.length;
+      if(k%10===0)await new Promise(r=>setTimeout(r,0));
+    }
+    const csvStr='\ufeff'+csv.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\r\n');
+    zip.add('manifest.csv',new TextEncoder().encode(csvStr));
+    dl(baseName()+'_tokens.zip',zip.blob());
+  }catch(e){alert('エラー：'+e.message)}
+  finally{btn.disabled=false;btn.textContent='切り出しWAVのZIP'}
+});
+
+/* ====================== 分析・辞書タブ ====================== */
+let lexicon={};        // 形態素見出し -> {def:語義}
+let anSel=null;        // 選択中の見出し
+let anIndexCache=null; // 形態素インデックス
+
+// 形態素ごとの {form, head, type, gloss, pos} を返す
+function morphInfo(s){
+  const ms=flatMorphs(s), before=morphDelims(s);
+  const gl=(s.tv||{}).gloss||[], po=(s.tv||{}).pos||[];
+  return ms.map((m,i)=>{
+    let d='';
+    const pre=String(m).match(/^([-=+])/);
+    if(pre)d=pre[1]; else {const b=before[i]||''; const mm=b.match(/([-=+])\s*$/); d=mm?mm[1]:''}
+    return {form:m, head:String(m).replace(/^[-=+]+/,''), type:d==='='?'clitic':d==='-'?'affix':'root',
+      gloss:gl[i]||'', pos:po[i]||'', i};
+  });
+}
+// 全コーパスを集計
+function buildAnalysis(){
+  const idx={}, posSet=new Set();
+  let nMorph=0, nWord=0, nSent=0;
+  segs.forEach((s,si)=>{
+    const info=morphInfo(s), before=morphDelims(s);
+    nMorph+=info.length;
+    info.forEach((mi,k)=>{
+      if(!mi.head)return;
+      const e=idx[mi.head]||(idx[mi.head]={head:mi.head,count:0,types:{},glosses:{},poss:{},occ:[]});
+      e.count++; e.types[mi.type]=(e.types[mi.type]||0)+1;
+      if(mi.gloss)e.glosses[mi.gloss]=(e.glosses[mi.gloss]||0)+1;
+      if(mi.pos){e.poss[mi.pos]=(e.poss[mi.pos]||0)+1;posSet.add(mi.pos)}
+      e.occ.push({si,k});
+      // 語数: 語頭（先頭 or 直前の区切りが空白/=）
+      const wb=/[\s=]/.test(before[k]||'');
+      if(k===0||wb)nWord++;
+    });
+    // 文数: ピリオドで終わる形態素の数
+    nSent+=info.filter(mi=>isEosMorph(mi.form)).length;
+  });
+  anIndexCache={idx,posSet:[...posSet].sort(),
+    stats:{records:segs.length,sentences:nSent,words:nWord,morphs:nMorph,unique:Object.keys(idx).length,
+      roots:Object.values(idx).filter(e=>dominantType(e)==='root').length,
+      affixes:Object.values(idx).filter(e=>dominantType(e)==='affix').length,
+      clitics:Object.values(idx).filter(e=>dominantType(e)==='clitic').length}};
+  return anIndexCache;
+}
+function dominantType(e){let best='root',n=-1;for(const t in e.types)if(e.types[t]>n){n=e.types[t];best=t}return best}
+function dominantPos(e){let best='',n=-1;for(const p in e.poss)if(e.poss[p]>n){n=e.poss[p];best=p}return best}
+function glossDefault(e){return Object.entries(e.glosses).sort((a,b)=>b[1]-a[1]).map(([g])=>g).join(' / ')}
+const TYLABEL={root:'語根',affix:'接辞',clitic:'接語'};
+function renderStats(){
+  const a=anIndexCache||buildAnalysis(), s=a.stats;
+  if(!segs.length){$('anStats').innerHTML='まず「注釈」タブで音声・注釈を読み込んでください。';return}
+  $('anStats').innerHTML='<div style="display:flex;gap:26px;flex-wrap:wrap;font-size:13px">'
+    +[['レコード',s.records],['文',s.sentences],['語',s.words],['形態素',s.morphs],
+      ['異なり形態素',s.unique],['語根',s.roots],['接辞',s.affixes],['接語',s.clitics]]
+      .map(([k,v])=>'<span><b style="font-size:21px;font-family:var(--jp-serif);color:var(--accent-ink)">'+v+'</b> <span class="note">'+k+'</span></span>').join('')
+    +'</div>';
+}
+function renderIndex(){
+  const a=anIndexCache||buildAnalysis();
+  const q=$('anSearch').value.trim().toLowerCase(), ty=$('anType').value, po=$('anPos').value, sort=$('anSort').value;
+  // pos選択肢を更新
+  const psel=$('anPos'); if(psel.options.length!==a.posSet.length+1){
+    psel.innerHTML='<option value="all">全品詞</option>'+a.posSet.map(p=>'<option value="'+escHtml(p)+'">'+escHtml(p)+'</option>').join('');
+    psel.value=po;
+  }
+  let list=Object.values(a.idx).filter(e=>{
+    if(ty!=='all'&&dominantType(e)!==ty)return false;
+    if(po!=='all'&&!e.poss[po])return false;
+    if(q){const gls=Object.keys(e.glosses).join(' ').toLowerCase();if(!e.head.toLowerCase().includes(q)&&!gls.includes(q))return false}
+    return true;
+  });
+  const byFreq=(x,y)=>y.count-x.count||x.head.localeCompare(y.head);
+  const TO={root:0,affix:1,clitic:2};
+  const cmp={freq:byFreq, alpha:(x,y)=>x.head.localeCompare(y.head),
+    type:(x,y)=>(TO[dominantType(x)]-TO[dominantType(y)])||byFreq(x,y),
+    pos:(x,y)=>((dominantPos(x)||'~').localeCompare(dominantPos(y)||'~'))||byFreq(x,y)};
+  list.sort(cmp[sort]||byFreq);
+  $('anIndex').innerHTML=list.map(e=>{
+    const dt=dominantType(e), gl=Object.keys(e.glosses).slice(0,3).join(', ');
+    return '<div class="anrow'+(e.head===anSel?' cur':'')+'" data-h="'+escHtml(e.head)+'">'
+      +'<span class="tybadge '+dt+'">'+TYLABEL[dt]+'</span>'
+      +'<span class="mh">'+escHtml(e.head)+'</span>'
+      +'<span class="gl">'+escHtml(gl)+'</span><span class="cnt">'+e.count+'</span></div>';
+  }).join('')||'<div class="note" style="padding:10px">該当なし</div>';
+}
+function renderDict(head){
+  anSel=head;
+  document.querySelectorAll('#anIndex .anrow').forEach(r=>r.classList.toggle('cur',r.dataset.h===head));
+  const a=anIndexCache, e=a&&a.idx[head];
+  if(!e){$('anDict').innerHTML='<div class="note">左の形態素を選んでください。</div>';return}
+  const types=Object.keys(e.types).map(t=>TYLABEL[t]).join('・');
+  const glosses=Object.entries(e.glosses).sort((x,y)=>y[1]-x[1]).map(([g,n])=>escHtml(g)+'（'+n+'）').join('　');
+  const poss=Object.entries(e.poss).sort((x,y)=>y[1]-x[1]).map(([p,n])=>escHtml(p)+'（'+n+'）').join('　');
+  let html='<div class="dhead"><span class="dhw">'+escHtml(head)+'</span>'
+    +'<span class="note">'+types+' / '+e.count+'例'+(poss?' / 品詞: '+poss:'')+'</span></div>'
+    +'<div class="dglosses"><b>gloss層から:</b> '+(glosses||'（なし）')+'</div>'
+    +'<div style="display:flex;align-items:baseline;gap:8px"><label class="note">語義（辞書用・自由に編集可）</label>'
+    +'<button type="button" id="anDefReset" class="rowbtn" title="この欄をgloss層の値で上書きします">↺ glossから取り込み直す</button>'
+    +'<span class="note" style="margin-left:auto;color:var(--done)">※ここの編集は gloss層には反映されません（辞書だけに保存）</span></div>'
+    +'<textarea class="ddef" id="anDef" placeholder="この形態素の語義・説明を記入（既定は gloss層から取り込み）">'+escHtml(lexicon[head]!=null?lexicon[head]:glossDefault(e))+'</textarea>'
+    +'<div class="note" style="margin-bottom:5px"><b>用例（'+e.occ.length+'）</b></div>';
+  html+=e.occ.map(o=>exampleHtml(o.si,o.k)).join('');
+  $('anDict').innerHTML=html;
+  // 語義の編集は lexicon[head] にのみ保存（gloss層 seg.tv.gloss は不変）
+  $('anDef').addEventListener('input',()=>{lexicon[head]=$('anDef').value});
+  $('anDefReset').addEventListener('click',()=>{const v=glossDefault(e);$('anDef').value=v;lexicon[head]=v});
+}
+function exampleHtml(si,hitK){
+  const s=segs[si]; if(!s)return '';
+  const info=morphInfo(s), before=morphDelims(s);
+  // 単語ごとにまとめて表示
+  let html='<div class="exitem"><div class="exhead"><button type="button" class="explay" data-si="'+si+'">▶</button>'
+    +'<span class="rid">#'+(si+1)+(speakers.length>1?(' '+escHtml(s.spk)):'')+'</span>'
+    +'<button type="button" class="explay anjump" data-si="'+si+'" style="margin-left:auto" title="注釈タブでこのレコードを開く">注釈で開く</button></div>'
+    +'<div class="exig">';
+  let cur='';
+  info.forEach((mi,k)=>{
+    const wb=k===0||/[\s=]/.test(before[k]||'');
+    if(wb){if(cur)html+='<div class="w">'+cur+'</div>';cur=''}
+    cur+='<div class="c'+(k===hitK?' hit':'')+'"><div class="m">'+escHtml(mi.form)+'</div><div class="g">'+escHtml(mi.gloss||'')+'</div></div>';
+  });
+  if(cur)html+='<div class="w">'+cur+'</div>';
+  html+='</div>';
+  if(s.note)html+='<div class="extrans">‘'+escHtml(s.note)+'’</div>';
+  html+='</div>';
+  return html;
+}
+function refreshAnalysis(){buildAnalysis();renderStats();renderIndex();if(anSel)renderDict(anSel);}
+// イベント
+$('anSearch').addEventListener('input',renderIndex);
+['anType','anPos','anSort'].forEach(id=>$(id).addEventListener('change',renderIndex));   // selectはchangeで（Safari対策）
+$('anIndex').addEventListener('click',e=>{const r=e.target.closest('.anrow');if(r)renderDict(r.dataset.h)});
+$('anDict').addEventListener('click',e=>{
+  const pl=e.target.closest('.explay');if(!pl)return;
+  const si=+pl.dataset.si, s=segs[si];if(!s)return;
+  if(pl.classList.contains('anjump')){switchTab('anno');sel=si;setActiveSpk(s.spk);afterSelChange();focusSeg(si);}
+  else playRange(s.t0,s.t1);
+});
+// タブ切り替え
+function switchTab(name){
+  document.querySelectorAll('#tabbar .tab').forEach(b=>b.classList.toggle('cur',b.dataset.tab===name));
+  $('tabAnno').classList.toggle('hidden',name!=='anno');
+  $('tabAnalysis').classList.toggle('hidden',name!=='analysis');
+  if(name==='analysis')refreshAnalysis();
+}
+document.getElementById('tabbar').addEventListener('click',e=>{const b=e.target.closest('.tab');if(b)switchTab(b.dataset.tab)});
+
+/* ---------- 辞書HTML＋音声ZIPの書き出し ---------- */
+// 用例レンダリング用に、各レコードの形態素・グロス・語境界をまとめる
+function dictData(){
+  const a=anIndexCache||buildAnalysis();
+  const base=(wavFile?wavFile.name.replace(/\.wav$/i,''):'dictionary').replace(/[\\\/:*?"<>|\s]+/g,'_');
+  const records=segs.map((s,i)=>{
+    const info=morphInfo(s), before=morphDelims(s);
+    return {i, clip:base+'_'+String(i+1).padStart(3,'0')+'.wav', id:s.id, spk:s.spk||'',
+      t0:+s.t0.toFixed(3), t1:+s.t1.toFixed(3), text:s.text||'', trans:s.note||'',
+      morphs:info.map(m=>m.form), gloss:info.map(m=>m.gloss),
+      wb:info.map((m,k)=>k===0||/[\s=]/.test(before[k]||''))};
+  });
+  const entries=Object.values(a.idx).map(e=>({
+    head:e.head, type:dominantType(e), types:Object.keys(e.types),
+    count:e.count, pos:dominantPos(e),
+    glosses:Object.entries(e.glosses).sort((x,y)=>y[1]-x[1]).map(([g,n])=>[g,n]),
+    def:(lexicon[e.head]!=null?lexicon[e.head]:glossDefault(e)),
+    occ:e.occ.map(o=>[o.si,o.k])
+  })).sort((x,y)=>y.count-x.count||x.head.localeCompare(y.head));
+  return {title:base, generated:new Date().toISOString().slice(0,10), multiSpk:speakers.length>1,
+    stats:a.stats, records, entries};
+}
+function buildDictHtml(d){
+  const json=JSON.stringify(d).replace(/<\//g,'<\\/');
+  return `<!DOCTYPE html>
+<html lang="ja"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${d.title} 辞書</title>
+<style>
+:root{--accent:#234a86;--accent-ink:#152e57;--accent-soft:#e6ecf5;--line:#d8dde7;--muted:#5f6672;--ink:#222730;
+--ipa:"Charis SIL","Doulos SIL","Gentium Plus","DejaVu Sans","Segoe UI","Hiragino Sans",sans-serif;--mono:ui-monospace,Menlo,monospace}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,"Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;color:var(--ink);background:#eef1f6;font-size:14px}
+header{background:#fff;border-bottom:2px solid var(--accent);padding:12px 18px;position:sticky;top:0;z-index:5}
+header h1{margin:0;font-size:20px;color:var(--accent-ink)}header .sub{font-size:12px;color:var(--muted);margin-top:3px}
+.abase{margin-top:8px;font-size:12px;color:var(--muted)}.abase input{font-family:var(--mono);font-size:12px;border:1px solid var(--line);border-radius:6px;padding:4px 8px;width:min(560px,90%)}
+main{display:flex;gap:16px;align-items:flex-start;padding:14px 18px 50px;max-width:1500px;margin:0 auto;flex-wrap:wrap}
+.col1{flex:0 0 340px}.col2{flex:1;min-width:300px}
+.bar{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap}.bar input,.bar select{border:1px solid var(--line);border-radius:6px;padding:5px 8px;font-size:13px}.bar input{flex:1;min-width:100px}
+.idx{max-height:74vh;overflow-y:auto;border:1px solid var(--line);border-radius:8px;background:#fff}
+.row{display:flex;align-items:baseline;gap:8px;padding:5px 9px;border-bottom:1px solid var(--line);cursor:pointer}
+.row:hover{background:var(--accent-soft)}.row.cur{background:#fdf6e6;box-shadow:inset 3px 0 0 var(--accent)}
+.row .h{font-family:var(--ipa);font-size:15px;font-weight:600;color:var(--accent-ink)}.row .g{font-size:11.5px;color:var(--muted);flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.row .c{font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:auto}
+.tb{font-size:10px;border-radius:4px;padding:0 5px}.tb.root{background:#e7eef0;color:#37606e}.tb.affix{background:#f1e7f0;color:#7a4f72}.tb.clitic{background:var(--accent-soft);color:var(--accent-ink)}
+.detail{background:#fff;border:1px solid var(--line);border-radius:8px;padding:14px 16px}
+.dhw{font-family:var(--ipa);font-size:26px;font-weight:700;color:var(--accent-ink)}
+.ddef{font-size:15px;margin:6px 0 12px;white-space:pre-wrap}.dmeta{font-size:12.5px;color:var(--muted);margin-bottom:10px}
+.ex{border:1px solid var(--line);border-radius:7px;padding:8px 10px;margin-bottom:8px}
+.ex .eh{display:flex;align-items:center;gap:8px;margin-bottom:4px}.ex .rid{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.play{border:1px solid var(--accent);color:var(--accent);background:#fff;border-radius:6px;padding:1px 10px;font-size:12px;cursor:pointer}.play:hover{background:var(--accent-soft)}
+.ig{display:flex;gap:11px;flex-wrap:wrap;font-family:var(--ipa)}.ig .w{display:flex;gap:3px}.ig .c{display:flex;flex-direction:column;font-size:14px;line-height:1.45}.ig .c .gl{font-size:11px;color:var(--muted)}
+.ig .c.hit .m{color:var(--accent);font-weight:700;background:#fdf6e6;border-radius:3px}.ig .c.hit .gl{color:var(--accent-ink);font-weight:600}
+.tr{font-size:13px;margin-top:4px}
+</style></head><body>
+<header>
+  <h1>${d.title} <span style="font-size:13px;color:var(--muted);font-weight:400">辞書</span></h1>
+  <div class="sub">${d.entries.length} 見出し / ${d.stats.records} レコード・${d.stats.sentences} 文・${d.stats.words} 語・${d.stats.morphs} 形態素　（BLT で生成 ${d.generated}）</div>
+  <div class="abase">音声の場所：<input id="abase" value="./audio/"> <span>← ローカルは <code>./audio/</code>、Zenodo等に置いた場合はファイルのベースURL（例: https://zenodo.org/records/XXXX/files/）を入力</span></div>
+</header>
+<main>
+  <div class="col1">
+    <div class="bar">
+      <input id="q" placeholder="検索（形態素・グロス・語義）">
+      <select id="ty"><option value="all">全種類</option><option value="root">語根</option><option value="affix">接辞</option><option value="clitic">接語</option></select>
+      <select id="so"><option value="freq">頻度順</option><option value="alpha">字順</option><option value="type">種類順</option></select>
+    </div>
+    <div class="idx" id="idx"></div>
+  </div>
+  <div class="col2"><div class="detail" id="detail">左の見出しを選んでください。</div></div>
+</main>
+<script>
+var D=${json};
+var TY={root:'語根',affix:'接辞',clitic:'接語'},TO={root:0,affix:1,clitic:2};
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;')}
+var abase=document.getElementById('abase');
+try{var sv=localStorage.getItem('blt_abase');if(sv)abase.value=sv}catch(e){}
+abase.addEventListener('input',function(){try{localStorage.setItem('blt_abase',abase.value)}catch(e){}});
+var player=new Audio();
+function play(i){var r=D.records[i];if(!r)return;player.pause();player.src=abase.value.replace(/\\/?$/,'/')+r.clip;player.currentTime=0;player.play().catch(function(){alert('音声を再生できません：'+player.src)})}
+function igHtml(ri,hitK){var r=D.records[ri];if(!r)return '';var html='<div class="ig">',cur='';
+  for(var k=0;k<r.morphs.length;k++){if(r.wb[k]){if(cur)html+='<div class="w">'+cur+'</div>';cur=''}
+    cur+='<div class="c'+(k===hitK?' hit':'')+'"><div class="m">'+esc(r.morphs[k])+'</div><div class="gl">'+esc(r.gloss[k]||'')+'</div></div>'}
+  if(cur)html+='<div class="w">'+cur+'</div>';return html+'</div>'}
+var sel=null;
+function renderDetail(h){sel=h;var e=null;for(var j=0;j<D.entries.length;j++)if(D.entries[j].head===h){e=D.entries[j];break}
+  [].forEach.call(document.querySelectorAll('#idx .row'),function(r){r.classList.toggle('cur',r.getAttribute('data-h')===h)});
+  if(!e){document.getElementById('detail').innerHTML='';return}
+  var gl=e.glosses.map(function(g){return esc(g[0])+'（'+g[1]+'）'}).join('　');
+  var html='<div class="dhw">'+esc(e.head)+'</div>'
+    +'<div class="dmeta">'+e.types.map(function(t){return TY[t]}).join('・')+' / '+e.count+'例'+(e.pos?' / 品詞: '+esc(e.pos):'')+'</div>'
+    +'<div class="ddef">'+esc(e.def||'')+'</div>'
+    +'<div class="dmeta"><b>gloss層:</b> '+(gl||'（なし）')+'</div>'
+    +'<div class="dmeta"><b>用例（'+e.occ.length+'）</b></div>';
+  html+=e.occ.map(function(o){var ri=o[0],r=D.records[ri];
+    return '<div class="ex"><div class="eh"><button class="play" onclick="play('+ri+')">▶ 再生</button><span class="rid">#'+(ri+1)+(D.multiSpk?(' '+esc(r.spk)):'')+'</span></div>'
+      +igHtml(ri,o[1])+(r.trans?'<div class="tr">‘'+esc(r.trans)+'’</div>':'')+'</div>'}).join('');
+  document.getElementById('detail').innerHTML=html}
+function renderIdx(){var q=document.getElementById('q').value.trim().toLowerCase(),ty=document.getElementById('ty').value,so=document.getElementById('so').value;
+  var list=D.entries.filter(function(e){if(ty!=='all'&&e.type!==ty)return false;
+    if(q){var g=e.glosses.map(function(x){return x[0]}).join(' ').toLowerCase();if(e.head.toLowerCase().indexOf(q)<0&&g.indexOf(q)<0&&String(e.def||'').toLowerCase().indexOf(q)<0)return false}return true});
+  if(so==='alpha')list.sort(function(a,b){return a.head.localeCompare(b.head)});
+  else if(so==='type')list.sort(function(a,b){return (TO[a.type]-TO[b.type])||b.count-a.count});
+  document.getElementById('idx').innerHTML=list.map(function(e){return '<div class="row'+(e.head===sel?' cur':'')+'" data-h="'+esc(e.head)+'"><span class="tb '+e.type+'">'+TY[e.type]+'</span><span class="h">'+esc(e.head)+'</span><span class="g">'+esc(e.glosses.slice(0,3).map(function(g){return g[0]}).join(', '))+'</span><span class="c">'+e.count+'</span></div>'}).join('')||'<div style="padding:10px;color:var(--muted)">該当なし</div>'}
+document.getElementById('idx').addEventListener('click',function(e){var r=e.target.closest('.row');if(r)renderDetail(r.getAttribute('data-h'))});
+['q','ty'].forEach(function(id){document.getElementById(id).addEventListener('input',renderIdx)});
+document.getElementById('so').addEventListener('change',renderIdx);
+renderIdx();
+<\/script></body></html>`;
+}
+$('dlDict').addEventListener('click',async()=>{
+  if(!segs.length){alert('注釈データがありません');return}
+  if(!wavInfo){alert('音声（WAV）が読み込まれていません');return}
+  const btn=$('dlDict');btn.disabled=true;const orig=btn.textContent;
+  try{
+    const d=dictData();
+    const html=buildDictHtml(d);
+    const zip=new ZipWriter();
+    zip.add(d.title+'_dictionary.html',new TextEncoder().encode(html));
+    // 各レコードの音声をaudio/フォルダに
+    for(let i=0;i<d.records.length;i++){
+      const r=d.records[i];
+      zip.add('audio/'+r.clip,await clipWav(wavInfo,r.t0,r.t1));
+      btn.textContent='音声切り出し中… '+(i+1)+'/'+d.records.length;
+      if(i%10===0)await new Promise(res=>setTimeout(res,0));
+    }
+    // README
+    const readme='【BLT 辞書パッケージ】\r\n'
+      +d.title+'_dictionary.html … 辞書本体（ブラウザで開く）\r\n'
+      +'audio/ … 各レコードの音声（辞書から再生）\r\n\r\n'
+      +'■ ローカルで使う: このフォルダのまま '+d.title+'_dictionary.html を開けば、audio/ の音声が再生されます。\r\n'
+      +'■ Zenodo等で公開する: audio/ 内のWAVファイルをZenodoのレコードにアップロードし、\r\n'
+      +'  辞書HTMLを開いて上部「音声の場所」に各ファイルのベースURL\r\n'
+      +'  （例: https://zenodo.org/records/XXXXXXX/files/ ）を貼り付けると、そのURLから音声が再生されます。\r\n'
+      +'  ※ファイル名はaudio/内と同じである必要があります。\r\n';
+    zip.add('README.txt',new TextEncoder().encode('\ufeff'+readme));
+    dl(d.title+'_dictionary.zip',zip.blob());
+  }catch(e){alert('エラー：'+e.message)}
+  finally{btn.disabled=false;btn.textContent=orig}
+});
+</script>
+</body>
+</html>

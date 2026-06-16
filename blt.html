@@ -246,6 +246,8 @@ tr.glossrow td{background:#f6faf8;padding:6px 8px}
 .tour-prev:hover{color:var(--ink)}
 .tour-skip{position:absolute;top:9px;right:11px;border:none;background:none;font-size:18px;line-height:1;color:var(--muted);cursor:pointer}
 .tour-skip:hover{color:var(--warn)}
+.tour-quit{margin-left:10px;border:none;background:none;color:var(--muted);font-size:11px;text-decoration:underline;cursor:pointer;padding:0}
+.tour-quit:hover{color:var(--warn)}
 </style>
 </head>
 <body>
@@ -2878,15 +2880,17 @@ $('dlDict').addEventListener('click',async()=>{
     if(!el || !isVisible(el)){ go(n+dir, dir); return; }  // 非表示の要素はスキップ
     idx=n;
     el.scrollIntoView({block:'center'});
-    pop.innerHTML='<button type="button" class="tour-skip" aria-label="閉じる">×</button>'
+    pop.innerHTML='<button type="button" class="tour-skip" aria-label="ツアーをスキップ" title="ツアーをスキップ（Escキーでも終了）">×</button>'
       +'<h4>'+s.title+'</h4><p>'+s.body+'</p>'
-      +'<div class="tour-row"><span class="tour-step">'+(n+1)+' / '+STEPS.length+'</span>'
+      +'<div class="tour-row"><span class="tour-step">'+(n+1)+' / '+STEPS.length
+      +'<button type="button" class="tour-quit">スキップ</button></span>'
       +'<span class="tour-btns">'
       +(n>0?'<button type="button" class="tour-prev">戻る</button>':'')
       +'<button type="button" class="tour-next">'+(n===STEPS.length-1?'完了':'次へ ›')+'</button>'
       +'</span></div>';
     pop.hidden=false;
     pop.querySelector('.tour-skip').onclick=endTour;
+    var qb=pop.querySelector('.tour-quit'); if(qb) qb.onclick=endTour;
     var nb=pop.querySelector('.tour-next');
     nb.onclick=function(){
       if(s.waitLoaded && !audioLoaded()){ nb.textContent='デモ音声を読み込み中…'; nb.disabled=true; loadDemo(); }

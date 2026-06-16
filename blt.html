@@ -2661,6 +2661,7 @@ $('dlDict').addEventListener('click',async()=>{
     {sel:'#brand', title:'BLTへようこそ', body:'ブラウザだけで完結するフィールドデータ編集ツールです。<b>音声の読み込みから注釈・グロス・ELAN(EAF)書き出し</b>までを、このツアーで一通り案内します。', place:'bottom'},
     {sel:'#cardFile', title:'① 音声を読み込む', body:'「<b>音声ファイル（WAV・PCM）を選択</b>」から録音を開きます。読み込むと無音を自動検出して発話区間に分割します。途中保存の .json や ELAN .eaf もここから開けます。<br><span style="color:var(--muted)">▶ 音声を選ぶと自動で次へ進みます。お持ちでなければ「次へ」でデモ音声を使って続けられます。</span>', place:'bottom', waitLoaded:true},
     {sel:'#cardWave', title:'波形で区間を確認・修正', body:'読み込んだ音声の波形です。区間（色付き帯）は<b>ドラッグで境界調整</b>、<b>クリック＋Space で再生</b>。取りこぼした発話は赤帯で警告され、ワンクリックで区間に追加できます。「⟳ 自動区切りをやり直し」で検出の感度も調整できます。', place:'bottom', needsAudio:true},
+    {sel:'#cardWave', title:'複数話者に対応', body:'各区間には<b>話者</b>が付きます（表の <b>spk</b> 列）。波形の下の <b>＋話者</b> で話者を増やすと、波形は<b>話者ごとのレーン</b>に分かれます。<br><b>別の話者どうしは時刻が重なってもOK</b>（同じ話者内は重複不可）なので、会話のオーバーラップもそのまま扱えます。書き出す <b>EAF は話者ごとの tier（PARTICIPANT 付き）</b>に分かれます。<br>例：2番目の区間を<b>話者B</b>に割り当てました。', place:'bottom', needsAudio:true, action:'demoSpk'},
     {sel:'#tb tr[data-i="0"]', title:'② 文字起こし（text）と訳（trans）', body:'区間の <b>text</b> 欄に文字起こし、<b>trans</b> 欄に訳を入力します。<br>例: <i style="font-family:var(--ipa)">nkjaan=du anna=tu uja=tu tamamiga=ti asɨ ffa-gama=nu u-tar=ca.</i><br>訳「昔々、母親と父親とタマミガという子がいたんだそうだ」', place:'bottom', needsAudio:true, action:'demoText', hideWave:true},
     {sel:'#paletteCard', title:'IPAパレットで発音記号を挿入', body:'キーボードで打ちにくい記号は、この <b>IPAパレット</b>（編集中に画面下に出ます）から挿入します。<br>例では「<b>as</b>」のあとに <b style="outline:2px solid var(--sel);border-radius:3px;padding:0 3px">ɨ</b>（中舌母音）を入れて <b>asɨ</b> にしました。母音セクションのボタンをクリックすると編集中のセルのカーソル位置に入ります。', place:'top', needsAudio:true, hideWave:true, action:'demoIPA'},
     {sel:'#tb tr.glossrow[data-i="0"]', title:'morph層：形態素が自動で区切られる', body:'text内の <b>-</b>（接辞）・<b>=</b>（接語）・空白を手がかりに、形態素が自動分割されてインターリニア表示になります。<br>例: <i>nkjaan / =du / anna / =tu …</i>（接語・接辞の境界も保持）。', place:'bottom', needsAudio:true, hideWave:true},
@@ -2789,7 +2790,18 @@ $('dlDict').addEventListener('click',async()=>{
       }catch(e){}
     });
   }
-  var ACTIONS={demoText:demoText, demoGloss:demoGloss, demoBdr:demoBdr, demoIPA:demoIPA, demoUtt2:demoUtt2, demoUdl:demoUdl};
+  function demoSpk(){
+    if(!demoMode) return;
+    try{
+      if(typeof speakers!=='undefined' && speakers.indexOf('B')<0) speakers.push('B');
+      if(segs[1]) segs[1].spk='B';   // 2番目の区間を話者Bに（レーン・spk列を見せる）
+      if(typeof renderSpkBar==='function') renderSpkBar();
+      if(typeof draw==='function') draw();
+      if(typeof drawOvw==='function') drawOvw();
+      if(typeof renderTable==='function') renderTable();
+    }catch(e){}
+  }
+  var ACTIONS={demoText:demoText, demoGloss:demoGloss, demoBdr:demoBdr, demoIPA:demoIPA, demoUtt2:demoUtt2, demoUdl:demoUdl, demoSpk:demoSpk};
   function isVisible(el){ if(!el) return false; var cs=getComputedStyle(el); if(cs.display==='none'||cs.visibility==='hidden') return false; var r=el.getBoundingClientRect(); return r.width>0&&r.height>0; }
   function clearWatch(){ if(watch){ clearInterval(watch); watch=null; } }
   function audioLoaded(){ var wv=document.getElementById('cardWave'); return (wv&&isVisible(wv))||(typeof segs!=='undefined'&&segs.length>0); }

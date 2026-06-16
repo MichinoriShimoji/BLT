@@ -2660,13 +2660,48 @@ $('dlDict').addEventListener('click',async()=>{
     {sel:'#brand', title:'BLTへようこそ', body:'ブラウザだけで完結するフィールドデータ編集ツールです。<b>音声の読み込みから注釈・グロス・ELAN(EAF)書き出し</b>までを、このツアーで一通り案内します。', place:'bottom'},
     {sel:'#cardFile', title:'① 音声を読み込む', body:'「<b>音声ファイル（WAV・PCM）を選択</b>」から録音を開きます。読み込むと無音を自動検出して発話区間に分割します。途中保存の .json や ELAN .eaf もここから開けます。<br><span style="color:var(--muted)">▶ 音声を選ぶと自動で次へ進みます。お持ちでなければ「次へ」でデモ音声を使って続けられます。</span>', place:'bottom', waitLoaded:true},
     {sel:'#cardWave', title:'波形で区間を確認・修正', body:'読み込んだ音声の波形です。区間（色付き帯）は<b>ドラッグで境界調整</b>、<b>クリック＋Space で再生</b>。取りこぼした発話は赤帯で警告され、ワンクリックで区間に追加できます。「⟳ 自動区切りをやり直し」で検出の感度も調整できます。', place:'bottom', needsAudio:true},
-    {sel:'#cardTable', title:'② 区間ごとに文字起こし・注釈', body:'各区間の行に <b>text</b>（文字起こし）や <b>trans</b>（翻訳）を直接入力します。セルをクリックして編集し、Tab・矢印で移動。発音表記が要るセルを編集すると画面下に <b>IPAパレット</b> が現れ、母音・子音・補助記号をクリックで挿入できます。', place:'top', needsAudio:true},
-    {sel:'#tierPreset', title:'グロス・層を追加', body:'「層構成」でプリセット（text+trans／+morph+gloss／+udl+morph+gloss）を選んだり、独自の層を追加できます。text内の <b>-</b> <b>=</b> <b>+</b> で形態素が自動分割され、<b>インターリニア・グロス</b>になります。', place:'bottom', needsAudio:true},
-    {sel:'#cardExport', title:'③ 書き出し・保存', body:'仕上がったら <b>EAF / TSV / JSON / WAV ZIP</b> で書き出し。<b>プロジェクト途中保存</b>（.json）で、同じWAVを読み込めば続きから再開できます。', place:'top', needsAudio:true},
+    {sel:'#cardTable', title:'② 文字起こしを入力', body:'区間の <b>text</b> 欄に文字起こしを入力します。<br>例: <i style="font-family:var(--ipa)">nkjaan=du anna=tu uja=tu tamamiga=ti asɨ ffa-gama=nu u-tar=ca.</i><br>（訳「昔々、母親と父親とタマミガという子がいたんだそうだ」）', place:'top', needsAudio:true, action:'demoText'},
+    {sel:'#paletteCard', title:'IPAパレットで発音記号', body:'キーボードで打ちにくい記号は、この <b>IPAパレット</b> から挿入します。例の <b>asɨ</b> の <b>ɨ</b>（中舌母音）も、母音セクションのボタンをクリックすれば編集中のセルに入ります。', place:'right', needsAudio:true},
+    {sel:'#cardTable', title:'形態素が自動で区切られる', body:'text内の <b>-</b>（接辞）・<b>=</b>（接語）・空白を手がかりに、形態素が自動分割されてインターリニア表示になります。<br>例: <i>nkjaan / =du / anna / =tu …</i>（接語・接辞の境界も保持）。', place:'top', needsAudio:true},
+    {sel:'#cardTable', title:'③ グロスを付ける', body:'各形態素の下の欄にグロスを記入します。<br>例: <b>nkjaan→昔</b>、<b>du→FOC</b>、<b>anna→母親</b>、<b>tu→COM</b> … のように。Leipzig式の略号も自由に書けます。', place:'top', needsAudio:true, action:'demoGloss'},
+    {sel:'#cardAnnoCtl', title:'文境界層（bdr）を足す', body:'「詳細設定」の<b>文境界をコーディング</b>を入れると、text の<b>ピリオド(.)</b>を文末の手がかりに、bdr層へ <b>BOS / EOS / I</b> を自動付与します（例文なら nkjaan=BOS … ca.=EOS）。文脈表示にも ‖ で文の切れ目が出ます。', place:'top', needsAudio:true, action:'demoBdr'},
+    {sel:'#cardExport', title:'④ 書き出し・保存', body:'仕上がったら <b>EAF / TSV / JSON / WAV ZIP</b> で書き出し。<b>プロジェクト途中保存</b>（.json）で、同じWAVを読み込めば続きから再開できます。', place:'top', needsAudio:true},
     {sel:'.bcite', title:'引用情報（DOI）', body:'BLTには DOI が付いています。研究で使ったら、このCITE欄の文献情報で引用してください。', place:'bottom'},
     {sel:'#fbOpen', title:'フィードバック歓迎', body:'改善点・気づいた点はこのボタンからお寄せください。このツアーは右上の「🧭 使い方ツアー」でいつでも見られます。', place:'left'}
   ];
-  var spot, pop, idx=-1, watch=null;
+  var spot, pop, idx=-1, watch=null, demoMode=false;
+  // 実演用の例文（埋め込みデモ音声に対応）
+  var EX_TEXT='nkjaan=du anna=tu uja=tu tamamiga=ti asɨ ffa-gama=nu u-tar=ca.';
+  var EX_TRANS='昔々、母親と父親とタマミガという子がいたんだそうだ。';
+  var EX_GLOSS={'0':'昔','1':'FOC','2':'母親','3':'COM'};
+  function fo(el){ el.dispatchEvent(new FocusEvent('focusout',{bubbles:true})); }
+  function demoText(){
+    if(!demoMode) return;
+    try{
+      if(typeof tiersDef!=='undefined' && !tiersDef.some(function(t){return t.name==='gloss';})){
+        var ps=document.getElementById('tierPreset');
+        if(ps){ ps.value='standard'; ps.dispatchEvent(new Event('change',{bubbles:true})); }
+      }
+      var tc=document.querySelector('#tb tr[data-i="0"] [data-k="text"]');
+      if(tc && !(segs[0].text||'').trim()){
+        tc.textContent=EX_TEXT; fo(tc);
+        var nc=document.querySelector('#tb tr[data-i="0"] [data-k="note"]');
+        if(nc){ nc.textContent=EX_TRANS; fo(nc); }
+      }
+    }catch(e){}
+  }
+  function demoGloss(){
+    if(!demoMode) return;
+    try{ document.querySelectorAll('#tb tr.glossrow[data-i="0"] [data-f="gloss"]').forEach(function(c){
+      if(EX_GLOSS[c.dataset.mi] && !c.textContent.trim()){ c.textContent=EX_GLOSS[c.dataset.mi]; fo(c); }
+    }); }catch(e){}
+  }
+  function demoBdr(){
+    try{ var det=document.querySelector('#cardAnnoCtl details'); if(det) det.open=true; }catch(e){}
+    if(!demoMode) return;
+    try{ var cb=document.getElementById('chkBdr'); if(cb && !cb.checked){ cb.checked=true; cb.dispatchEvent(new Event('change',{bubbles:true})); } }catch(e){}
+  }
+  var ACTIONS={demoText:demoText, demoGloss:demoGloss, demoBdr:demoBdr};
   function isVisible(el){ if(!el) return false; var cs=getComputedStyle(el); if(cs.display==='none'||cs.visibility==='hidden') return false; var r=el.getBoundingClientRect(); return r.width>0&&r.height>0; }
   function clearWatch(){ if(watch){ clearInterval(watch); watch=null; } }
   function audioLoaded(){ var wv=document.getElementById('cardWave'); return (wv&&isVisible(wv))||(typeof segs!=='undefined'&&segs.length>0); }
@@ -2679,6 +2714,7 @@ $('dlDict').addEventListener('click',async()=>{
   }
   function loadDemo(){
     try{
+      demoMode=true;
       var dt=new DataTransfer(); dt.items.add(makeDemoWav());
       var inp=document.getElementById('wavInput'); inp.files=dt.files;
       inp.dispatchEvent(new Event('change',{bubbles:true}));
@@ -2726,6 +2762,7 @@ $('dlDict').addEventListener('click',async()=>{
     var s=STEPS[n], el=document.querySelector(s.sel);
     if(!el || !isVisible(el)){ go(n+dir, dir); return; }  // 非表示の要素はスキップ
     idx=n;
+    if(s.action && ACTIONS[s.action]){ try{ ACTIONS[s.action](); }catch(e){} }  // 実演アクション
     el.scrollIntoView({block:'center'});
     pop.innerHTML='<button type="button" class="tour-skip" aria-label="閉じる">×</button>'
       +'<h4>'+s.title+'</h4><p>'+s.body+'</p>'
@@ -2742,7 +2779,7 @@ $('dlDict').addEventListener('click',async()=>{
       else go(idx+1, 1);
     };
     var prev=pop.querySelector('.tour-prev'); if(prev) prev.onclick=function(){ go(idx-1, -1); };
-    setTimeout(function(){ place(el); }, 60);
+    setTimeout(function(){ place(el); }, s.action?180:60);  // 実演で再描画する場合は少し待つ
     if(s.waitLoaded) startWatch();                        // 音声を読み込んだら自動で次へ
   }
   function startTour(){

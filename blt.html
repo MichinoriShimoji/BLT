@@ -2666,8 +2666,8 @@ $('dlDict').addEventListener('click',async()=>{
     {sel:'#tb tr.glossrow[data-i="0"]', title:'morph層：形態素が自動で区切られる', body:'text内の <b>-</b>（接辞）・<b>=</b>（接語）・空白を手がかりに、形態素が自動分割されてインターリニア表示になります。<br>例: <i>nkjaan / =du / anna / =tu …</i>（接語・接辞の境界も保持）。', place:'bottom', needsAudio:true, hideWave:true},
     {sel:'#tb tr.glossrow[data-i="0"]', title:'③ gloss層：グロスを付ける', body:'各形態素の下の欄にグロスを記入します。<br>例: <b>nkjaan→昔</b>、<b>du→FOC</b>、<b>anna→母親</b>、<b>tu→COM</b> … のように。これで <b>text＋morph＋gloss＋trans</b> がそろいました。', place:'bottom', needsAudio:true, action:'demoGloss', hideWave:true},
     {sel:'#tb tr.glossrow[data-i="0"]', title:'④ 文境界層（bdr）：ピリオドで BOS / EOS', body:'パネル4「詳細設定」の <b>文境界をコーディング（bdr層・ピリオド基準）</b> をONにすると（上でチェックが入ります）、text の<b>ピリオド(.)</b>を文末の手がかりに、各形態素へ <b>BOS（文頭）/ EOS（文末）/ I（文中）</b> が自動付与されます（例文なら <b>nkjaan=BOS … ca.=EOS</b>）。文脈表示にも <b>‖</b> で文の切れ目が出ます。', place:'bottom', needsAudio:true, action:'demoBdr', hideWave:true},
-    {sel:'#cardTable', title:'発話境界 ≠ 文境界', body:'BLTが音声を<b>ポーズで区切った区間＝「発話」</b>（発話境界）に対し、<b>bdr層</b>は<b>ピリオド基準の「文」</b>（文境界）です。両者は一致しません。<br>別の発話を読み込みました：<i style="font-family:var(--ipa)">unu ffa-gama=a dondon dondon bizin nn aparagi-midum-mas-i-i sudac-i-i,</i>（「この子はどんどん…美人、、、美しい女に育って」）。言い直し（<b>bizin「美人」→ nn=FRG → aparagi-midum「美しい女」</b>）を含み、<b>コンマで終わる＝文として未完</b>。だから bdr に <b>EOS が付きません</b>（＝1発話だが1文ではない）。', place:'top', needsAudio:true, action:'demoUtt2', hideWave:true},
-    {sel:'#tb tr.glossrow[data-i="0"]', title:'udl層：基底形の境界で morph 分割', body:'<b>udl層（基底形）</b>を加えると、morph は <b>表層の text</b> ではなく <b>udl の形態素境界</b>に従って分割されます。<br>text は表層形のまま（<i>…aparagi<b>midummasii</b>…</i>）、udl に基底形 <i>…aparagi-<b>midum-as-i-i</b>…</i> と境界を書けば、morph は <b>midum / -as / -i / -i</b> に分割されます（表層 <b>midummasii</b> → 基底 <b>midum-as-i-i</b>）。表層と基底がずれる言語で有効です。', place:'bottom', needsAudio:true, action:'demoUdl', hideWave:true},
+    {sel:'#cardTable', title:'発話境界 ≠ 文境界', body:'BLTが音声を<b>ポーズで区切った区間＝「発話」</b>（発話境界）と、<b>bdr層</b>の<b>ピリオド基準の「文」</b>（文境界）は<b>必ずしも一致しません</b>。<br>別の発話を読み込みました：<i style="font-family:var(--ipa)">unu ffa-gama=a dondon dondon bizin nn aparagi-midum-mas-i-i sudac-i-i,</i>（「この子はどんどん…美人、、、美しい女に育って」）。言い直し（<b>bizin「美人」→ nn=FRG → aparagi-midum「美しい女」</b>）を含み、<b>コンマで終わる＝文として未完</b>。だから bdr に <b>EOS が付きません</b>（＝1発話だが1文ではない）。', place:'top', needsAudio:true, action:'demoUtt2', hideWave:true},
+    {sel:'#cardTable', title:'udl層：基底形の境界で morph 分割', body:'<b>udl層（基底形）</b>を加えると、morph は <b>表層の text</b> ではなく <b>udl の形態素境界</b>に従って分割されます。<br>text は表層形のまま（<i>…aparagi<b>midummasii</b>…</i>）、udl に基底形 <i>…aparagi-<b>midum-as-i-i</b>…</i> と境界を書けば、morph は <b>midum / -as / -i / -i</b> に分割されます（表層 <b>midummasii</b> → 基底 <b>midum-as-i-i</b>）。表層と基底がずれる言語で有効です。', place:'bottom', needsAudio:true, action:'demoUdl', hideWave:true},
     {sel:'#cardExport', title:'⑤ 書き出し・保存', body:'仕上がったら <b>EAF / TSV / JSON / WAV ZIP</b> で書き出し。<b>プロジェクト途中保存</b>（.json）で、同じWAVを読み込めば続きから再開できます。', place:'top', needsAudio:true},
     {sel:'.bcite', title:'引用情報（DOI）', body:'BLTには DOI が付いています。研究で使ったら、このCITE欄の文献情報で引用してください。', place:'bottom'},
     {sel:'#fbOpen', title:'フィードバック歓迎', body:'改善点・気づいた点はこのボタンからお寄せください。このツアーは右上の「🧭 使い方ツアー」でいつでも見られます。', place:'left'}
@@ -2722,7 +2722,7 @@ $('dlDict').addEventListener('click',async()=>{
   }
   function clearIPAHighlight(){ var b=document.querySelector('#paletteCard button[data-ch="ɨ"]'); if(b){ b.style.outline=''; b.style.outlineOffset=''; } var pc=document.getElementById('paletteCard'); if(pc){ pc.style.transform=''; pc.style.transition=''; } }
   // 発話境界≠文境界 の実演：別の発話(_003)を読み込んで注釈
-  var demo2Loaded=false;
+  var utt2Loading=false, utt2Ready=false, utt2Cbs=[];
   function makeDemo2Wav(){
     var bin=atob(BLT_DEMO2_WAV_B64), arr=new Uint8Array(bin.length);
     for(var i=0;i<bin.length;i++) arr[i]=bin.charCodeAt(i);
@@ -2741,36 +2741,52 @@ $('dlDict').addEventListener('click',async()=>{
       },120);
     }catch(e){}
   }
-  function demoUtt2(){
-    if(!demoMode) return;
+  // _003 の読み込み完了（wavName が _2 になる）を待ってから検出・注釈する堅牢版
+  function utt2IsLoaded(){ return /tomiyama_2/.test(((document.getElementById('wavName')||{}).textContent)||''); }
+  function ensureUtt2(onReady){
+    if(utt2Ready){ if(onReady) onReady(); return; }
+    if(onReady) utt2Cbs.push(onReady);
+    if(utt2Loading) return;
+    utt2Loading=true;
     try{
-      if(segs[0] && (segs[0].text||'').indexOf('aparagi')>=0) return;  // 既に実演済み
-      if(demo2Loaded) return;
-      demo2Loaded=true;
       var dt=new DataTransfer(); dt.items.add(makeDemo2Wav());
       var inp=document.getElementById('wavInput'); inp.files=dt.files;
       inp.dispatchEvent(new Event('change',{bubbles:true}));
-      setTimeout(function(){ try{ if(typeof detect==='function') detect(); }catch(e){} },1300);
-      setTimeout(annotateUtt2,1900);
     }catch(e){}
+    var tries=0, iv=setInterval(function(){
+      tries++;
+      if(utt2IsLoaded()){
+        clearInterval(iv);
+        try{ if(typeof detect==='function' && (typeof segs==='undefined'||!segs.length)) detect(); }catch(e){}
+        setTimeout(function(){
+          try{ annotateUtt2(); }catch(e){}
+          utt2Ready=true;
+          var cbs=utt2Cbs.slice(); utt2Cbs=[]; cbs.forEach(function(cb){ try{ cb(); }catch(e){} });
+        },250);
+      } else if(tries>60){ clearInterval(iv); utt2Loading=false; }  // 12秒で諦め（再試行可）
+    },200);
   }
+  function demoUtt2(){ if(!demoMode) return; ensureUtt2(function(){ reposition(); }); }
   function demoUdl(){
     if(!demoMode) return;
-    try{
-      var s=segs[0]; if(!s) return;
-      if((s.tv||{}).udl) return;  // 既に実演済み
-      // udl層（区間レベル＝基底形）を追加し、morphの分割元を udl にする（gloss/bdr は保持）
-      if(typeof tiersDef!=='undefined' && !tiersDef.some(function(t){return t.name==='udl';})){
-        tiersDef.unshift({name:'udl',parent:'seg'});
-      }
-      morphSrc='udl';
-      // text は表層形（境界なし）、udl に基底形（境界あり）を入れる
-      s.text='unu ffagamaa dondon dondon bizin nn aparagimidummasii sudacii,';
-      s.tv=s.tv||{};
-      s.tv.udl='unu ffa-gama=a dondon dondon bizin nn aparagi-midum-as-i-i sudac-i-i';
-      if(typeof refreshTierUI==='function') refreshTierUI();
-      if(typeof renderTable==='function') renderTable();
-    }catch(e){}
+    ensureUtt2(function(){
+      try{
+        var s=segs[0]; if(!s) return;
+        if((s.tv||{}).udl){ reposition(); return; }  // 既に実演済み
+        // udl層（区間レベル＝基底形）を追加し、morphの分割元を udl にする（gloss/bdr は保持）
+        if(typeof tiersDef!=='undefined' && !tiersDef.some(function(t){return t.name==='udl';})){
+          tiersDef.unshift({name:'udl',parent:'seg'});
+        }
+        morphSrc='udl';
+        // text は表層形（境界なし）、udl に基底形（境界あり）を入れる
+        s.text='unu ffagamaa dondon dondon bizin nn aparagimidummasii sudacii,';
+        s.tv=s.tv||{};
+        s.tv.udl='unu ffa-gama=a dondon dondon bizin nn aparagi-midum-as-i-i sudac-i-i';
+        if(typeof refreshTierUI==='function') refreshTierUI();
+        if(typeof renderTable==='function') renderTable();
+        reposition();
+      }catch(e){}
+    });
   }
   var ACTIONS={demoText:demoText, demoGloss:demoGloss, demoBdr:demoBdr, demoIPA:demoIPA, demoUtt2:demoUtt2, demoUdl:demoUdl};
   function isVisible(el){ if(!el) return false; var cs=getComputedStyle(el); if(cs.display==='none'||cs.visibility==='hidden') return false; var r=el.getBoundingClientRect(); return r.width>0&&r.height>0; }

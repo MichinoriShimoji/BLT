@@ -2657,7 +2657,7 @@ $('dlDict').addEventListener('click',async()=>{
 (function(){
   var STEPS=[
     {sel:'#brand', title:'BLTへようこそ', body:'ブラウザだけで完結するフィールドデータ編集ツールです。<b>音声の読み込みから注釈・グロス・ELAN(EAF)書き出し</b>までを、このツアーで一通り案内します。', place:'bottom'},
-    {sel:'#cardFile', title:'① 音声を読み込む', body:'「<b>音声ファイル（WAV・PCM）を選択</b>」から録音を開きます。読み込むと無音を自動検出して発話区間に分割します。途中保存の .json や ELAN .eaf もここから開けます。<br><span style="color:var(--muted)">▶ ここで実際に音声を選ぶと、ツアーは自動で次に進みます。</span>', place:'bottom', waitLoaded:true},
+    {sel:'#cardFile', title:'① 音声を読み込む', body:'「<b>音声ファイル（WAV・PCM）を選択</b>」から録音を開きます。読み込むと無音を自動検出して発話区間に分割します。途中保存の .json や ELAN .eaf もここから開けます。<br><span style="color:var(--muted)">▶ 音声を選ぶと自動で次へ進みます。お持ちでなければ「次へ」でデモ音声を使って続けられます。</span>', place:'bottom', waitLoaded:true},
     {sel:'#cardWave', title:'波形で区間を確認・修正', body:'読み込んだ音声の波形です。区間（色付き帯）は<b>ドラッグで境界調整</b>、<b>クリック＋Space で再生</b>。取りこぼした発話は赤帯で警告され、ワンクリックで区間に追加できます。「⟳ 自動区切りをやり直し」で検出の感度も調整できます。', place:'bottom', needsAudio:true},
     {sel:'#cardTable', title:'② 区間ごとに文字起こし・注釈', body:'各区間の行に <b>text</b>（文字起こし）や <b>trans</b>（翻訳）を直接入力します。セルをクリックして編集し、Tab・矢印で移動。発音表記が要るセルを編集すると画面下に <b>IPAパレット</b> が現れ、母音・子音・補助記号をクリックで挿入できます。', place:'top', needsAudio:true},
     {sel:'#tierPreset', title:'グロス・層を追加', body:'「層構成」でプリセット（text+trans／+morph+gloss／+udl+morph+gloss）を選んだり、独自の層を追加できます。text内の <b>-</b> <b>=</b> <b>+</b> で形態素が自動分割され、<b>インターリニア・グロス</b>になります。', place:'bottom', needsAudio:true},
@@ -2668,7 +2668,34 @@ $('dlDict').addEventListener('click',async()=>{
   var spot, pop, idx=-1, watch=null;
   function isVisible(el){ if(!el) return false; var cs=getComputedStyle(el); if(cs.display==='none'||cs.visibility==='hidden') return false; var r=el.getBoundingClientRect(); return r.width>0&&r.height>0; }
   function clearWatch(){ if(watch){ clearInterval(watch); watch=null; } }
-  function startWatch(){ clearWatch(); watch=setInterval(function(){ var wv=document.getElementById('cardWave'); var loaded=(wv&&isVisible(wv))||(typeof segs!=='undefined'&&segs.length>0); if(loaded){ clearWatch(); go(idx+1,1); } },500); }
+  function audioLoaded(){ var wv=document.getElementById('cardWave'); return (wv&&isVisible(wv))||(typeof segs!=='undefined'&&segs.length>0); }
+  function startWatch(){ clearWatch(); watch=setInterval(function(){ if(audioLoaded()){ clearWatch(); go(idx+1,1); } },400); }
+  // ツアー用の合成デモ音声を生成（無音区切りが効くよう、発話風バーストと無音を交互に）
+  function makeDemoWav(){
+    var sr=16000, N=sr*9, data=new Float32Array(N);
+    [[0.5,1.2],[2.3,1.0],[4.1,1.3],[6.1,0.9],[7.5,1.0]].forEach(function(b){
+      var st=Math.floor(b[0]*sr), len=Math.floor(b[1]*sr);
+      for(var i=0;i<len;i++){ var t=i/len, e=Math.sin(Math.PI*t);
+        var s=(Math.random()*2-1)*0.5 + 0.5*Math.sin(2*Math.PI*(140+60*Math.sin(t*6))*(i/sr));
+        if(st+i<N) data[st+i]+=e*0.6*s; }
+    });
+    var buf=new ArrayBuffer(44+N*2), dv=new DataView(buf);
+    function ws(o,s){ for(var i=0;i<s.length;i++) dv.setUint8(o+i,s.charCodeAt(i)); }
+    ws(0,'RIFF'); dv.setUint32(4,36+N*2,true); ws(8,'WAVE'); ws(12,'fmt ');
+    dv.setUint32(16,16,true); dv.setUint16(20,1,true); dv.setUint16(22,1,true);
+    dv.setUint32(24,sr,true); dv.setUint32(28,sr*2,true); dv.setUint16(32,2,true); dv.setUint16(34,16,true);
+    ws(36,'data'); dv.setUint32(40,N*2,true);
+    for(var i=0;i<N;i++){ var v=Math.max(-1,Math.min(1,data[i])); dv.setInt16(44+i*2, v*32767, true); }
+    return new File([buf],'demo（ツアー用）.wav',{type:'audio/wav'});
+  }
+  function loadDemo(){
+    try{
+      var dt=new DataTransfer(); dt.items.add(makeDemoWav());
+      var inp=document.getElementById('wavInput'); inp.files=dt.files;
+      inp.dispatchEvent(new Event('change',{bubbles:true}));
+      setTimeout(function(){ try{ if(typeof detect==='function'&&(typeof segs==='undefined'||!segs.length)) detect(); }catch(e){} },1600);
+    }catch(e){}
+  }
   function ensure(){
     if(spot) return;
     spot=document.createElement('div'); spot.className='tour-spot'; spot.hidden=true; document.body.appendChild(spot);
@@ -2720,7 +2747,11 @@ $('dlDict').addEventListener('click',async()=>{
       +'</span></div>';
     pop.hidden=false;
     pop.querySelector('.tour-skip').onclick=endTour;
-    pop.querySelector('.tour-next').onclick=function(){ go(idx+1, 1); };
+    var nb=pop.querySelector('.tour-next');
+    nb.onclick=function(){
+      if(s.waitLoaded && !audioLoaded()){ nb.textContent='デモ音声を読み込み中…'; nb.disabled=true; loadDemo(); }
+      else go(idx+1, 1);
+    };
     var prev=pop.querySelector('.tour-prev'); if(prev) prev.onclick=function(){ go(idx-1, -1); };
     setTimeout(function(){ place(el); }, 60);
     if(s.waitLoaded) startWatch();                        // 音声を読み込んだら自動で次へ

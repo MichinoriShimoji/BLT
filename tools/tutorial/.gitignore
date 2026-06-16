@@ -1,0 +1,5 @@
+node_modules/
+frames/
+demo.wav
+*.mp4
+package-lock.json

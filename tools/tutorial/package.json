@@ -1,0 +1,12 @@
+{
+  "name": "blt-tutorial",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Generate the BLT tutorial demo video (silent, captioned) from the real blt.html.",
+  "scripts": {
+    "shoot": "node shoot.js"
+  },
+  "dependencies": {
+    "puppeteer-core": "^25.1.0"
+  }
+}

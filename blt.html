@@ -230,6 +230,22 @@ tr.glossrow td{background:#f6faf8;padding:6px 8px}
 .fb-fallback{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.5}
 .fb-fallback a{color:var(--accent);font-weight:600;text-decoration:none}
 .fb-fallback a:hover{text-decoration:underline}
+#tourBtn{margin-left:auto;background:var(--accent-soft);color:var(--accent-ink);border:1px solid var(--accent);border-radius:16px;padding:5px 13px;font-size:12px;font-weight:600;cursor:pointer;align-self:center}
+#tourBtn:hover{background:var(--accent);color:#fff}
+.tour-spot{position:fixed;border-radius:8px;box-shadow:0 0 0 9999px rgba(15,23,42,.62);z-index:10000;pointer-events:none;transition:top .25s,left .25s,width .25s,height .25s;outline:2px solid var(--accent);outline-offset:2px}
+.tour-pop{position:fixed;z-index:10001;background:var(--surface);border-radius:10px;width:340px;max-width:calc(100vw - 24px);padding:16px 18px 14px;box-shadow:0 12px 44px rgba(0,0,0,.34)}
+.tour-pop h4{margin:0 0 6px;font-family:var(--jp-serif);color:var(--accent-ink);font-size:15.5px}
+.tour-pop p{margin:0;font-size:12.7px;color:var(--ink);line-height:1.6}
+.tour-row{display:flex;align-items:center;justify-content:space-between;margin-top:13px;gap:8px}
+.tour-step{font-size:11px;color:var(--muted)}
+.tour-btns{display:flex;gap:6px}
+.tour-btns button{border-radius:6px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--line)}
+.tour-next{background:var(--accent);color:#fff;border-color:var(--accent)}
+.tour-next:hover{background:var(--accent-ink)}
+.tour-prev{background:var(--surface);color:var(--muted)}
+.tour-prev:hover{color:var(--ink)}
+.tour-skip{position:absolute;top:9px;right:11px;border:none;background:none;font-size:18px;line-height:1;color:var(--muted);cursor:pointer}
+.tour-skip:hover{color:var(--warn)}
 </style>
 </head>
 <body>
@@ -254,6 +270,7 @@ tr.glossrow td{background:#f6faf8;padding:6px 8px}
   <div id="tabbar">
     <button type="button" class="tab cur" data-tab="anno">注釈</button>
     <button type="button" class="tab" data-tab="analysis">分析・辞書</button>
+    <button type="button" id="tourBtn" title="BLTの使い方を順に案内します">🧭 使い方ツアー</button>
   </div>
 </header>
 <main>
@@ -2632,6 +2649,80 @@ $('dlDict').addEventListener('click',async()=>{
   close.addEventListener('click', hide);
   ov.addEventListener('click', function(e){ if(e.target===ov) hide(); });
   document.addEventListener('keydown', function(e){ if(e.key==='Escape' && !ov.hidden) hide(); });
+})();
+</script>
+
+<script>
+/* アプリ内インタラクティブ・ガイドツアー（依存なし） */
+(function(){
+  var STEPS=[
+    {sel:'#brand', title:'BLTへようこそ', body:'BLTは、ブラウザだけで完結するフィールドデータ編集ツールです。音声の文字起こし・注釈・グロス・ELAN(EAF)などへの書き出しが、インストール不要・データは端末内のまま行えます。このツアーで主な流れを案内します。', place:'bottom'},
+    {sel:'#cardFile', title:'① まず音声を読み込む', body:'WAV音声を選ぶと、無音を自動検出して発話区間に分割します。途中保存した <b>.json プロジェクト</b> や、既存の <b>ELAN .eaf</b> もここから開けます。', place:'bottom'},
+    {sel:'#tabbar', title:'注釈と分析の切り替え', body:'<b>注釈</b>タブで文字起こし・グロス付け、<b>分析・辞書</b>タブで語数・形態素リスト・簡易辞書を確認できます。音声を読み込むと、この下に波形パネルと注釈表が現れます。', place:'bottom'},
+    {sel:'#saveBar', title:'いつでも保存・書き出し', body:'作業内容は <b>EAF / TSV / JSON / WAV ZIP</b> で書き出せます。<b>プロジェクト途中保存</b>で .json として保存し、あとで続きから再開もできます。', place:'bottom'},
+    {sel:'.bcite', title:'引用情報（DOI）', body:'BLTには DOI が付いています。研究で使ったら、このCITE欄の文献情報で引用してください。', place:'bottom'},
+    {sel:'#fbOpen', title:'フィードバック歓迎', body:'改善点・気づいた点があれば、このボタンからいつでもお寄せください。次回からこのツアーは右上の「🧭 使い方ツアー」でいつでも見られます。', place:'left'}
+  ];
+  var spot, pop, idx=-1;
+  function ensure(){
+    if(spot) return;
+    spot=document.createElement('div'); spot.className='tour-spot'; spot.hidden=true; document.body.appendChild(spot);
+    pop=document.createElement('div'); pop.className='tour-pop'; pop.hidden=true; document.body.appendChild(pop);
+  }
+  function endTour(){
+    if(spot) spot.hidden=true; if(pop) pop.hidden=true; idx=-1;
+    try{ localStorage.setItem('blt_tour_done','1'); }catch(e){}
+    document.removeEventListener('keydown', onKey);
+    window.removeEventListener('resize', reposition);
+  }
+  function onKey(e){
+    if(e.key==='Escape') endTour();
+    else if(e.key==='ArrowRight') go(idx+1);
+    else if(e.key==='ArrowLeft') go(idx-1);
+  }
+  function place(el){
+    var r=el.getBoundingClientRect(), pad=6;
+    spot.style.top=(r.top-pad)+'px'; spot.style.left=(r.left-pad)+'px';
+    spot.style.width=(r.width+pad*2)+'px'; spot.style.height=(r.height+pad*2)+'px';
+    spot.hidden=false;
+    var pw=pop.offsetWidth||340, ph=pop.offsetHeight||160, m=12, vw=innerWidth, vh=innerHeight;
+    var top, left, st=STEPS[idx].place||'bottom';
+    if(st==='left'){ left=r.left-pw-m; top=r.top; }
+    else if(st==='top'){ top=r.top-ph-m; left=r.left; }
+    else { top=r.bottom+m; left=r.left; }            // bottom
+    if(left<m) left=m; if(left+pw>vw-m) left=vw-pw-m;
+    if(top<m) top=r.bottom+m; if(top+ph>vh-m) top=Math.max(m, r.top-ph-m);
+    pop.style.top=top+'px'; pop.style.left=left+'px';
+  }
+  function reposition(){ if(idx>=0 && idx<STEPS.length){ var el=document.querySelector(STEPS[idx].sel); if(el) place(el); } }
+  function go(n){
+    if(n<0) return;
+    if(n>=STEPS.length){ endTour(); return; }
+    var s=STEPS[n], el=document.querySelector(s.sel);
+    if(!el){ go(n+1); return; }                       // 非表示要素はスキップ
+    idx=n;
+    el.scrollIntoView({block:'center', behavior:'smooth'});
+    pop.innerHTML='<button type="button" class="tour-skip" aria-label="閉じる">×</button>'
+      +'<h4>'+s.title+'</h4><p>'+s.body+'</p>'
+      +'<div class="tour-row"><span class="tour-step">'+(n+1)+' / '+STEPS.length+'</span>'
+      +'<span class="tour-btns">'
+      +(n>0?'<button type="button" class="tour-prev">戻る</button>':'')
+      +'<button type="button" class="tour-next">'+(n===STEPS.length-1?'完了':'次へ ›')+'</button>'
+      +'</span></div>';
+    pop.hidden=false;
+    pop.querySelector('.tour-skip').onclick=endTour;
+    pop.querySelector('.tour-next').onclick=function(){ go(idx+1); };
+    var prev=pop.querySelector('.tour-prev'); if(prev) prev.onclick=function(){ go(idx-1); };
+    setTimeout(function(){ place(el); }, 60);
+  }
+  function startTour(){
+    ensure(); document.addEventListener('keydown', onKey);
+    window.addEventListener('resize', reposition); go(0);
+  }
+  var btn=document.getElementById('tourBtn');
+  if(btn) btn.addEventListener('click', startTour);
+  // 初回訪問時のみ自動起動
+  try{ if(!localStorage.getItem('blt_tour_done')) setTimeout(startTour, 700); }catch(e){}
 })();
 </script>
 </body>

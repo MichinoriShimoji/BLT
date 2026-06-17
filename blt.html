@@ -695,7 +695,11 @@ function importEaf(xmlText){
       if(isMorphTier(ct))return;
       const nm=lname(ct.id);
       ct.anns.forEach(a=>{const r=recByAid[a.ref];if(!r)return;
-        if(ct.id===transTierId)r.note=a.val; else {r.tv[nm]=a.val; if(a.val)segLayers.add(nm);}
+        if(ct.id===transTierId){r.note=a.val;return;}
+        if(nm==='spk'){if(a.val)r.spk=a.val;return;}        // BLT書き出しの spk 層→話者
+        if(nm==='ID'||nm==='id'){if(a.val)r.idEaf=a.val;return;}  // ID 層→レコードID
+        if(nm==='bdr'||nm==='wbdr')return;                   // 計算層は再計算するので取り込まない
+        r.tv[nm]=a.val; if(a.val)segLayers.add(nm);
       });
     });
   });
@@ -742,19 +746,26 @@ function importEaf(xmlText){
   indepTiers.forEach(it=>{
     const nm=lname(it.id), tos=it.anns.filter(a=>a.kind==='al'&&a.t0!=null);
     if(!tos.length)return;
-    recs.forEach(r=>{const c=(r.t0+r.t1)/2*1000;const hit=tos.find(a=>c>=a.t0&&c<=a.t1);if(hit&&hit.val){r.tv[nm]=hit.val;segLayers.add(nm)}});
+    const pick=r=>{const c=(r.t0+r.t1)/2*1000;return tos.find(a=>c>=a.t0&&c<=a.t1)};
+    if(nm==='ID'||nm==='id'){recs.forEach(r=>{const h=pick(r);if(h&&h.val)r.idEaf=h.val});return;}  // BLT書き出しの ID 層
+    if(nm==='spk'){recs.forEach(r=>{const h=pick(r);if(h&&h.val)r.spk=h.val});return;}
+    if(nm==='bdr'||nm==='wbdr')return;
+    recs.forEach(r=>{const hit=pick(r);if(hit&&hit.val){r.tv[nm]=hit.val;segLayers.add(nm)}});
   });
   // 反映
   recs.sort((a,b)=>a.t0-b.t0);
   if(!recs.length)throw new Error('注釈区間が見つかりません');
-  speakers=newSpeakers.length?newSpeakers:['A']; activeSpk=speakers[0];
+  const spkSet=[]; recs.forEach(r=>{if(r.spk&&!spkSet.includes(r.spk))spkSet.push(r.spk)});  // spk層/＠話者から実話者を再構築
+  speakers=spkSet.length?spkSet:['A']; activeSpk=speakers[0];
   morphSrc='text';   // glossOn は morph親の層（下のtiersDef）から refreshTierUI で導出
   tiersDef=[...morphLayers].map(n=>({name:n,parent:'morph'}))
     .concat([...segLayers].map(n=>({name:n,parent:'seg'})));
+  const keepTv=new Set(tiersDef.map(t=>t.name));   // 層化されなかった空エントリ（kana/gloss/pos等）を掃除
+  recs.forEach(r=>{Object.keys(r.tv).forEach(k=>{if(!keepTv.has(k))delete r.tv[k]})});
   const base=(wavFile?wavFile.name.replace(/\.wav$/i,''):'eaf').replace(/[\\\/:*?"<>|\s]+/g,'_');
   const wsuf=String(recs.length).length>3?String(recs.length).length:3;
   segs=recs.map((r,i)=>{
-    const o={t0:+r.t0.toFixed(3),t1:+r.t1.toFixed(3),id:base+'_'+String(i+1).padStart(wsuf,'0'),
+    const o={t0:+r.t0.toFixed(3),t1:+r.t1.toFixed(3),id:r.idEaf||(base+'_'+String(i+1).padStart(wsuf,'0')),
       spk:r.spk,text:r.text,note:r.note,tv:r.tv};
     if(Array.isArray(r.morphs)&&r.morphs.length)o.morphs=r.morphs;
     return o;

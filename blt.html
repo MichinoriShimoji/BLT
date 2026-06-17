@@ -2922,6 +2922,8 @@ $('dlDict').addEventListener('click',async()=>{
     };
     var prev=pop.querySelector('.tour-prev'); if(prev) prev.onclick=function(){ go(idx-1, -1); };
     setTimeout(function(){ var e2=document.querySelector(s.sel); if(e2) place(e2); }, s.action?220:60);  // 実演で再描画する場合は少し待つ
+    // 波形ステップ：読み込み後の自動検出でパネル1・2が隠れてレイアウトが動くので、数回追従させる
+    if(s.scrollTop){ [500,1000,1700,2600].forEach(function(d){ setTimeout(function(){ if(idx===n){ window.scrollTo(0,0); reposition(); } }, d); }); }
     if(s.waitLoaded) startWatch();                        // 音声を読み込んだら自動で次へ
   }
   function startTour(){

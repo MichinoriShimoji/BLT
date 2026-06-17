@@ -153,7 +153,7 @@ code{background:var(--accent-soft);padding:1px 5px;border-radius:4px;font-size:1
 }
 /* パネル4上部：左コントロール＋右の文脈ウィンドウ */
 #annoCtlRow{display:flex;gap:14px;align-items:stretch;flex-wrap:wrap}
-#annoPager{margin:10px 0 0;padding-top:9px;border-top:1px solid var(--line);align-items:center}
+#annoPager{margin:0 0 10px;padding-bottom:9px;border-bottom:1px solid var(--line);align-items:center}
 #annoCtlLeft{flex:1 1 360px;min-width:0}
 #ctxPane{flex:1 1 320px;min-width:0;display:flex;flex-direction:column;border:1px solid var(--line);border-radius:8px;background:#fafbfa;overflow:hidden}
 #ctxHead{display:flex;align-items:center;gap:6px;padding:4px 8px;border-bottom:1px solid var(--line);background:var(--surface)}
@@ -439,14 +439,6 @@ tr.glossrow td{background:#f6faf8;padding:6px 8px}
     <div id="ctxBody" class="ctxbody"><span class="note">レコードを作ると、ここに連続表示されます。</span></div>
    </div>
   </div>
-  <div class="optrow" id="annoPager">
-    <label class="note">表示レイヤー</label>
-    <select id="viewLayer"></select>
-    <span class="sep" style="width:1px;height:20px;background:var(--line)"></span>
-    <button id="btnPgPrev" disabled>◀ 前の5件</button>
-    <span id="pgInfo" class="note" style="font-family:var(--mono)">0件</span>
-    <button id="btnPgNext" disabled>次の5件 ▶</button>
-  </div>
 </div>
 </div><!-- /waveCol（ここまで上部固定） -->
 
@@ -457,6 +449,14 @@ tr.glossrow td{background:#f6faf8;padding:6px 8px}
 </div>
 
 <div class="card hidden" id="cardTable">
+  <div class="optrow" id="annoPager">
+    <label class="note">表示レイヤー</label>
+    <select id="viewLayer"></select>
+    <span class="sep" style="width:1px;height:20px;background:var(--line)"></span>
+    <button id="btnPgPrev" disabled>◀ 前の5件</button>
+    <span id="pgInfo" class="note" style="font-family:var(--mono)">0件</span>
+    <button id="btnPgNext" disabled>次の5件 ▶</button>
+  </div>
   <table>
     <thead id="tbHead"></thead>
     <tbody id="tb"></tbody>

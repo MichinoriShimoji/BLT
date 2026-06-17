@@ -148,13 +148,13 @@ code{background:var(--accent-soft);padding:1px 5px;border-radius:4px;font-size:1
 /* 広い画面ではパネル3（波形）と4（注釈）を横並びにして上部固定の高さを抑え、下の表を広く見せる */
 /* 波形の下を左右2分割：左＝パネル4操作部（スクロールしても残す）／右＝レコード表（縦スクロール） */
 #lowerSplit{display:flex;gap:14px;align-items:flex-start}
-#annoSide{flex:0 0 430px;min-width:0}
+#annoSide{flex:0 0 380px;min-width:0}
 #tableCol{flex:1 1 auto;min-width:0}
-@media (min-width:1180px){
+@media (min-width:1040px){
   #annoSide{position:sticky;align-self:flex-start}   /* topはJSで波形の高さに合わせて設定 */
   #annoSide #cardAnnoCtl{max-height:calc(100vh - 120px);overflow:auto}
 }
-@media (max-width:1179px){
+@media (max-width:1039px){
   #lowerSplit{flex-direction:column}
   #annoSide{flex-basis:auto;width:100%}
 }

@@ -699,27 +699,42 @@ function importEaf(xmlText){
       });
     });
   });
-  // morph層（テキストの Symbolic_Subdivision の子）
-  const morphAidInfo={};   // morph注釈id -> {rec, idx}
-  let morphParentLevel='text';
+  // morph層＝テキスト配下の Symbolic_Subdivision チェーンの最下層（葉）。
+  // text→word→morph のように中間subdivision（語など）が挟まっても葉の形態素まで降りる。
+  const morphAidInfo={};   // 形態素注釈id -> {r, idx}
+  const hasSubdivChild=t=>(childrenOf[t.id]||[]).some(isMorphTier);
+  // ある親注釈の子注釈を PREVIOUS で順序付けして返す
+  const orderedChildren=(tier,parentAid)=>{
+    const arr=tier.anns.filter(a=>a.ref===parentAid);
+    if(arr.length<2)return arr.slice();
+    const next={}; arr.forEach(a=>{if(a.prev)next[a.prev]=a});
+    const start=arr.find(a=>!a.prev)||arr[0]; const ordered=[]; let cur=start, guard=0;
+    while(cur&&guard++<9999){ordered.push(cur);cur=next[cur.id]}
+    if(ordered.length!==arr.length){ordered.length=0;arr.forEach(a=>ordered.push(a))}
+    return ordered;
+  };
   textTiers.forEach(tt=>{
-    (childrenOf[tt.id]||[]).filter(isMorphTier).forEach(mt=>{
-      // 親注釈ごとに PREVIOUS で順序付け
-      const byParent={};
-      mt.anns.forEach(a=>{(byParent[a.ref]=byParent[a.ref]||[]).push(a)});
-      Object.keys(byParent).forEach(pid=>{
-        const arr=byParent[pid], next={}; arr.forEach(a=>{if(a.prev)next[a.prev]=a});
-        const start=arr.find(a=>!a.prev)||arr[0]; const ordered=[]; let cur=start, guard=0;
-        while(cur&&guard++<9999){ordered.push(cur);cur=next[cur.id]}
-        if(ordered.length!==arr.length){ordered.length=0;arr.forEach(a=>ordered.push(a))}
-        const r=recByAid[pid]; if(!r)return;
-        r.morphs=ordered.map(a=>a.val);
-        ordered.forEach((a,idx)=>morphAidInfo[a.id]={r,idx});
+    (childrenOf[tt.id]||[]).filter(isMorphTier).forEach(topSub=>{
+      // 葉subdivision（gloss/pos等の関連層が付く層）を特定
+      let leaf=topSub; while(hasSubdivChild(leaf)){leaf=(childrenOf[leaf.id]||[]).find(isMorphTier);}
+      // 中間subdivisionを再帰的に降りて葉の形態素注釈を平坦化
+      const collectMorphs=(subTier,parentAid)=>{
+        const kids=orderedChildren(subTier,parentAid);
+        if(!hasSubdivChild(subTier))return kids;   // 葉＝形態素
+        const childSub=(childrenOf[subTier.id]||[]).find(isMorphTier);
+        let out=[]; kids.forEach(k=>{out=out.concat(collectMorphs(childSub,k.id))}); return out;
+      };
+      recs.forEach(r=>{
+        if(r._textTier!==tt.id)return;
+        const ms=collectMorphs(topSub,r.aid); if(!ms.length)return;
+        r.morphs=ms.map(a=>a.val);
+        ms.forEach((a,idx)=>morphAidInfo[a.id]={r,idx});
       });
-      // morphの子（morph系層: gloss/pos等）
-      (childrenOf[mt.id]||[]).forEach(gt=>{
-        const nm=lname(gt.id); morphLayers.add(nm);
-        gt.anns.forEach(a=>{const m=morphAidInfo[a.ref];if(m){m.r.tv[nm]=m.r.tv[nm]||[];m.r.tv[nm][m.idx]=a.val}});
+      // 葉(morph)層の Symbolic_Association 子（gloss/pos等）→ 形態素レベル層
+      (childrenOf[leaf.id]||[]).filter(ct=>!isMorphTier(ct)).forEach(gt=>{
+        const nm=lname(gt.id); let any=false;
+        gt.anns.forEach(a=>{const m=morphAidInfo[a.ref];if(m){m.r.tv[nm]=m.r.tv[nm]||[];m.r.tv[nm][m.idx]=a.val; if((a.val||'').length)any=true;}});
+        if(any)morphLayers.add(nm);
       });
     });
   });

@@ -458,8 +458,11 @@ tr.glossrow td{background:#f6faf8;padding:6px 8px}
     <button class="primary" id="dlTsv">TSV（Excel対応）</button>
     <button class="primary" id="dlJson">JSON</button>
     <button class="primary" id="dlIndigo" title="電子辞書ツール InDIGO 用のフラットJSON（gloss/posを形態素に整列、start_time/end_time/speaker/audio_file 付き）">InDIGO用JSON</button>
+    <button class="primary" id="dlGb4e" title="LaTeX gb4e 形式のインターリニアグロス（各区間が \ex / \gll に対応。\usepackage{gb4e} が必要）">LaTeX（gb4e）</button>
+    <button class="primary" id="dlWord" title="MS Word（.docx）。タブ整列のインターリニアグロス＋gloss小型大文字＋略語リスト（外部ライブラリ不要・内蔵生成）">Word（.docx）</button>
     <button class="primary" id="dlZip">切り出しWAVのZIP</button>
     <span class="sep"></span>
+    <label style="font-size:12px;color:var(--ink)" title="gloss の大文字略語を小型大文字（小文字+SmallCaps）にします（Word・gb4e）"><input type="checkbox" id="igtSmallCaps" checked> glossを小型大文字</label>
     <button id="dlProj">プロジェクトを途中保存（.json）</button>
   </div>
 </div>
@@ -2199,6 +2202,109 @@ function dl(name,content,type){
   setTimeout(()=>URL.revokeObjectURL(a.href),10000);
 }
 function escXml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+
+/* ---------- IGT 書き出し（LaTeX gb4e / MS Word .docx） ---------- */
+// gloss 略語→full（Word の Abbreviations 用。IGT Builder のマップを移植）
+const IGT_GLOSS_MAP={"1SG":"first person singular","2SG":"second person singular","3SG":"third person singular","1PL":"first person plural","2PL":"second person plural","3PL":"third person plural","1.0":"first person","2.0":"second person","3.0":"third person","A":"agent-like argument of canonical transitive verb","ABL":"ablative","ABS":"absolutive","ACC":"accusative","ADD":"additive","ADJ":"adjectival affix","ADJZ":"adjectivizer","ADN":"adnominal","ADNZ":"adnominalizer","ADV":"adverbalizer","ADVZ":"adverbalizer","ADVRS":"adversative","AFF":"affirmative","ALL":"allative","ANT":"anterior","APPL":"applicative","ART":"article","ASP":"aspect","ASRT":"assertive","ATT":"attributive","ATTR":"attributive","AUX":"auxiliary","AVR":"aversive","BEN":"benefactive","CAUS":"causative","CL":"classifier","CLF":"classifier","CMPL":"completive","CMPR":"comparative","CNC":"concessive","CND":"conditional","CNJ":"conjunction","CNT":"continuous","CNTR":"contrastive","COM":"comitative","COMP":"comparative","COMPL":"completive","COND":"conditional","CONJ":"conjunction","CONT":"continuous","COP":"copula","CP":"complement","CRCM":"circumstantial","CSL":"causal","CSS":"concessive","CVB":"converb","DAT":"dative","DECL":"declarative","DEF":"definite","DEM":"demonstrative","DET":"determiner","DIM":"diminutive","DIR":"directional","DIST":"distal","DISTR":"distributive","DM":"discourse marker","DSC":"discourse marker","DU":"dual","DUB":"dubitative","DUR":"durative","EMPH":"emphatic","ERG":"ergative","ESS":"essive","EVID":"evidential","EXCL":"exclusive","F":"feminine","FILL":"filler","FIN":"finite","FOC":"focus","FP":"final particle","FRG":"fragment","FUT":"future","GEN":"genitive","GER":"gerund","GOL":"goal","HAB":"habitual","HON":"honorific","HORT":"hortative","HS":"hearsay","HUM":"humble","HYP":"hypothetical","IMP":"imperative","INC":"inclusive","INCH":"inchoative","IND":"indicative","INDF":"indefinite","INF":"inferential","INS":"instrumental","INT":"intentional","INTJ":"interjection","INTR":"intransitive","IPFV":"imperfective","IRR":"irrealis","LIM":"limitative","LNK":"linker","LOC":"locative","M":"masculine","MAL":"malefactive","MED":"medial","MIR":"mirative","MOD":"modality","N":"neuter","NEG":"negative","NMLZ":"nominalizer","NOM":"nominative","NPST":"non-past","NUM":"numeral","OBJ":"object","OBL":"oblique","ONM":"onomatopoeia","OPT":"optative","ORD":"ordinal","P":"patient-like argument of canonical transitive verb","PASS":"passive","PFV":"perfective","PL":"plural","PN":"personal name","POL":"polite","POSS":"possessive","POT":"potential","PRF":"perfect","PROG":"progressive","PROH":"prohibitive","PROSP":"prospective","PROX":"proximal","PRS":"present","PRT":"particle","PST":"past","PTCP":"participle","PURP":"purposive","Q":"question marker","QUOT":"quotative","RECP":"reciprocal","RED":"reduplication","REFL":"reflexive","REL":"relative","REP":"reportative","RES":"resultative","RESP":"respectful","RST":"restrictive","S":"single argument of canonical intransitive verb","SBJ":"subject","SEQ":"sequential","SF":"sentence final particle","SFP":"sentence final particle","SG":"singular","SIM":"simultaneous","STAT":"stative","SUB":"subordinator","TAM":"tense-aspect-mood","TER":"terminative","THM":"thematic vowel","TOP":"topic","TR":"transitive","VBZ":"verbalizer","VLZ":"verbalizer","VOC":"vocative","VOL":"volitional"};
+function igtSmallCapsOn(){const c=document.getElementById('igtSmallCaps');return c?c.checked:true;}
+// 各区間 → {surfaceWords,textWords,glossWords,trans,has4}（語単位で text/gloss を同数生成して整列を保証）
+function igtRowsAll(){
+  const morphOn=glossOn&&morphTiers().some(t=>t.name==='gloss');
+  const sp=s=>String(s||'').trim()?String(s).trim().split(/\s+/):[];
+  return segs.map(s=>{
+    let surfaceWords=[],textWords=[],glossWords=[];
+    if(morphOn){
+      const words=hasExplicitMorphs(s)?[s.morphs]:morphSplit(morphSrcText(s));
+      const gl=(s.tv||{}).gloss||[]; let k=0;
+      words.forEach(w=>{
+        textWords.push(w.join(''));
+        let g=''; w.forEach((m,j)=>{const sep=/^[-=+]/.test(m)?m[0]:'-';g+=(j?sep:'')+(gl[k++]||'');});
+        glossWords.push(g);
+      });
+      surfaceWords=sp(s.text);
+    }else{ textWords=sp(s.text); }
+    const has4=morphOn&&surfaceWords.length===textWords.length&&surfaceWords.join(' ')!==textWords.join(' ');
+    return {surfaceWords,textWords,glossWords,trans:(s.note||'').trim(),has4};
+  }).filter(ex=>ex.textWords.length||ex.glossWords.length||ex.trans);
+}
+// gloss語を区切り(- = .)で分割し、各片が大文字略語か判定
+function igtGlossParts(word){
+  return String(word||'').split(/([\-=.])/).filter(x=>x!=='').map(seg=>{
+    if(/^[-=.]$/.test(seg))return {t:seg,sc:false};
+    const tok=seg.replace(/[^A-Za-z0-9]/g,'');
+    return {t:seg,sc:!!(tok&&/^[A-Z0-9]+$/.test(tok)&&/[A-Z]/.test(tok))};
+  });
+}
+function escLatex(s){return String(s).replace(/\\/g,'\\textbackslash{}').replace(/([&%$#_{}])/g,'\\$1').replace(/~/g,'\\textasciitilde{}').replace(/\^/g,'\\textasciicircum{}');}
+function igtTransJP(t){return /[぀-ヿ一-鿿]/.test(t);}
+function glossLatex(word){return igtGlossParts(word).map(p=>(p.sc&&igtSmallCapsOn())?'\\textsc{'+escLatex(p.t.toLowerCase())+'}':escLatex(p.t)).join('');}
+function buildGb4e(){
+  if(!segs.length)return;
+  let out='% LaTeX gb4e 形式のインターリニアグロス（要 \\usepackage{gb4e}）\n% BLT — Browser-based Lightweight Toolkit より書き出し\n\n';
+  igtRowsAll().forEach(ex=>{
+    out+='\\begin{exe}\n\\ex\n';
+    if(ex.glossWords.length){
+      const cell=w=>w===''?'{}':escLatex(w), gcell=w=>w===''?'{}':glossLatex(w);
+      const lines=[ex.textWords.map(cell).join(' '), ex.glossWords.map(gcell).join(' ')];
+      if(ex.has4){ lines.unshift(ex.surfaceWords.map(cell).join(' ')); out+='\\glll '; }
+      else out+='\\gll ';
+      out+=lines.join(' \\\\\n      ')+' \\\\\n';
+    }else if(ex.textWords.length){
+      out+=ex.textWords.map(escLatex).join(' ')+'\n';
+    }
+    if(ex.trans)out+='\\glt '+(igtTransJP(ex.trans)?('「'+escLatex(ex.trans)+'」'):('`'+escLatex(ex.trans)+"'"))+'\n';
+    out+='\\end{exe}\n\n';
+  });
+  dl(baseName()+'_gb4e.tex',out,'text/plain;charset=utf-8');
+}
+// ---- Word(.docx) を OOXML から内蔵生成（外部ライブラリ不要） ----
+function wRun(text,o){o=o||{};let rp='';if(o.sc)rp+='<w:smallCaps/>';if(o.bold)rp+='<w:b/>';if(o.size)rp+='<w:sz w:val="'+o.size+'"/>';return '<w:r>'+(rp?'<w:rPr>'+rp+'</w:rPr>':'')+'<w:t xml:space="preserve">'+escXml(text)+'</w:t></w:r>';}
+function wTabR(){return '<w:r><w:tab/></w:r>';}
+function wGlossRuns(word){return igtGlossParts(word).map(p=>(p.sc&&igtSmallCapsOn())?wRun(p.t.toLowerCase(),{sc:true}):wRun(p.t)).join('');}
+function wPara(runs,ppr){return '<w:p>'+(ppr?'<w:pPr>'+ppr+'</w:pPr>':'')+(runs||'')+'</w:p>';}
+function wTabsXml(ps){return '<w:tabs>'+ps.map(p=>'<w:tab w:val="left" w:pos="'+Math.round(p)+'"/>').join('')+'</w:tabs>';}
+function igtEstW(str){let w=0;for(const ch of String(str))w+=(ch.charCodeAt(0)>255)?2:1;return w;}
+function igtChunks(ex,maxWidth,numberIndent){
+  const ncols=Math.max(ex.textWords.length,ex.glossWords.length,ex.surfaceWords.length,1),cw=[];
+  for(let c=0;c<ncols;c++){const m=Math.max(igtEstW(ex.textWords[c]||''),igtEstW(ex.glossWords[c]||''),igtEstW(ex.surfaceWords[c]||''));cw.push(Math.max(m*150+300,900));}
+  const chunks=[];let ch={start:0,end:0},cur=numberIndent;
+  for(let c=0;c<ncols;c++){if(cur+cw[c]>maxWidth&&c>ch.start){ch.end=c;chunks.push(ch);ch={start:c,end:c};cur=numberIndent;}cur+=cw[c];ch.end=c+1;}
+  if(ch.end>ch.start)chunks.push(ch);
+  return chunks.map(c=>{const tabs=[];let pos=numberIndent;for(let k=c.start;k<c.end;k++){tabs.push(pos);pos+=cw[k];}return {start:c.start,end:c.end,tabs};});
+}
+function buildWordDocx(){
+  if(!segs.length)return;
+  const NI=720,MAXW=8500;let body='';const used=new Set();
+  igtRowsAll().forEach((ex,i)=>{
+    const chunks=igtChunks(ex,MAXW,NI);
+    chunks.forEach((ch,ci)=>{
+      const first=ci===0,tx=wTabsXml(ch.tabs),ppF=tx+'<w:ind w:left="'+NI+'" w:hanging="'+NI+'"/>',ppC=tx+'<w:ind w:left="'+NI+'"/>';
+      const lineRuns=(words,withNum)=>{let r=withNum?wRun('('+(i+1)+')'):'';for(let c=ch.start;c<ch.end;c++){if((withNum)||c>ch.start)r+=wTabR();r+=wRun(words[c]||'');}return r;};
+      if(ex.has4){ body+=wPara(lineRuns(ex.surfaceWords,first),first?ppF:ppC); body+=wPara(lineRuns(ex.textWords,false),ppC); }
+      else { body+=wPara(lineRuns(ex.textWords,first),first?ppF:ppC); }
+      if(ex.glossWords.length){let r='';for(let c=ch.start;c<ch.end;c++){if(c>ch.start)r+=wTabR();r+=wGlossRuns(ex.glossWords[c]||'');}body+=wPara(r,ppC);}
+    });
+    if(ex.trans)body+=wPara(wRun(igtTransJP(ex.trans)?('「'+ex.trans+'」'):("'"+ex.trans+"'")),'<w:ind w:left="'+NI+'"/>');
+    body+=wPara('','');
+    ex.glossWords.forEach(w=>String(w||'').split(/[\-=.]/).forEach(p=>{const a=p.trim().toUpperCase();if(a&&IGT_GLOSS_MAP[a])used.add(a);}));
+  });
+  if(used.size){
+    body+=wPara('','')+wPara('','')+wPara(wRun('Abbreviations',{bold:true,size:24}),'')+wPara('','');
+    [...used].sort().forEach(a=>{body+=wPara(wRun(a.toLowerCase(),{sc:true})+wTabR()+wRun((IGT_GLOSS_MAP[a]||'').split('\n')[0]),wTabsXml([1440]));});
+  }
+  const docXml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    +'<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>'+body
+    +'<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/></w:sectPr></w:body></w:document>';
+  const enc=new TextEncoder(),zip=new ZipWriter();
+  zip.add('[Content_Types].xml',enc.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>'));
+  zip.add('_rels/.rels',enc.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>'));
+  zip.add('word/_rels/document.xml.rels',enc.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>'));
+  zip.add('word/document.xml',enc.encode(docXml));
+  dl(baseName()+'_igt.docx',zip.blob());
+}
+$('dlGb4e').addEventListener('click',()=>{if(!segs.length){alert('先に音声・注釈を読み込んでください');return}buildGb4e();});
+$('dlWord').addEventListener('click',()=>{if(!segs.length){alert('先に音声・注釈を読み込んでください');return}buildWordDocx();});
+
 $('dlEaf').addEventListener('click',()=>{
   if(!segs.length)return;
   const wavName=wavFile?wavFile.name:'audio.wav';

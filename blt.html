@@ -153,6 +153,7 @@ code{background:var(--accent-soft);padding:1px 5px;border-radius:4px;font-size:1
 }
 /* パネル4上部：左コントロール＋右の文脈ウィンドウ */
 #annoCtlRow{display:flex;gap:14px;align-items:stretch;flex-wrap:wrap}
+#annoPager{margin:10px 0 0;padding-top:9px;border-top:1px solid var(--line);align-items:center}
 #annoCtlLeft{flex:1 1 360px;min-width:0}
 #ctxPane{flex:1 1 320px;min-width:0;display:flex;flex-direction:column;border:1px solid var(--line);border-radius:8px;background:#fafbfa;overflow:hidden}
 #ctxHead{display:flex;align-items:center;gap:6px;padding:4px 8px;border-bottom:1px solid var(--line);background:var(--surface)}
@@ -260,6 +261,19 @@ tr.glossrow td{background:#f6faf8;padding:6px 8px}
 .srch-tbl th{color:var(--muted);font-weight:600;font-size:11.5px;border-bottom:2px solid var(--line)}
 .srch-tbl td.ipa{font-family:var(--ipa)}
 .srch-jump{padding:3px 9px;font-size:12px;white-space:nowrap}
+/* KWIC（前後文脈つき検索結果） */
+.kwic-wrap{overflow-x:auto}
+.kwic-tbl{border-collapse:collapse;font-size:13px;white-space:nowrap}
+.kwic-tbl td{padding:3px 7px;border-bottom:1px solid var(--line);vertical-align:baseline}
+.kwic-row{cursor:pointer}
+.kwic-row:hover td{background:#eef4ff}
+.kwic-id{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.kwic-l{text-align:right;font-family:var(--ipa)}
+.kwic-k{text-align:center;font-family:var(--ipa)}
+.kwic-r{text-align:left;font-family:var(--ipa)}
+.kwic-k mark{background:#ffe08a;color:#3a2b00;padding:0 3px;border-radius:3px;font-weight:700}
+.kctx{color:var(--muted);opacity:.7}
+.kwic-sub{font-size:11px;color:var(--muted);font-family:var(--ipa)}
 </style>
 </head>
 <body>
@@ -416,14 +430,6 @@ tr.glossrow td{background:#f6faf8;padding:6px 8px}
         <label style="font-size:13px;color:var(--ink)" title="空白と = を語境界とし、形態素ごとに BOW/EOW/I を自動コーディング"><input type="checkbox" id="chkWbdr"> 語境界をコーディング（wbdr層・空白/= 基準）</label>
       </div>
     </details>
-    <div class="optrow" style="margin:0">
-      <label class="note">表示レイヤー</label>
-      <select id="viewLayer"></select>
-      <span class="sep" style="width:1px;height:20px;background:var(--line)"></span>
-      <button id="btnPgPrev" disabled>◀ 前の5件</button>
-      <span id="pgInfo" class="note" style="font-family:var(--mono)">0件</span>
-      <button id="btnPgNext" disabled>次の5件 ▶</button>
-    </div>
    </div>
    <div id="ctxPane">
     <div id="ctxHead">
@@ -432,6 +438,14 @@ tr.glossrow td{background:#f6faf8;padding:6px 8px}
     </div>
     <div id="ctxBody" class="ctxbody"><span class="note">レコードを作ると、ここに連続表示されます。</span></div>
    </div>
+  </div>
+  <div class="optrow" id="annoPager">
+    <label class="note">表示レイヤー</label>
+    <select id="viewLayer"></select>
+    <span class="sep" style="width:1px;height:20px;background:var(--line)"></span>
+    <button id="btnPgPrev" disabled>◀ 前の5件</button>
+    <span id="pgInfo" class="note" style="font-family:var(--mono)">0件</span>
+    <button id="btnPgNext" disabled>次の5件 ▶</button>
   </div>
 </div>
 </div><!-- /waveCol（ここまで上部固定） -->
@@ -2827,20 +2841,55 @@ function runSearch(){
   else{segs.forEach((s,si)=>{flatMorphs(s).forEach((m,mi)=>{if(morphMatchesAt(s,mi,conds,combine))out.push({si,mi});});});}
   renderSearchResults(unit,out);
 }
+// マッチ位置（ハイライト範囲）を返す。nonempty/empty はハイライトなし
+function srchSpan(val,op,q){
+  val=String(val==null?'':val);
+  if(op==='exact')return val?{s:0,e:val.length}:null;
+  if(op==='regex'){try{const m=new RegExp(q).exec(val);return m?{s:m.index,e:m.index+m[0].length}:null;}catch(e){return null;}}
+  if(op==='contains'){const i=(q==='')?-1:val.indexOf(q);return i>=0?{s:i,e:i+q.length}:null;}
+  return null;
+}
+function kwicTrunc(str,keepEnd,max){str=String(str||'');if(str.length<=max)return escHtml(str);return keepEnd?'…'+escHtml(str.slice(str.length-max)):escHtml(str.slice(0,max))+'…';}
+function srchNeighbor(si,delta,layer){const t=segs[si+delta];if(!t)return '';return layer==='__text'?(t.text||''):srchSegVal(t,layer);}
+function kwicRow(si,id,prev,left,key,right,next,sub,mi){
+  const L=(prev?'<span class="kctx">'+kwicTrunc(prev,true,22)+' </span>':'')+kwicTrunc(left,true,42);
+  const R=kwicTrunc(right,false,42)+(next?'<span class="kctx"> '+kwicTrunc(next,false,22)+'</span>':'');
+  return '<tr class="kwic-row srch-jump" data-si="'+si+'"'+(mi!=null?' data-mi="'+mi+'"':'')+'>'
+    +'<td class="kwic-id">'+escHtml(id||'')+'</td>'
+    +'<td class="kwic-l">'+L+'</td>'
+    +'<td class="kwic-k">'+(key?'<mark>'+escHtml(key)+'</mark>':'')+'</td>'
+    +'<td class="kwic-r">'+R+'</td>'
+    +'<td class="kwic-sub">'+escHtml(sub||'')+'</td></tr>';
+}
 function renderSearchResults(unit,res,msg){
   const box=$('srchResults');
   $('srchCount').textContent=msg?msg:(res.length+' 件');
   if(msg&&!res.length){box.innerHTML='<span class="note">'+escHtml(msg)+'</span>';return;}
   if(!res.length){box.innerHTML='<span class="note">該当なし</span>';return;}
-  if(unit==='record'){
-    box.innerHTML='<table class="srch-tbl"><thead><tr><th>#</th><th>ID</th><th>spk</th><th>text</th><th>trans</th><th></th></tr></thead><tbody>'
-      +res.map(r=>{const s=segs[r.si];return '<tr><td>'+(r.si+1)+'</td><td>'+escHtml(s.id||'')+'</td><td>'+escHtml(s.spk||'')+'</td><td class="ipa">'+escHtml(s.text||'')+'</td><td>'+escHtml(s.note||'')+'</td><td><button type="button" class="explay srch-jump" data-si="'+r.si+'">注釈で開く</button></td></tr>';}).join('')+'</tbody></table>';
-  }else{
-    box.innerHTML='<table class="srch-tbl"><thead><tr><th>morph</th><th>形態素層の値</th><th>区間ID</th><th>text</th><th></th></tr></thead><tbody>'
-      +res.map(r=>{const s=segs[r.si],ms=flatMorphs(s),m=(ms[r.mi]||'').replace(/^[-=+]/,'');
-        const lv=morphTiers().map(t=>{const v=((s.tv||{})[t.name]||[])[r.mi]||'';return v?(t.name+'='+v):'';}).filter(Boolean).join(' / ');
-        return '<tr><td class="ipa"><b>'+escHtml(m)+'</b></td><td>'+escHtml(lv)+'</td><td>'+escHtml(s.id||'')+'</td><td class="ipa">'+escHtml(s.text||'')+'</td><td><button type="button" class="explay srch-jump" data-si="'+r.si+'">注釈で開く</button></td></tr>';}).join('')+'</tbody></table>';
-  }
+  const conds=srchGetConds();
+  const rows=res.map(r=>{
+    const s=segs[r.si];
+    if(unit==='morph'){
+      const ms=flatMorphs(s).map(m=>String(m||'').replace(/^[-=+]/,''));
+      const left=ms.slice(0,r.mi).join(' '), key=ms[r.mi]||'', right=ms.slice(r.mi+1).join(' ');
+      const sub=morphTiers().map(t=>{const v=((s.tv||{})[t.name]||[])[r.mi]||'';return v?(t.name+'='+v):'';}).filter(Boolean).join(' / ');
+      return kwicRow(r.si,s.id,srchNeighbor(r.si,-1,'__text'),left,key,right,srchNeighbor(r.si,1,'__text'),sub,r.mi);
+    }
+    // record単位：ハイライト可能な最初の条件を主役に
+    const c=conds.find(c=>['contains','exact','regex'].includes(c.op)&&c.q!=='');
+    if(c&&c.level==='morph'){
+      const ms=flatMorphs(s).map(m=>String(m||'').replace(/^[-=+]/,'')), vals=srchMorphVals(s,c.layer);
+      let idx=vals.findIndex(v=>srchMatch(v,c.op,c.q));
+      const left=idx>=0?ms.slice(0,idx).join(' '):ms.join(' '), key=idx>=0?ms[idx]:'', right=idx>=0?ms.slice(idx+1).join(' '):'';
+      const sub=idx>=0?(c.layer+'='+(vals[idx]||'')):'';
+      return kwicRow(r.si,s.id,srchNeighbor(r.si,-1,'__text'),left,key,right,srchNeighbor(r.si,1,'__text'),sub,idx>=0?idx:null);
+    }
+    const layer=(c&&c.level==='seg')?c.layer:'text', val=srchSegVal(s,layer), sp=c?srchSpan(val,c.op,c.q):null;
+    const before=sp?val.slice(0,sp.s):val, key=sp?val.slice(sp.s,sp.e):'', after=sp?val.slice(sp.e):'';
+    const sub=(layer!=='text')?layer:'';
+    return kwicRow(r.si,s.id,srchNeighbor(r.si,-1,layer),before,key,after,srchNeighbor(r.si,1,layer),sub,null);
+  });
+  box.innerHTML='<div class="kwic-wrap"><table class="kwic-tbl"><tbody>'+rows.join('')+'</tbody></table></div>';
 }
 $('srchAdd').addEventListener('click',addSearchCond);
 $('srchRun').addEventListener('click',runSearch);

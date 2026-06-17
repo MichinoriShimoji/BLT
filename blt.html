@@ -2889,6 +2889,8 @@ $('dlDict').addEventListener('click',async()=>{
     var s=STEPS[n];
     // デモ音声でないとき（＝自分の音声を読み込んだとき）は、実演前提のステップを飛ばす
     if(!demoMode && (s.action || s.demoOnly)){ go(n+dir, dir); return; }
+    // ステップ中にユーザーが操作した状態（セル編集・フォーカス・IPAパレット）をリセットしてデフォルトで進む
+    try{ if(document.activeElement && document.activeElement!==document.body && document.activeElement.blur) document.activeElement.blur(); }catch(e){}
     // 注釈の実演ステップでは sticky 波形を隠して表（インターリニア）を見せる
     var wc=waveCard();
     if(wc){
@@ -2896,8 +2898,8 @@ $('dlDict').addEventListener('click',async()=>{
       wc.style.display = s.hideWave ? 'none' : '';
       if(!s.hideWave && wasHidden){ setTimeout(function(){ try{ if(typeof draw==='function') draw(); if(typeof drawOvw==='function') drawOvw(); }catch(e){} },60); }
     }
-    // IPAパレットは専用ステップ以外では隠す
-    if(s.sel!=='#paletteCard'){ clearIPAHighlight(); if(typeof hidePalette==='function') try{ hidePalette(); }catch(e){} }
+    // IPAパレットは毎ステップ一旦リセット（IPAステップだけ後段のアクションで再表示）
+    clearIPAHighlight(); if(typeof hidePalette==='function') try{ hidePalette(); }catch(e){}
     // 実演アクション（glossrow を生成・再描画することがあるので、ターゲット解決の前に実行）
     if(s.action && ACTIONS[s.action]){ try{ ACTIONS[s.action](); }catch(e){} }
     var el=document.querySelector(s.sel);

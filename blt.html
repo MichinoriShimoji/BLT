@@ -3132,6 +3132,8 @@ $('dlDict').addEventListener('click',async()=>{
   var STEPS=[
     {sel:'#brand', title:'BLTへようこそ', body:'ブラウザだけで完結するフィールドデータ編集ツールです。<b>音声の読み込みから注釈・グロス・ELAN(EAF)書き出し</b>までを、このツアーで一通り案内します。', place:'bottom'},
     {sel:'#cardFile', title:'① 作業を始める', body:'まず <b>「新規に始める」</b>か<b>「既存の作業を再開する」</b>を選びます。<br><b>新規</b>＝音声（WAV）を読み込み→自動区切り→注釈。<b>既存再開</b>＝音声を読み込んでから、以前の .json や ELAN .eaf を読み込みます。<br><span style="color:var(--muted)">▶ お持ちの音声が無ければ「次へ」でデモ音声を使って続けられます。</span>', place:'bottom', waitLoaded:true},
+    {sel:'#cardSeg', title:'② 自動区切り（無音検出で発話に分割）', body:'音声を読み込んだら、パネル2の「<b>自動検出を実行</b>」を押します。無音部分を手がかりに、音声が<b>発話区間（レコード）に自動分割</b>されます。<br>「<b>しきい値を自動推定</b>」のままでOK。うまく切れないときは、しきい値・最小無音長・最小区間長を調整して再実行できます（境界は後から波形上でドラッグ調整も可能）。', place:'bottom', needsAudio:true},
+    {sel:'#cardWave', title:'→ 発話区間に分割されました', body:'「自動検出を実行」を押すと、このように音声が<b>色付きの区間（発話）</b>に分割されます。次の画面で、この区間の確認・修正方法を見ていきます。', place:'bottom', needsAudio:true, demoOnly:true, action:'demoDetect', scrollTop:true},
     {sel:'#cardWave', title:'波形で区間を確認・修正', body:'読み込んだ音声の波形です。区間（色付き帯）は<b>ドラッグで境界調整</b>、<b>クリック＋Space で再生</b>。区間化されなかった有音（取りこぼし）は<b>赤帯</b>で警告されます — このデモにも1か所あります。◀▶や「確認再生」で確認し、<b>「✓ 区間に追加」</b>で区間化、対象外なら「無視」。「⟳ 自動区切りをやり直し」で検出の感度も調整できます。', place:'bottom', needsAudio:true, scrollTop:true},
     {sel:'#cardWave', title:'複数話者に対応', body:'波形は<b>話者ごとに色分け・レーン分割</b>されます（上の波形で、区間ごとに色が違うのが話者の違いです）。波形の下の <b>＋話者</b> で話者を増やせます。<br><b>別の話者どうしは時刻が重なってもOK</b>（同じ話者内は重複不可）なので、会話のオーバーラップもそのまま扱えます。<br>例：<b>話者B</b>を追加し、2番目の区間を話者Bに割り当てました（色が変わります）。', place:'bottom', needsAudio:true, action:'demoSpk'},
     {sel:'#tb tr[data-i="0"]', title:'② 文字起こし（text）と訳（trans）', body:'区間の <b>text</b> 欄に文字起こし、<b>trans</b> 欄に訳を入力します。<br>例: <i style="font-family:var(--ipa)">nkjaan=du anna=tu uja=tu tamamiga=ti asɨ ffa-gama=nu u-tar=ca.</i><br>訳「昔々、母親と父親とタマミガという子がいたんだそうだ」', place:'bottom', needsAudio:true, action:'demoText', hideWave:true},
@@ -3294,7 +3296,7 @@ $('dlDict').addEventListener('click',async()=>{
       if(typeof renderTable==='function') renderTable();
     }catch(e){}
   }
-  var ACTIONS={demoText:demoText, demoGloss:demoGloss, demoBdr:demoBdr, demoIPA:demoIPA, demoUtt2:demoUtt2, demoUdl:demoUdl, demoSpk:demoSpk};
+  var ACTIONS={demoDetect:demoDetect, demoText:demoText, demoGloss:demoGloss, demoBdr:demoBdr, demoIPA:demoIPA, demoUtt2:demoUtt2, demoUdl:demoUdl, demoSpk:demoSpk};
   function isVisible(el){ if(!el) return false; var cs=getComputedStyle(el); if(cs.display==='none'||cs.visibility==='hidden') return false; var r=el.getBoundingClientRect(); return r.width>0&&r.height>0; }
   function clearWatch(){ if(watch){ clearInterval(watch); watch=null; } }
   function audioLoaded(){ var wv=document.getElementById('cardWave'); return (wv&&isVisible(wv))||(typeof segs!=='undefined'&&segs.length>0); }
@@ -3311,9 +3313,10 @@ $('dlDict').addEventListener('click',async()=>{
       var dt=new DataTransfer(); dt.items.add(makeDemoWav());
       var inp=document.getElementById('wavInput'); inp.files=dt.files;
       inp.dispatchEvent(new Event('change',{bubbles:true}));
-      setTimeout(function(){ try{ if(typeof detect==='function'&&(typeof segs==='undefined'||!segs.length)) detect(); }catch(e){} },1600);
+      // 自動区切りはツアーの「自動区切り」ステップ（demoDetect）で実行する
     }catch(e){}
   }
+  function demoDetect(){ try{ if(typeof detect==='function'&&(typeof segs==='undefined'||!segs.length)) detect(); }catch(e){} }
   function ensure(){
     if(spot) return;
     spot=document.createElement('div'); spot.className='tour-spot'; spot.hidden=true; document.body.appendChild(spot);

@@ -2371,6 +2371,15 @@ function wRun(text,o){o=o||{};let rp='';if(o.sc)rp+='<w:smallCaps/>';if(o.bold)r
 function wTabR(){return '<w:r><w:tab/></w:r>';}
 function wGlossRuns(word){return igtGlossParts(word).map(p=>(p.sc&&igtSmallCapsOn())?wRun(p.t.toLowerCase(),{sc:true}):wRun(p.t)).join('');}
 function wPara(runs,ppr){return '<w:p>'+(ppr?'<w:pPr>'+ppr+'</w:pPr>':'')+(runs||'')+'</w:p>';}
+// 罫線なし固定幅テーブルでインターリニアを列整列（タブよりCJK幅に強く、各列は内容幅に固定して折り返さない）
+function wCell(runs,w){return '<w:tc><w:tcPr><w:tcW w:w="'+w+'" w:type="dxa"/><w:noWrap/><w:tcMar><w:top w:w="0" w:type="dxa"/><w:left w:w="0" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="120" w:type="dxa"/></w:tcMar><w:vAlign w:val="bottom"/></w:tcPr><w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/></w:pPr>'+(runs||'')+'</w:p></w:tc>';}
+function wRow(cells){return '<w:tr>'+cells+'</w:tr>';}
+function wTable(rows,widths){
+  const nil=['top','left','bottom','right','insideH','insideV'].map(b=>'<w:'+b+' w:val="nil"/>').join('');
+  const grid='<w:tblGrid>'+widths.map(w=>'<w:gridCol w:w="'+w+'"/>').join('')+'</w:tblGrid>';  // Word必須：各列幅
+  return '<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/><w:tblLayout w:type="fixed"/><w:tblBorders>'+nil+'</w:tblBorders>'
+    +'<w:tblCellMar><w:left w:w="0" w:type="dxa"/><w:right w:w="120" w:type="dxa"/></w:tblCellMar><w:tblLook w:val="0000"/></w:tblPr>'+grid+rows+'</w:tbl>';
+}
 function wTabsXml(ps){return '<w:tabs>'+ps.map(p=>'<w:tab w:val="left" w:pos="'+Math.round(p)+'"/>').join('')+'</w:tabs>';}
 function igtEstW(str){let w=0;for(const ch of String(str))w+=(ch.charCodeAt(0)>255)?2:1;return w;}
 function igtChunks(ex,maxWidth,numberIndent){
@@ -2379,7 +2388,7 @@ function igtChunks(ex,maxWidth,numberIndent){
   const chunks=[];let ch={start:0,end:0},cur=numberIndent;
   for(let c=0;c<ncols;c++){if(cur+cw[c]>maxWidth&&c>ch.start){ch.end=c;chunks.push(ch);ch={start:c,end:c};cur=numberIndent;}cur+=cw[c];ch.end=c+1;}
   if(ch.end>ch.start)chunks.push(ch);
-  return chunks.map(c=>{const tabs=[];let pos=numberIndent;for(let k=c.start;k<c.end;k++){tabs.push(pos);pos+=cw[k];}return {start:c.start,end:c.end,tabs};});
+  return chunks.map(c=>{const tabs=[];let pos=numberIndent;for(let k=c.start;k<c.end;k++){tabs.push(pos);pos+=cw[k];}return {start:c.start,end:c.end,tabs,widths:cw.slice(c.start,c.end)};});
 }
 function buildWordDocx(){
   if(!segs.length)return;
@@ -2387,11 +2396,20 @@ function buildWordDocx(){
   igtRowsAll().forEach((ex,i)=>{
     const chunks=igtChunks(ex,MAXW,NI);
     chunks.forEach((ch,ci)=>{
-      const first=ci===0,tx=wTabsXml(ch.tabs),ppF=tx+'<w:ind w:left="'+NI+'" w:hanging="'+NI+'"/>',ppC=tx+'<w:ind w:left="'+NI+'"/>';
-      const lineRuns=(words,withNum)=>{let r=withNum?wRun('('+(i+1)+')'):'';for(let c=ch.start;c<ch.end;c++){if((withNum)||c>ch.start)r+=wTabR();r+=wRun(words[c]||'');}return r;};
-      if(ex.has4){ body+=wPara(lineRuns(ex.surfaceWords,first),first?ppF:ppC); body+=wPara(lineRuns(ex.textWords,false),ppC); }
-      else { body+=wPara(lineRuns(ex.textWords,first),first?ppF:ppC); }
-      if(ex.glossWords.length){let r='';for(let c=ch.start;c<ch.end;c++){if(c>ch.start)r+=wTabR();r+=wGlossRuns(ex.glossWords[c]||'');}body+=wPara(r,ppC);}
+      // 行＝surface(あれば)/text/gloss。先頭セルに例番号（最初のチャンクのみ）。語ごとに1セル。
+      const LEADW=620, colW=[LEADW].concat(ch.widths);
+      const rowOf=(words,gloss,lead)=>{
+        let cells=wCell(wRun(lead||''),LEADW);
+        for(let c=ch.start;c<ch.end;c++)cells+=wCell(gloss?wGlossRuns(words[c]||''):wRun(words[c]||''),ch.widths[c-ch.start]);
+        return wRow(cells);
+      };
+      const num=ci===0?('('+(i+1)+')'):'';
+      let rows='';
+      if(ex.has4){ rows+=rowOf(ex.surfaceWords,false,num); rows+=rowOf(ex.textWords,false,''); }
+      else { rows+=rowOf(ex.textWords,false,num); }
+      if(ex.glossWords.length)rows+=rowOf(ex.glossWords,true,'');
+      body+=wTable(rows,colW);
+      body+=wPara('');   // テーブル間/末尾には段落が必要（Word互換）
     });
     if(ex.trans)body+=wPara(wRun(igtTransJP(ex.trans)?('「'+ex.trans+'」'):("'"+ex.trans+"'")),'<w:ind w:left="'+NI+'"/>');
     body+=wPara('','');

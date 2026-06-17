@@ -145,6 +145,12 @@ code{background:var(--accent-soft);padding:1px 5px;border-radius:4px;font-size:1
 #missNote button{flex:none;border:none;background:none;color:#8f1d1d;font-size:13px;padding:0 4px;cursor:pointer;margin-left:auto}
 #missCtl{display:inline-flex;flex-direction:column;align-items:center;gap:3px;border:1px solid var(--line);border-radius:8px;padding:5px 9px;background:var(--surface)}
 #missCtl.hot{border-color:#d92626;background:#fdf3f2}
+/* 広い画面ではパネル3（波形）と4（注釈）を横並びにして上部固定の高さを抑え、下の表を広く見せる */
+@media (min-width:1180px){
+  #waveCol:has(#cardAnnoCtl:not(.hidden)){display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:14px;align-items:start}
+  #waveCol:has(#cardAnnoCtl:not(.hidden)) > .card{margin:0}
+  #waveCol:has(#cardAnnoCtl:not(.hidden)) #cardAnnoCtl{max-height:none}
+}
 /* パネル4上部：左コントロール＋右の文脈ウィンドウ */
 #annoCtlRow{display:flex;gap:14px;align-items:stretch;flex-wrap:wrap}
 #annoCtlLeft{flex:1 1 360px;min-width:0}
@@ -626,6 +632,7 @@ $('projInput').addEventListener('change',async ev=>{
     ignoredMiss=(p.ignoredMiss||[]).map(g=>({t0:+g.t0,t1:+g.t1}));
     lexicon=(p.lexicon&&typeof p.lexicon==='object')?p.lexicon:{};
     sel=-1;afterSegChange();
+    hideSetup();   // 復元した区間を自動区切りで上書きしないよう、検出パネルは隠す
   }catch(e){alert('読み込めませんでした：'+e.message)}
   ev.target.value='';
 });
@@ -772,6 +779,7 @@ function importEaf(xmlText){
   });
   ignoredMiss=[]; sel=-1;
   renderSpkBar(); refreshTierUI(); afterSegChange();
+  hideSetup();   // 取り込んだ区間を自動区切りで上書きしないよう、検出パネルは隠す
   alert('EAFを取り込みました：'+segs.length+'区間 / 話者 '+speakers.join('・')
     +(tiersDef.length?'\n層: '+tiersDef.map(t=>t.name).join('・'):'')
     +(segs.some(s=>Array.isArray(s.morphs)&&s.morphs.length)?'\n（形態素は元の区切りを保持しています）':''));
@@ -936,11 +944,16 @@ function applyDetect(a,b){
   // 自動検出はアクティブ話者のレコードだけを対象に置き換える（他話者は保持）
   const inRange=s=>s.t1>a&&s.t0<b&&s.spk===activeSpk;
   const affected=segs.filter(inRange);
-  const hasAnno=affected.some(s=>s.text||s.note);
+  const hasMorphAnno=s=>(s.morphs&&s.morphs.length)||(s.tv&&Object.keys(s.tv).some(k=>{const v=s.tv[k];return Array.isArray(v)?v.some(Boolean):!!v}));
+  const hasAnno=affected.some(s=>s.text||s.note||hasMorphAnno(s));
+  const hasMorph=affected.some(hasMorphAnno);
   const spkNote=speakers.length>1?'話者「'+activeSpk+'」の':'';
-  if(affected.length&&!confirm(hasAnno
-    ?spkNote+'範囲内の'+affected.length+'区間は置き換えられ、入力済みの注釈は新しい区間と時間が重なるものに引き継がれます。よろしいですか？'
-    :spkNote+'範囲内の'+affected.length+'区間を自動検出の結果で置き換えます。よろしいですか？'))return;
+  if(affected.length&&!confirm(
+     hasMorph
+      ?'⚠ '+spkNote+'範囲内の'+affected.length+'区間には形態素・グロスなどの注釈が含まれています。\n自動区切りで区間の境界が変わると、これらの注釈が新しい区間に正しく対応しなくなる場合があります。\n（既存のEAFやプロジェクトを取り込んだ場合、通常この操作は不要です）\n\n本当に自動区切りで置き換えますか？'
+      :hasAnno
+      ?spkNote+'範囲内の'+affected.length+'区間は置き換えられ、入力済みの注釈は新しい区間と時間が重なるものに引き継がれます。よろしいですか？'
+      :spkNote+'範囲内の'+affected.length+'区間を自動検出の結果で置き換えます。よろしいですか？'))return;
   const fresh=runDetect(a,b);
   // 注釈の引き継ぎ（重なり最大の旧区間から）
   if(hasAnno){
@@ -950,7 +963,9 @@ function applyDetect(a,b){
         const ov=Math.min(ns.t1,os.t1)-Math.max(ns.t0,os.t0);
         if(ov>bestOv){bestOv=ov;best=os}
       });
-      if(best&&bestOv>0){ns.text=best.text;ns.note=best.note;if(best.id)ns.id=best.id}
+      if(best&&bestOv>0){ns.text=best.text;ns.note=best.note;if(best.id)ns.id=best.id;
+        if(best.morphs&&best.morphs.length)ns.morphs=best.morphs.slice();
+        if(best.tv&&Object.keys(best.tv).length)ns.tv=JSON.parse(JSON.stringify(best.tv));}
     });
   }
   segs=segs.filter(s=>!inRange(s)).concat(fresh);
@@ -1501,6 +1516,8 @@ function syncStickyTop(){
 }
 syncStickyTop();
 window.addEventListener('resize',()=>{syncStickyTop();if(env){draw();drawOvw()}});
+// 波形カラムの幅が変わったら（パネル3・4の横並び切替やサイズ変更など）再描画
+if(window.ResizeObserver){let lastW=0;new ResizeObserver(es=>{const w=Math.round(es[0].contentRect.width);if(w!==lastW){lastW=w;if(env){draw();drawOvw()}}}).observe(wave);}
 
 /* ---------- 説明ポップアップ ---------- */
 document.addEventListener('click',e=>{

@@ -325,25 +325,38 @@ tr.glossrow td{background:#f6faf8;padding:6px 8px}
 
 <div id="tabAnno">
 <div class="card" id="cardFile">
-  <h2><span class="steplabel">1</span>WAVファイルを選ぶ<button type="button" class="helpbtn" data-help="helpFile" data-title="ファイルの読み込みについて">?</button></h2>
+  <h2><span class="steplabel">1</span>作業を始める<button type="button" class="helpbtn" data-help="helpFile" data-title="ファイルの読み込みについて">?</button></h2>
   <div class="helpsrc" id="helpFile">
     <div class="note">音声は非圧縮WAV（PCM）を想定しています。ファイルはブラウザの外に送信されず、すべて手元のPC内で処理されます。音声ファイル自体が書き換えられることはありません。<br><br>「途中保存したプロジェクト（.json）を読み込む」は、<b>先に同じWAVを読み込んでから</b>使ってください（プロジェクトには音声そのものは含まれません）。</div>
   </div>
-  <div class="filebox">
-    <button onclick="wavInput.click()">音声ファイル（WAV・PCM）を選択</button>
-    <input type="file" id="wavInput" accept=".wav,audio/wav,audio/x-wav" hidden>
-    <span class="fname" id="wavName">未選択</span>
+  <!-- 開始の選択：新規 か 既存再開 か -->
+  <div id="startChooser">
+    <div class="note" style="margin:0 0 8px">どちらから始めますか？</div>
+    <div class="filebox">
+      <button id="btnStartNew" class="primary">🆕 新規に始める</button>
+      <button id="btnStartResume">📂 既存の作業を再開する</button>
+    </div>
+    <div class="note" style="margin-top:8px"><b>新規</b>＝音声（WAV）を読み込んで自動区切り→注釈。<b>既存再開</b>＝音声を読み込んでから、以前の保存（.json）や ELAN（.eaf）を読み込み。</div>
   </div>
-  <div id="loadProg" class="hidden" style="margin:4px 0 8px">
-    <div id="loadBar" class="lbar"><i id="loadBarFill"></i></div>
-    <div id="loadProgText" class="note" style="margin-top:4px"></div>
-  </div>
-  <div class="filebox">
-    <button onclick="projInput.click()">途中保存したプロジェクト（.json）を読み込む</button>
-    <input type="file" id="projInput" accept=".json,application/json" hidden>
-    <button onclick="eafInput.click()">ELANの.eafを読み込む</button>
-    <input type="file" id="eafInput" accept=".eaf,.xml,text/xml" hidden>
-    <span class="note">※どちらも先に対応するWAVを読み込んでから</span>
+  <!-- 共通フロー（モード選択後に表示） -->
+  <div id="startFlow" class="hidden">
+    <div id="flowMsg" class="note" style="margin:0 0 8px"></div>
+    <div class="filebox">
+      <button id="btnPickWav" class="primary" onclick="wavInput.click()">① 音声ファイル（WAV・PCM）を選択</button>
+      <input type="file" id="wavInput" accept=".wav,audio/wav,audio/x-wav" hidden>
+      <span class="fname" id="wavName">未選択</span>
+    </div>
+    <div id="loadProg" class="hidden" style="margin:4px 0 8px">
+      <div id="loadBar" class="lbar"><i id="loadBarFill"></i></div>
+      <div id="loadProgText" class="note" style="margin-top:4px"></div>
+    </div>
+    <div class="filebox hidden" id="resumeStep2">
+      <button onclick="projInput.click()" id="btnResumeProj" disabled>② プロジェクト（.json）を読み込む</button>
+      <input type="file" id="projInput" accept=".json,application/json" hidden>
+      <button onclick="eafInput.click()" id="btnResumeEaf" disabled>② ELANの .eaf を読み込む</button>
+      <input type="file" id="eafInput" accept=".eaf,.xml,text/xml" hidden>
+    </div>
+    <button type="button" id="btnStartBack" style="margin-top:8px;background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;padding:0">← 最初に戻る</button>
   </div>
 </div>
 
@@ -642,6 +655,30 @@ $('btnAddSpk').addEventListener('click',()=>{
 
 /* ---------- ファイル読み込み ---------- */
 $('wavInput').addEventListener('change',ev=>{const f=ev.target.files[0];if(f)loadFile(f)});
+// ---- 開始ナビゲーション（新規／既存再開） ----
+let startMode=null;
+function setStartMode(m){
+  startMode=m;
+  $('startChooser').classList.toggle('hidden', m!=null);
+  $('startFlow').classList.toggle('hidden', m==null);
+  $('resumeStep2').classList.toggle('hidden', m!=='resume');
+  if(m==='new')$('flowMsg').innerHTML='<b>新規</b>：まず <b>①音声（WAV）</b> を読み込みます。読み込むと下のパネルで自動区切り→注釈へ進めます。';
+  else if(m==='resume')$('flowMsg').innerHTML='<b>既存再開</b>：<b>①対応する音声（WAV）</b> → <b>②保存ファイル（.json か ELAN .eaf）</b> の順に読み込みます。';
+}
+function onWavLoaded(){
+  if(!startMode)setStartMode('new');   // ツアー等でモード未選択のまま読み込んだ場合は新規扱い
+  if(startMode==='resume'){
+    $('btnResumeProj').disabled=false; $('btnResumeEaf').disabled=false;
+    $('resumeStep2').classList.remove('hidden');
+    $('cardSeg').classList.add('hidden');   // 区間は保存ファイルから復元するので自動区切りパネルは隠す
+    $('flowMsg').innerHTML='✓ 音声を読み込みました。次に <b>②</b> 保存ファイル（.json か ELAN .eaf）を読み込んでください。';
+  }else{
+    $('flowMsg').innerHTML='✓ 音声を読み込みました。下の <b>パネル2「自動検出を実行」</b>で発話区間に分割します。';
+  }
+}
+$('btnStartNew').addEventListener('click',()=>setStartMode('new'));
+$('btnStartResume').addEventListener('click',()=>setStartMode('resume'));
+$('btnStartBack').addEventListener('click',()=>setStartMode(null));
 $('projInput').addEventListener('change',async ev=>{
   const f=ev.target.files[0];if(!f)return;
   try{
@@ -870,6 +907,7 @@ async function loadFile(f){
     speakers=['A'];activeSpk='A';renderSpkBar();
     segs=[];sel=-1;pend=null;cursorT=null;ignoredMiss=[];lexicon={};anSel=null;afterSegChange();
     hideLoad();
+    onWavLoaded();   // ガイドフロー：新規→自動区切りへ／既存再開→.json・.eaf 読み込みへ誘導
   }catch(e){
     wavInfo=null;env=null;
     hideLoad();
@@ -3093,7 +3131,7 @@ $('dlDict').addEventListener('click',async()=>{
 (function(){
   var STEPS=[
     {sel:'#brand', title:'BLTへようこそ', body:'ブラウザだけで完結するフィールドデータ編集ツールです。<b>音声の読み込みから注釈・グロス・ELAN(EAF)書き出し</b>までを、このツアーで一通り案内します。', place:'bottom'},
-    {sel:'#cardFile', title:'① 音声を読み込む', body:'「<b>音声ファイル（WAV・PCM）を選択</b>」から録音を開きます。読み込むと無音を自動検出して発話区間に分割します。途中保存の .json や ELAN .eaf もここから開けます。<br><span style="color:var(--muted)">▶ 音声を選ぶと自動で次へ進みます。お持ちでなければ「次へ」でデモ音声を使って続けられます。</span>', place:'bottom', waitLoaded:true},
+    {sel:'#cardFile', title:'① 作業を始める', body:'まず <b>「新規に始める」</b>か<b>「既存の作業を再開する」</b>を選びます。<br><b>新規</b>＝音声（WAV）を読み込み→自動区切り→注釈。<b>既存再開</b>＝音声を読み込んでから、以前の .json や ELAN .eaf を読み込みます。<br><span style="color:var(--muted)">▶ お持ちの音声が無ければ「次へ」でデモ音声を使って続けられます。</span>', place:'bottom', waitLoaded:true},
     {sel:'#cardWave', title:'波形で区間を確認・修正', body:'読み込んだ音声の波形です。区間（色付き帯）は<b>ドラッグで境界調整</b>、<b>クリック＋Space で再生</b>。区間化されなかった有音（取りこぼし）は<b>赤帯</b>で警告されます — このデモにも1か所あります。◀▶や「確認再生」で確認し、<b>「✓ 区間に追加」</b>で区間化、対象外なら「無視」。「⟳ 自動区切りをやり直し」で検出の感度も調整できます。', place:'bottom', needsAudio:true, scrollTop:true},
     {sel:'#cardWave', title:'複数話者に対応', body:'波形は<b>話者ごとに色分け・レーン分割</b>されます（上の波形で、区間ごとに色が違うのが話者の違いです）。波形の下の <b>＋話者</b> で話者を増やせます。<br><b>別の話者どうしは時刻が重なってもOK</b>（同じ話者内は重複不可）なので、会話のオーバーラップもそのまま扱えます。<br>例：<b>話者B</b>を追加し、2番目の区間を話者Bに割り当てました（色が変わります）。', place:'bottom', needsAudio:true, action:'demoSpk'},
     {sel:'#tb tr[data-i="0"]', title:'② 文字起こし（text）と訳（trans）', body:'区間の <b>text</b> 欄に文字起こし、<b>trans</b> 欄に訳を入力します。<br>例: <i style="font-family:var(--ipa)">nkjaan=du anna=tu uja=tu tamamiga=ti asɨ ffa-gama=nu u-tar=ca.</i><br>訳「昔々、母親と父親とタマミガという子がいたんだそうだ」', place:'bottom', needsAudio:true, action:'demoText', hideWave:true},

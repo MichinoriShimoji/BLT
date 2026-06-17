@@ -146,10 +146,17 @@ code{background:var(--accent-soft);padding:1px 5px;border-radius:4px;font-size:1
 #missCtl{display:inline-flex;flex-direction:column;align-items:center;gap:3px;border:1px solid var(--line);border-radius:8px;padding:5px 9px;background:var(--surface)}
 #missCtl.hot{border-color:#d92626;background:#fdf3f2}
 /* 広い画面ではパネル3（波形）と4（注釈）を横並びにして上部固定の高さを抑え、下の表を広く見せる */
+/* 波形の下を左右2分割：左＝パネル4操作部（スクロールしても残す）／右＝レコード表（縦スクロール） */
+#lowerSplit{display:flex;gap:14px;align-items:flex-start}
+#annoSide{flex:0 0 430px;min-width:0}
+#tableCol{flex:1 1 auto;min-width:0}
 @media (min-width:1180px){
-  #waveCol:has(#cardAnnoCtl:not(.hidden)){display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:14px;align-items:start}
-  #waveCol:has(#cardAnnoCtl:not(.hidden)) > .card{margin:0}
-  #waveCol:has(#cardAnnoCtl:not(.hidden)) #cardAnnoCtl{max-height:none}
+  #annoSide{position:sticky;align-self:flex-start}   /* topはJSで波形の高さに合わせて設定 */
+  #annoSide #cardAnnoCtl{max-height:calc(100vh - 120px);overflow:auto}
+}
+@media (max-width:1179px){
+  #lowerSplit{flex-direction:column}
+  #annoSide{flex-basis:auto;width:100%}
 }
 /* パネル4上部：左コントロール＋右の文脈ウィンドウ */
 #annoCtlRow{display:flex;gap:14px;align-items:stretch;flex-wrap:wrap}
@@ -195,10 +202,17 @@ th,td{border:1px solid var(--line);padding:4px 8px;text-align:left;vertical-alig
 th{font-size:10.5px;color:var(--muted);background:#f4f6f5;letter-spacing:.05em}
 td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 td[contenteditable]{cursor:text;min-width:50px}
-td[contenteditable]:focus{outline:2px solid var(--accent);outline-offset:-2px;background:#fbfdfc}
-td[data-k=text]{font-family:var(--ipa);font-size:15.5px;min-width:200px}
-td[data-k=note]{min-width:120px}
+[contenteditable]:focus{outline:2px solid var(--accent);outline-offset:-2px;background:#fbfdfc}
 td[data-k=id]{font-family:var(--mono);font-size:12.5px}
+/* 番号セルに開始・終了（秒）を縦に内蔵 */
+td.numtime{text-align:center;white-space:nowrap;min-width:60px}
+.numtime .rnum{font-weight:600;font-size:13px}
+.numtime .rtime{font-family:var(--mono);font-size:10px;color:var(--muted);cursor:text;padding:0 2px;border-radius:3px}
+.numtime .rtime:focus{color:var(--ink)}
+/* text と trans を縦に並べる列 */
+td.ttcell{min-width:220px}
+.ttline{cursor:text;padding:2px 3px;border-radius:3px;min-height:18px;font-family:var(--ipa);font-size:15px}
+.ttline.ttrans{font-family:inherit;font-size:12.5px;color:var(--muted);margin-top:3px;border-top:1px dashed var(--line);padding-top:3px}
 tr.selrow td{background:#fdf6e6}
 .rowbtn{padding:1px 8px;font-size:11px}
 /* interlinear gloss */
@@ -398,6 +412,10 @@ tr.glossrow td{background:#f6faf8;padding:6px 8px}
   </div>
 </div>
 
+</div><!-- /waveCol（ここまで上部固定） -->
+
+<div id="lowerSplit">
+<div id="annoSide">
 <div class="card hidden" id="cardAnnoCtl">
   <h2><span class="steplabel">4</span>注釈を付ける<button type="button" class="helpbtn" data-help="helpAnno" data-title="注釈の付け方・層の使い方">?</button></h2>
   <div class="helpsrc" id="helpAnno">
@@ -440,7 +458,7 @@ tr.glossrow td{background:#f6faf8;padding:6px 8px}
    </div>
   </div>
 </div>
-</div><!-- /waveCol（ここまで上部固定） -->
+</div><!-- /annoSide -->
 
 <div id="tableCol">
 <div class="card" id="paletteCard">
@@ -466,6 +484,7 @@ tr.glossrow td{background:#f6faf8;padding:6px 8px}
   </div>
 </div>
 </div><!-- /tableCol -->
+</div><!-- /lowerSplit -->
 </div><!-- /workArea -->
 
 <div class="card hidden" id="cardExport">
@@ -1526,12 +1545,16 @@ function zoomCenter(f){
 }
 // 波形カードのsticky位置をヘッダーの高さに追従させる
 function syncStickyTop(){
-  $('waveCol').style.top=(document.querySelector('header').offsetHeight+4)+'px';
+  const hh=document.querySelector('header').offsetHeight;
+  $('waveCol').style.top=(hh+4)+'px';
+  // 左サイドバー（パネル4操作部）は、上部固定の波形のすぐ下に貼り付ける
+  const side=$('annoSide');
+  if(side)side.style.top=(hh+$('waveCol').offsetHeight+10)+'px';
 }
 syncStickyTop();
 window.addEventListener('resize',()=>{syncStickyTop();if(env){draw();drawOvw()}});
-// 波形カラムの幅が変わったら（パネル3・4の横並び切替やサイズ変更など）再描画
-if(window.ResizeObserver){let lastW=0;new ResizeObserver(es=>{const w=Math.round(es[0].contentRect.width);if(w!==lastW){lastW=w;if(env){draw();drawOvw()}}}).observe(wave);}
+// 波形カラムの高さ・幅が変わったら（コンパイル切替・検出後のレイアウト変化など）再計算・再描画
+if(window.ResizeObserver){let lastW=0;new ResizeObserver(es=>{syncStickyTop();const w=Math.round(es[0].contentRect.width);if(w!==lastW){lastW=w;if(env){draw();drawOvw()}}}).observe($('waveCol'));}
 
 /* ---------- 説明ポップアップ ---------- */
 document.addEventListener('click',e=>{
@@ -1935,7 +1958,7 @@ function visCols(){
           text:viewLayer==='all'||viewLayer==='text',
           trans:viewLayer==='all'||viewLayer==='trans'};
 }
-function colCount(){const v=visCols();return 6+(v.spk?1:0)+(v.text?1:0)+(v.trans?1:0)}
+function colCount(){const v=visCols();return 4+(v.spk?1:0)+((v.text||v.trans)?1:0)}  // #(時間内蔵)・再生・ID・✕ ＋ spk ＋ text/trans列
 // サブ行（グロス行）を表示するか
 function subrowOn(){
   if(viewLayer==='text'||viewLayer==='trans'||viewLayer==='spk')return false;
@@ -1990,21 +2013,25 @@ function renderTable(){
   const tb=$('tb');
   page=Math.max(0,Math.min(page,Math.max(0,Math.ceil(segs.length/PAGE)-1)));
   const v=visCols(), start=page*PAGE, end=Math.min(segs.length,start+PAGE);
-  $('tbHead').innerHTML='<tr><th>#</th><th>再生</th><th>ID</th>'
+  $('tbHead').innerHTML='<tr><th>#</th><th></th><th>ID</th>'
     +(v.spk?'<th>spk</th>':'')
-    +(v.text?'<th>text</th>':'')+(v.trans?'<th>trans</th>':'')
-    +'<th>開始（秒）</th><th>終了（秒）</th><th></th></tr>';
+    +((v.text||v.trans)?'<th>text / trans</th>':'')
+    +'<th></th></tr>';
   tb.innerHTML=segs.slice(start,end).map((s,k)=>{
     const i=start+k;
     let h='<tr data-i="'+i+'"'+(i===sel?' class="selrow"':'')+'>'
-      +'<td class="num">'+(i+1)+'</td>'
+      +'<td class="num numtime">'
+        +'<div class="rnum">'+(i+1)+'</div>'
+        +'<div class="rtime" contenteditable="true" data-k="t0" title="開始（秒）">'+s.t0.toFixed(3)+'</div>'
+        +'<div class="rtime" contenteditable="true" data-k="t1" title="終了（秒）">'+s.t1.toFixed(3)+'</div>'
+      +'</td>'
       +'<td><button type="button" class="rowbtn play">▶</button></td>'
       +'<td contenteditable="true" data-k="id">'+escHtml(s.id)+'</td>'
       +(v.spk?'<td contenteditable="true" data-k="spk" title="話者ID">'+escHtml(s.spk||'')+'</td>':'')
-      +(v.text?'<td contenteditable="true" data-k="text">'+escHtml(s.text)+'</td>':'')
-      +(v.trans?'<td contenteditable="true" data-k="note">'+escHtml(s.note)+'</td>':'')
-      +'<td contenteditable="true" data-k="t0" class="num">'+s.t0.toFixed(3)+'</td>'
-      +'<td contenteditable="true" data-k="t1" class="num">'+s.t1.toFixed(3)+'</td>'
+      +((v.text||v.trans)?'<td class="ttcell">'
+        +(v.text?'<div class="ttline" contenteditable="true" data-k="text" title="text">'+escHtml(s.text)+'</div>':'')
+        +(v.trans?'<div class="ttline ttrans" contenteditable="true" data-k="note" title="trans（訳）">'+escHtml(s.note)+'</div>':'')
+       +'</td>':'')
       +'<td><button type="button" class="rowbtn del" title="このレコード（区間指定と注釈）を削除します。音声は変更されません">✕</button></td></tr>';
     if(subrowOn())h+=glossRowHtml(s,i);
     return h;
@@ -2064,7 +2091,7 @@ $('tb').addEventListener('focusout',e=>{
     }
     return;
   }
-  const td=e.target.closest('td[contenteditable]');if(!td)return;
+  const td=e.target.closest('[data-k]');if(!td)return;
   const tr=td.closest('tr'), i=+tr.dataset.i, k=td.dataset.k, s=segs[i];
   if(!s)return;
   const v=td.textContent.replace(/ /g,' ').trim();
@@ -2114,7 +2141,7 @@ $('tb').addEventListener('keydown',e=>{
     if(e.key==='Escape')gp.blur();
     return;
   }
-  const td=e.target.closest('td[contenteditable]');if(!td)return;
+  const td=e.target.closest('[data-k]');if(!td)return;
   if(e.key==='Enter'){
     e.preventDefault();
     const i=+td.closest('tr').dataset.i;

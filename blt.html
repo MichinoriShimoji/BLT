@@ -86,15 +86,15 @@ main{max-width:1800px;margin:0 auto;padding:18px 20px 60px}
 #waveCol .card h2 .pipbtns{margin-left:auto;display:flex;gap:4px}
 #waveCol .card h2 button{font-size:11px;padding:1px 8px;cursor:pointer}
 #waveCol.min #cardWave>*:not(h2){display:none}
-/* コンパクトモード（自動取り込み後：パネル3を縮小してパネル4を広く） */
-#waveCol.compact3 #cardWave{padding:6px 12px}
-#waveCol.compact3 #cardWave h2{font-size:12px;margin:0 0 4px}
-#waveCol.compact3 #ovw{height:18px;margin-bottom:3px}
-#waveCol.compact3 #wave{height:96px}
-#waveCol.compact3 .wavebar{margin-top:4px;gap:4px}
-#waveCol.compact3 .wavebar button{font-size:11px;padding:2px 6px}
+/* コンパクトモード（自動取り込み後：パネル3を縦圧縮してパネル4を広く） */
+#waveCol.compact3 #cardWave{padding:4px 12px 5px}
+#waveCol.compact3 #cardWave h2{font-size:11.5px;margin:0 0 2px}
+#waveCol.compact3 #ovw{height:12px;margin-bottom:2px}
+#waveCol.compact3 #wave{height:64px}
+#waveCol.compact3 .wavebar{margin-top:3px;gap:3px}
+#waveCol.compact3 .wavebar button{font-size:11px;padding:1px 6px}
 #waveCol.compact3 #spkBar .note{display:none}
-#waveCol.compact3 #spkBar{margin-top:3px}
+#waveCol.compact3 #spkBar{margin-top:2px}
 #waveCol.compact3 .helpbtn{display:none}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:16px 18px;margin-bottom:14px}
 .card h2{font-size:13px;color:var(--accent-ink);margin:0 0 10px;letter-spacing:.06em}
@@ -443,14 +443,10 @@ tr.glossrow td{background:#f6faf8;padding:6px 8px}
     </div>
     <div id="tierChips" style="margin:0 0 8px"></div>
     <details style="margin:0 0 8px">
-      <summary class="detbtn">詳細設定（morphの分割元・境界コーディング）</summary>
+      <summary class="detbtn">詳細設定（morphの分割元）</summary>
       <div class="optrow" id="morphSrcRow" style="margin:8px 0 6px">
         <label class="note">morphをどの層から分割するか（表層と基底形が異なる場合のみ）</label>
         <select id="morphSrc" title="形態素分割のもとになる層"></select>
-      </div>
-      <div class="optrow" style="margin:6px 0 0">
-        <label id="bdrSetting" style="font-size:13px;color:var(--ink)" title="ピリオドを文境界とし、形態素ごとに BOS/EOS/I を自動コーディング"><input type="checkbox" id="chkBdr"> 文境界をコーディング（bdr層・ピリオド基準）</label>
-        <label style="font-size:13px;color:var(--ink)" title="空白と = を語境界とし、形態素ごとに BOW/EOW/I を自動コーディング"><input type="checkbox" id="chkWbdr"> 語境界をコーディング（wbdr層・空白/= 基準）</label>
       </div>
     </details>
    </div>
@@ -479,6 +475,9 @@ tr.glossrow td{background:#f6faf8;padding:6px 8px}
     <button id="btnPgPrev" disabled>◀ 前の5件</button>
     <span id="pgInfo" class="note" style="font-family:var(--mono)">0件</span>
     <button id="btnPgNext" disabled>次の5件 ▶</button>
+    <span class="sep" style="width:1px;height:20px;background:var(--line)"></span>
+    <label id="bdrSetting" style="font-size:12px;color:var(--ink)" title="ピリオドを文境界とし、形態素ごとに BOS/EOS/I を自動コーディング"><input type="checkbox" id="chkBdr"> 文境界(bdr)</label>
+    <label style="font-size:12px;color:var(--ink)" title="空白と = を語境界とし、形態素ごとに BOW/EOW/I を自動コーディング"><input type="checkbox" id="chkWbdr"> 語境界(wbdr)</label>
   </div>
   <table>
     <thead id="tbHead"></thead>

@@ -1775,6 +1775,30 @@ function morphSplit(text){
 }
 // 明示的な形態素（EAF取り込みなど）があればそれを使い、なければテキストから機械分割
 function hasExplicitMorphs(s){return Array.isArray(s.morphs)&&s.morphs.length>0}
+// 形態素列を分割元テキストに照合し、語境界（空白）と境界記号（-=+）を復元して語ごとに整列する。
+// 返り値: [{text:'nkjaan=ca.', gloss:'昔=HS'}, ...]（形態素が区切り記号を持つ/持たないどちらでも動作）
+function alignIGT(s){
+  const flat=flatMorphs(s), gl=(s.tv||{}).gloss||[], text=String(morphSrcText(s)||'');
+  const words=[]; let cur=null, pos=0;
+  for(let k=0;k<flat.length;k++){
+    const surf=String(flat[k]==null?'':flat[k]);
+    const core=surf.replace(/^[-=+]/,'');
+    const g=gl[k]||'';
+    let sep='', newWord=(cur===null);
+    if(core){
+      const idx=text.indexOf(core,pos);
+      if(idx>=0){
+        const gap=text.slice(pos,idx);
+        if(/\s/.test(gap))newWord=true;                         // 直前との間に空白＝新しい語
+        else{const d=gap.match(/[-=+]/);sep=d?d[0]:(/^[-=+]/.test(surf)?surf[0]:'');}
+        pos=idx+core.length;
+      }else if(/^[-=+]/.test(surf)){sep=surf[0];}               // テキスト未照合だが境界記号を持つ
+    }
+    if(newWord){cur={t:[],g:[]};words.push(cur);sep='';}
+    cur.t.push(sep+core); cur.g.push((cur.g.length?sep:'')+g);
+  }
+  return words.map(w=>({text:w.t.join(''),gloss:w.g.join('')}));
+}
 function flatMorphs(s){return hasExplicitMorphs(s)?s.morphs.slice():morphSplit(morphSrcText(s)).flat()}
 function morphLineOf(s){
   if(hasExplicitMorphs(s))return s.morphs.join('-');
@@ -2257,13 +2281,9 @@ function igtRowsAll(){
   return segs.map(s=>{
     let surfaceWords=[],textWords=[],glossWords=[];
     if(morphOn){
-      const words=hasExplicitMorphs(s)?[s.morphs]:morphSplit(morphSrcText(s));
-      const gl=(s.tv||{}).gloss||[]; let k=0;
-      words.forEach(w=>{
-        textWords.push(w.join(''));
-        let g=''; w.forEach((m,j)=>{const sep=/^[-=+]/.test(m)?m[0]:'-';g+=(j?sep:'')+(gl[k++]||'');});
-        glossWords.push(g);
-      });
+      const words=alignIGT(s);
+      textWords=words.map(w=>w.text);
+      glossWords=words.map(w=>w.gloss);
       surfaceWords=sp(s.text);
     }else{ textWords=sp(s.text); }
     const has4=morphOn&&surfaceWords.length===textWords.length&&surfaceWords.join(' ')!==textWords.join(' ');
@@ -2278,12 +2298,24 @@ function igtGlossParts(word){
     return {t:seg,sc:!!(tok&&/^[A-Z0-9]+$/.test(tok)&&/[A-Z]/.test(tok))};
   });
 }
-function escLatex(s){return String(s).replace(/\\/g,'\\textbackslash{}').replace(/([&%$#_{}])/g,'\\$1').replace(/~/g,'\\textasciitilde{}').replace(/\^/g,'\\textasciicircum{}');}
+// 非ASCIIのIPA等を tipa／標準LaTeX コマンドに変換（pLaTeX/upLaTeX でそのままコンパイルできるように）
+const TEX_IPA={
+  'ɨ':'\\textbari{}','ʉ':'\\textbaru{}','ə':'\\textschwa{}','ɛ':'\\textepsilon{}','ɔ':'\\textopeno{}',
+  'ɯ':'\\textturnm{}','ɪ':'\\textsci{}','ʊ':'\\textupsilon{}','ɑ':'\\textscripta{}','ɒ':'\\textturnscripta{}',
+  'æ':'\\ae{}','ø':'\\o{}','œ':'\\oe{}','ɐ':'\\textturna{}','ʌ':'\\textturnv{}','ɤ':'\\textramshorns{}',
+  'ŋ':'\\ng{}','ɸ':'\\textphi{}','β':'\\textbeta{}','θ':'\\texttheta{}','ð':'\\dh{}','ʃ':'\\textesh{}',
+  'ʒ':'\\textyogh{}','ç':'\\c{c}','ɲ':'\\textltailn{}','ɴ':'\\textscn{}','ɭ':'\\textrtaill{}',
+  'ɾ':'\\textfishhookr{}','ɽ':'\\textrtailr{}','ʔ':'\\textglotstop{}','ʕ':'\\textrevglotstop{}',
+  'ɡ':'g','ɣ':'\\textgamma{}','χ':'\\textchi{}','ʁ':'\\textinvscr{}','ɕ':'\\textctc{}','ʑ':'\\textctz{}',
+  'ɟ':'\\textbardotlessj{}','ː':'\\textlengthmark{}','ˑ':'\\texthalflength{}','ʂ':'\\textrtails{}','ʐ':'\\textrtailz{}',
+  'ž':'\\v{z}','š':'\\v{s}','č':'\\v{c}','ź':'\\\'{z}','ż':'\\.{z}','ń':'\\\'{n}'
+};
+function escLatex(s){return String(s).replace(/\\/g,'\\textbackslash{}').replace(/([&%$#_{}])/g,'\\$1').replace(/~/g,'\\textasciitilde{}').replace(/\^/g,'\\textasciicircum{}').replace(/[À-˿Ͱ-Ͽ]/g,ch=>TEX_IPA[ch]||ch);}
 function igtTransJP(t){return /[぀-ヿ一-鿿]/.test(t);}
 function glossLatex(word){return igtGlossParts(word).map(p=>(p.sc&&igtSmallCapsOn())?'\\textsc{'+escLatex(p.t.toLowerCase())+'}':escLatex(p.t)).join('');}
 function buildGb4e(){
   if(!segs.length)return;
-  let out='% LaTeX gb4e 形式のインターリニアグロス（要 \\usepackage{gb4e}）\n% BLT — Browser-based Lightweight Toolkit より書き出し\n\n';
+  let out='';
   igtRowsAll().forEach(ex=>{
     out+='\\begin{exe}\n\\ex\n';
     if(ex.glossWords.length){
@@ -2298,7 +2330,15 @@ function buildGb4e(){
     if(ex.trans)out+='\\glt '+(igtTransJP(ex.trans)?('「'+escLatex(ex.trans)+'」'):('`'+escLatex(ex.trans)+"'"))+'\n';
     out+='\\end{exe}\n\n';
   });
-  dl(baseName()+'_gb4e.tex',out,'text/plain;charset=utf-8');
+  const pre='% BLT — Browser-based Lightweight Toolkit より書き出し（gb4e インターリニアグロス）\n'
+    +'% コンパイル例: ptex2pdf -l '+baseName()+'_gb4e.tex （pLaTeX）／ uplatex なら ujarticle に変更\n'
+    +'% 要パッケージ: gb4e, tipa（IPA記号は tipa コマンドに変換済み）\n'
+    +'% 既存の論文に貼る場合は、\\begin{exe}…\\end{exe} の本文だけをコピーしてください。\n'
+    +'\\documentclass[a4paper]{jarticle}\n'
+    +'\\usepackage{gb4e}\n'
+    +'\\usepackage{tipa}\n'
+    +'\\begin{document}\n\n';
+  dl(baseName()+'_gb4e.tex',pre+out+'\\end{document}\n','text/plain;charset=utf-8');
 }
 // ---- Word(.docx) を OOXML から内蔵生成（外部ライブラリ不要） ----
 function wRun(text,o){o=o||{};let rp='';if(o.sc)rp+='<w:smallCaps/>';if(o.bold)rp+='<w:b/>';if(o.size)rp+='<w:sz w:val="'+o.size+'"/>';return '<w:r>'+(rp?'<w:rPr>'+rp+'</w:rPr>':'')+'<w:t xml:space="preserve">'+escXml(text)+'</w:t></w:r>';}

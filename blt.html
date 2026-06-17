@@ -2298,19 +2298,42 @@ function igtGlossParts(word){
     return {t:seg,sc:!!(tok&&/^[A-Z0-9]+$/.test(tok)&&/[A-Z]/.test(tok))};
   });
 }
-// 非ASCIIのIPA等を tipa／標準LaTeX コマンドに変換（pLaTeX/upLaTeX でそのままコンパイルできるように）
-const TEX_IPA={
-  'ɨ':'\\textbari{}','ʉ':'\\textbaru{}','ə':'\\textschwa{}','ɛ':'\\textepsilon{}','ɔ':'\\textopeno{}',
-  'ɯ':'\\textturnm{}','ɪ':'\\textsci{}','ʊ':'\\textupsilon{}','ɑ':'\\textscripta{}','ɒ':'\\textturnscripta{}',
-  'æ':'\\ae{}','ø':'\\o{}','œ':'\\oe{}','ɐ':'\\textturna{}','ʌ':'\\textturnv{}','ɤ':'\\textramshorns{}',
-  'ŋ':'\\ng{}','ɸ':'\\textphi{}','β':'\\textbeta{}','θ':'\\texttheta{}','ð':'\\dh{}','ʃ':'\\textesh{}',
-  'ʒ':'\\textyogh{}','ç':'\\c{c}','ɲ':'\\textltailn{}','ɴ':'\\textscn{}','ɭ':'\\textrtaill{}',
-  'ɾ':'\\textfishhookr{}','ɽ':'\\textrtailr{}','ʔ':'\\textglotstop{}','ʕ':'\\textrevglotstop{}',
-  'ɡ':'g','ɣ':'\\textgamma{}','χ':'\\textchi{}','ʁ':'\\textinvscr{}','ɕ':'\\textctc{}','ʑ':'\\textctz{}',
-  'ɟ':'\\textbardotlessj{}','ː':'\\textlengthmark{}','ˑ':'\\texthalflength{}','ʂ':'\\textrtails{}','ʐ':'\\textrtailz{}',
-  'ž':'\\v{z}','š':'\\v{s}','č':'\\v{c}','ź':'\\\'{z}','ż':'\\.{z}','ń':'\\\'{n}'
-};
-function escLatex(s){return String(s).replace(/\\/g,'\\textbackslash{}').replace(/([&%$#_{}])/g,'\\$1').replace(/~/g,'\\textasciitilde{}').replace(/\^/g,'\\textasciicircum{}').replace(/[À-˿Ͱ-Ͽ]/g,ch=>TEX_IPA[ch]||ch);}
+// 非ASCIIのIPA等を tipa／標準LaTeX コマンドに変換（pLaTeX/upLaTeX でそのままコンパイルできるように）。
+// キーはUnicodeコードポイント(16進4桁)。コマンド名は tipauni のUnicode対応表（tipa/extraipa に実在）から採取。
+const TEX_IPA={'0127':'\\textcrh','0195':'\\texthvlig','01C1':'\\textdoublepipe','01C2':'\\textdoublebarpipe','0239':'\\textqplig','0250':'\\textturna','0251':'\\textscripta','0252':'\\textturnscripta','0253':'\\texthtb','0254':'\\textopeno','0255':'\\textctc','0256':'\\textrtaild','0257':'\\texthtd','0258':'\\textreve','0259':'\\textschwa','025B':'\\textepsilon','025C':'\\textrevepsilon','025E':'\\textcloserevepsilon','025F':'\\textbardotlessj','0260':'\\texthtg','0262':'\\textscg','0263':'\\textgamma','0264':'\\textramshorns','0265':'\\textturnh','0266':'\\texthth','0267':'\\texththeng','0268':'\\textbari','026A':'\\textsci','026C':'\\textbeltl','026D':'\\textrtaill','026E':'\\textlyoghlig','026F':'\\textturnm','0270':'\\textturnmrleg','0271':'\\textltailm','0272':'\\textltailn','0273':'\\textrtailn','0274':'\\textscn','0275':'\\textbaro','0278':'\\textphi','0279':'\\textturnr','027A':'\\textturnlonglegr','027B':'\\textturnrrtail','027D':'\\textrtailr','027E':'\\textfishhookr','0280':'\\textscr','0281':'\\textinvscr','0282':'\\textrtails','0283':'\\textesh','0284':'\\texthtbardotlessj','0288':'\\textrtailt','0289':'\\textbaru','028A':'\\textupsilon','028C':'\\textturnv','028D':'\\textturnw','028E':'\\textturny','028F':'\\textscy','0290':'\\textrtailz','0291':'\\textctz','0292':'\\textyogh','0294':'\\textglotstop','0295':'\\textrevglotstop','0298':'\\textbullseye','0299':'\\textscb','029B':'\\texthtscg','029C':'\\textsch','029D':'\\textctj','029F':'\\textscl','02A1':'\\textbarglotstop','02A2':'\\textbarrevglotstop','02A3':'\\textdzlig','02A4':'\\textdblig','02A6':'\\texttslig','02A7':'\\textteshlig','02A8':'\\texttctclig','02DE':'\\textrhoticity','031A':'\\textcorner','03B2':'\\textbeta','03B8':'\\texttheta','03C7':'\\textchi','025A':'\\textrhookschwa','025D':'\\textrhookrevepsilon','0276':'\\textscoelig','0277':'\\textcloseomega','027C':'\\textlonglegr','0287':'\\textturnt','028B':'\\textscriptv','0293':'\\textctyogh','0296':'\\textinvglotstop','0297':'\\textstretchc','029A':'\\textcloseepsilon','029E':'\\textturnk','02A0':'\\texthtq','02A5':'\\textdctzlig','02D0':'\\textlengthmark','02D1':'\\texthalflength','02C8':'\\textprimstress','02CC':'\\textsecstress','0261':'g','00E6':'\\ae{}','00F8':'\\o{}','0153':'\\oe{}','00F0':'\\dh{}','00FE':'\\th{}','014B':'\\ng{}','00DF':'\\ss{}','0131':'\\i{}','0237':'\\j{}','02BC':'\''};
+// 結合発音区別符（コードポイント→直前の文字に付くアクセント命令）。標準LaTeXアクセント＋tipaの下付き記号。
+const TEX_ACCENT={'0300':'\\`','0301':'\\\'','0302':'\\^','0303':'\\~','0304':'\\=','0306':'\\u','0307':'\\.','0308':'\\"','030A':'\\r','030B':'\\H','030C':'\\v','0327':'\\c','0328':'\\k','0323':'\\d','0331':'\\b','0320':'\\textsubbar','0324':'\\textsubumlaut','0325':'\\textsubring','0329':'\\textsyllabic','032A':'\\textsubbridge','032C':'\\textsubwedge','032F':'\\textsubarch','0330':'\\textsubtilde','0334':'\\textsuperimposetilde','0339':'\\textsubrhalfring','031C':'\\textsublhalfring','031D':'\\textraising','031E':'\\textlowering','031F':'\\textsubplus','0318':'\\textadvancing','0319':'\\textretracting','033A':'\\textinvsubbridge','033B':'\\textsubsquare','033C':'\\textseagull','033D':'\\textovercross'};
+const HEX4=cp=>cp.toString(16).toUpperCase().padStart(4,'0');
+// 1文字（基底）をLaTeXトークンへ。\textXXX 命令は呼び出し側で{}を付ける。未対応の音声記号はnull。
+function texBase(ch){
+  if(ch==='\\')return '\\textbackslash{}';
+  if('&%$#_{}'.indexOf(ch)>=0)return '\\'+ch;
+  if(ch==='~')return '\\textasciitilde{}';
+  if(ch==='^')return '\\textasciicircum{}';
+  const cp=ch.codePointAt(0);
+  if(cp<0x80)return ch;
+  const t=TEX_IPA[HEX4(cp)];
+  if(t)return t;
+  // 音声記号が入りうる範囲のみ変換対象に。範囲外（日本語など）は生のまま通す。
+  const phon=(cp>=0x80&&cp<0x300)||(cp>=0x370&&cp<0x400)||(cp>=0x1D00&&cp<0x1F00)||(cp>=0x2C60&&cp<0x2C80);
+  return phon?null:ch;
+}
+function escLatex(s){
+  const nf=String(s==null?'':s).normalize('NFD');
+  let out='';
+  const arr=Array.from(nf);
+  for(let i=0;i<arr.length;i++){
+    const ch=arr[i];
+    const comb=[];
+    while(i+1<arr.length){const c=arr[i+1].codePointAt(0); if(c>=0x300&&c<=0x36F){comb.push(c);i++;}else break;}
+    let base=texBase(ch);
+    if(base===null)base='\\BLTuni{'+HEX4(ch.codePointAt(0))+'}';   // 未対応の音声記号は印を出して必ずコンパイルできるように
+    let tok=/^\\text[A-Za-z]+$/.test(base)?base+'{}':base;          // argless tipa命令には{}を付ける
+    comb.forEach(c=>{const a=TEX_ACCENT[HEX4(c)]; if(a)tok=a+'{'+tok+'}';});  // 結合記号でラップ（未対応は無視）
+    out+=tok;
+  }
+  return out;
+}
 function igtTransJP(t){return /[぀-ヿ一-鿿]/.test(t);}
 function glossLatex(word){return igtGlossParts(word).map(p=>(p.sc&&igtSmallCapsOn())?'\\textsc{'+escLatex(p.t.toLowerCase())+'}':escLatex(p.t)).join('');}
 function buildGb4e(){
@@ -2332,11 +2355,14 @@ function buildGb4e(){
   });
   const pre='% BLT — Browser-based Lightweight Toolkit より書き出し（gb4e インターリニアグロス）\n'
     +'% コンパイル例: ptex2pdf -l '+baseName()+'_gb4e.tex （pLaTeX）／ uplatex なら ujarticle に変更\n'
-    +'% 要パッケージ: gb4e, tipa（IPA記号は tipa コマンドに変換済み）\n'
-    +'% 既存の論文に貼る場合は、\\begin{exe}…\\end{exe} の本文だけをコピーしてください。\n'
+    +'% 要パッケージ: gb4e, tipa, extraipa（IPA記号は tipa コマンドに変換済み）\n'
+    +'% 既存の論文に貼る場合は、\\begin{exe}…\\end{exe} の本文だけをコピーしてください（プリアンブルで上記パッケージの読み込みが必要）。\n'
     +'\\documentclass[a4paper]{jarticle}\n'
+    +'\\usepackage[T1]{fontenc}\n'
     +'\\usepackage{gb4e}\n'
     +'\\usepackage{tipa}\n'
+    +'\\usepackage{extraipa}\n'
+    +'\\providecommand{\\BLTuni}[1]{{\\bfseries[U+#1]}}% 未対応文字の目印（通常は出ません）\n'
     +'\\begin{document}\n\n';
   dl(baseName()+'_gb4e.tex',pre+out+'\\end{document}\n','text/plain;charset=utf-8');
 }

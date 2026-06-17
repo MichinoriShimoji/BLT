@@ -233,20 +233,20 @@ tr.glossrow td{background:#f6faf8;padding:6px 8px}
 #tourBtn{margin-left:auto;background:var(--sel);color:#4a3500;border:1px solid #e0a52e;border-radius:16px;padding:5px 13px;font-size:12px;font-weight:700;cursor:pointer;align-self:center}
 #tourBtn:hover{background:#e9a92f}
 .tour-spot{position:fixed;border-radius:8px;box-shadow:0 0 0 9999px rgba(15,23,42,.62);z-index:10000;pointer-events:none;transition:top .25s,left .25s,width .25s,height .25s;outline:2px solid var(--accent);outline-offset:2px}
-.tour-pop{position:fixed;z-index:10001;background:var(--surface);border-radius:10px;width:340px;max-width:calc(100vw - 24px);padding:16px 18px 14px;box-shadow:0 12px 44px rgba(0,0,0,.34)}
-.tour-pop h4{margin:0 0 6px;font-family:var(--jp-serif);color:var(--accent-ink);font-size:15.5px}
-.tour-pop p{margin:0;font-size:12.7px;color:var(--ink);line-height:1.6}
-.tour-row{display:flex;align-items:center;justify-content:space-between;margin-top:13px;gap:8px}
-.tour-step{font-size:11px;color:var(--muted)}
-.tour-btns{display:flex;gap:6px}
-.tour-btns button{border-radius:6px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--line)}
+.tour-pop{position:fixed;z-index:10001;background:var(--surface);border-radius:12px;width:480px;max-width:calc(100vw - 28px);padding:24px 28px 20px;box-shadow:0 14px 50px rgba(0,0,0,.36)}
+.tour-pop h4{margin:0 0 10px;font-family:var(--jp-serif);color:var(--accent-ink);font-size:23px;line-height:1.35}
+.tour-pop p{margin:0;font-size:17px;color:var(--ink);line-height:1.8}
+.tour-row{display:flex;align-items:center;justify-content:space-between;margin-top:20px;gap:10px}
+.tour-step{font-size:14px;color:var(--muted)}
+.tour-btns{display:flex;gap:8px}
+.tour-btns button{border-radius:8px;padding:10px 22px;font-size:16px;font-weight:700;cursor:pointer;border:1px solid var(--line)}
 .tour-next{background:var(--sel);color:#4a3500;border-color:#e0a52e}
 .tour-next:hover{background:#e9a92f}
 .tour-prev{background:var(--surface);color:var(--muted)}
 .tour-prev:hover{color:var(--ink)}
-.tour-skip{position:absolute;top:9px;right:11px;border:none;background:none;font-size:18px;line-height:1;color:var(--muted);cursor:pointer}
+.tour-skip{position:absolute;top:12px;right:15px;border:none;background:none;font-size:24px;line-height:1;color:var(--muted);cursor:pointer}
 .tour-skip:hover{color:var(--warn)}
-.tour-quit{margin-left:10px;border:none;background:none;color:var(--muted);font-size:11px;text-decoration:underline;cursor:pointer;padding:0}
+.tour-quit{margin-left:12px;border:none;background:none;color:var(--muted);font-size:14px;text-decoration:underline;cursor:pointer;padding:0}
 .tour-quit:hover{color:var(--warn)}
 </style>
 </head>
@@ -2673,7 +2673,7 @@ $('dlDict').addEventListener('click',async()=>{
     {sel:'#tb tr.glossrow[data-i="0"]', title:'→ bdr に BOS / EOS が付く', body:'チェックを入れると、各形態素へ <b>BOS（文頭）/ EOS（文末）/ I（文中）</b> が自動付与されます（例文なら <b>nkjaan=BOS … ca.=EOS</b>）。文脈表示にも <b>‖</b> で文の切れ目が出ます。', place:'bottom', needsAudio:true, hideWave:true, demoOnly:true},
     {sel:'#cardTable', title:'発話境界 ≠ 文境界', body:'BLTが音声を<b>ポーズで区切った区間＝「発話」</b>（発話境界）と、<b>bdr層</b>の<b>ピリオド基準の「文」</b>（文境界）は<b>必ずしも一致しません</b>。<br>別の発話を読み込みました：<i style="font-family:var(--ipa)">unu ffa-gama=a dondon dondon bizin nn aparagi-midum-mas-i-i sudac-i-i,</i>（「この子はどんどん…美人、、、美しい女に育って」）。言い直し（<b>bizin「美人」→ nn=FRG → aparagi-midum「美しい女」</b>）を含み、<b>コンマで終わる＝文として未完</b>。だから bdr に <b>EOS が付きません</b>（＝1発話だが1文ではない）。<br><b>メリット：</b>発話（自動区切り）と文（bdr）は別管理なので、<b>注釈は文を気にせず、自動区切りの発話単位でどんどん付けていけばOK</b>。文をまたぐ・文として未完でも、文の構造は bdr 層が別に担います。', place:'top', needsAudio:true, action:'demoUtt2', hideWave:true},
     {sel:'#annoCtlLeft', title:'層（レイヤー）の追加・カスタマイズ', body:'注釈の<b>層</b>は自由に構成できます。<br>・<b>層構成</b>のプリセット：<i>text+trans</i> ／ <i>+morph+gloss</i> ／ <i>+udl</i> をワンタッチで切替。<br>・「<b>さらに層を追加</b>」で独自の層（例：<b>pos・kana・note</b> など）を追加できます。追加時に<b>親</b>を選びます — <b>区間</b>（trans のように1区間に1つ）か <b>形態素</b>（gloss のように形態素ごと）。<br>・追加した層は下の<b>チップ</b>に並び、✕でいつでも削除できます。', place:'top', needsAudio:true},
-    {sel:'#cardTable', title:'udl層：基底形の境界で morph 分割', body:'<b>udl層（基底形）</b>を加えると、morph は <b>表層の text</b> ではなく <b>udl の形態素境界</b>に従って分割されます。表層 text は区切らずそのまま、udl に境界を書くだけ。<br>例：<div style="background:var(--accent-soft);border-left:3px solid var(--accent);border-radius:5px;padding:6px 10px;margin:6px 0;font-family:var(--ipa);font-size:13.5px"><b>midummasii</b>（表層）&nbsp;→&nbsp;<b>midum -as -i -i</b>（udl＝morph）</div>表層と基底がずれていても、udl に書いた境界どおりに morph 分割されます。', place:'bottom', needsAudio:true, action:'demoUdl', hideWave:true},
+    {sel:'#cardTable', title:'udl層：基底形の境界で morph 分割', body:'<b>udl層（基底形）</b>を加えると、morph は <b>表層の text</b> ではなく <b>udl の形態素境界</b>に従って分割されます。表層 text は区切らずそのまま、udl に境界を書くだけ。<br>例：<div style="background:var(--accent-soft);border-left:3px solid var(--accent);border-radius:5px;padding:8px 12px;margin:8px 0;font-family:var(--ipa);font-size:16px"><b>midummasii</b>（表層）&nbsp;→&nbsp;<b>midum -as -i -i</b>（udl＝morph）</div>表層と基底がずれていても、udl に書いた境界どおりに morph 分割されます。', place:'bottom', needsAudio:true, action:'demoUdl', hideWave:true},
     {sel:'#cardExport', title:'⑤ 書き出し・保存', body:'仕上がったら <b>EAF / TSV / JSON / WAV ZIP</b> で書き出し。<b>プロジェクト途中保存</b>（.json）で、同じWAVを読み込めば続きから再開できます。', place:'top', needsAudio:true},
     {sel:'.bcite', title:'引用情報（DOI）', body:'BLTには DOI が付いています。研究で使ったら、このCITE欄の文献情報で引用してください。', place:'bottom'},
     {sel:'#fbOpen', title:'フィードバック歓迎', body:'改善点・気づいた点はこのボタンからお寄せください。このツアーは右上の「🧭 使い方ツアー」でいつでも見られます。', place:'left'}

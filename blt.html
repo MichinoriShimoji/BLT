@@ -3219,7 +3219,45 @@ $('dlDict').addEventListener('click',async()=>{
     "Word（.docx）":"Word (.docx)","切り出しWAVのZIP":"Per-segment WAV ZIP","glossを小型大文字":"gloss in small caps",
     "プロジェクトを途中保存（.json）":"Save project (.json)","辞書をHTML＋音声でダウンロード（ZIP）":"Download lexicon as HTML + audio (ZIP)",
     // 表ヘッダ
-    "text / trans":"text / trans"
+    "text / trans":"text / trans",
+    // 開始ガイド文（flowMsg。<b>で分割された断片を順に英訳。キーは前後空白を含めない）
+    "：まず":": first load","①音声（WAV）":"① the audio (WAV)",
+    "を読み込みます。読み込むと下のパネルで自動区切り→注釈へ進めます。":"— load it; then segment below and annotate.",
+    "：":":","①対応する音声（WAV）":"① the matching audio (WAV)","→":"→",
+    "②保存ファイル（.json か ELAN .eaf）":"② the saved file (.json or ELAN .eaf)",
+    "の順に読み込みます。":"— load these in that order.",
+    "✓ 音声を読み込みました。次に":"✓ Audio loaded. Next, load","②":"②",
+    "保存ファイル（.json か ELAN .eaf）を読み込んでください。":"the saved file (.json or ELAN .eaf).",
+    "✓ 音声を読み込みました。下の":"✓ Audio loaded. Use",
+    "パネル2「自動検出を実行」":"Panel 2 “Run auto-detect”","で発話区間に分割します。":" to split it into utterance segments.",
+    // アラート（固定文）
+    "先にWAVファイルを読み込んでください":"Please load a WAV file first.",
+    "層の名前を入力してください":"Please enter a layer name.",
+    "先に挿入先のセル（text欄など）をクリックしてください":"Click a target cell (e.g. the text field) first.",
+    "先に音声・注釈を読み込んでください":"Load audio and annotations first.",
+    "注釈データがありません":"No annotation data.","音声（WAV）が読み込まれていません":"No audio (WAV) loaded."
+  };
+  // 数値混じりの動的文言（区間数・件数・秒など）はパターンで英訳
+  const PAT=[
+    [/^(\d+)区間　選択: #(\d+) ([\d.]+)–([\d.]+)s$/, m=>m[1]+' seg. — sel #'+m[2]+' '+m[3]+'–'+m[4]+'s'],
+    [/^(\d+)区間$/, m=>m[1]+' seg.'],
+    [/^(\d+)–(\d+) \/ (\d+)件$/, m=>m[1]+'–'+m[2]+' / '+m[3]],
+    [/^(\d+)件$/, m=>m[1]],
+    [/^⚠ 取りこぼし (\d+)件$/, m=>'⚠ Missed: '+m[1]],
+    [/^カーソル位置 ([\d.]+) 秒$/, m=>'Cursor '+m[1]+' s']
+  ];
+  function applyPat(key){
+    for(const p of PAT){const m=key.match(p[0]);if(m)return p[1](m);}
+    const w=key.match(/^(.*[\d.]+) 秒$/); if(w&&/Hz/.test(key))return w[1]+' s';
+    return null;
+  }
+  // ヘルプ（?ポップアップ）の英訳：差し替え用 innerHTML
+  const HELP_EN={
+    helpFile:'<div class="note">Audio is expected to be uncompressed WAV (PCM). Files are never sent outside your browser — everything is processed locally, and the audio file itself is never modified.<br><br>To use “Load a project (.json)”, <b>load the matching WAV first</b> (the project does not contain the audio itself).</div>',
+    helpSeg:'<div class="note"><b>Manual:</b> drag over an empty part of the waveform to select a range, then <b>press Enter</b> to make it a segment. <b>Auto:</b> detects runs of speech (allowing very short silences) and segments them at once (you can fix them by hand afterwards).<br><br>Auto-detect estimates a threshold from the noise floor and speech level and uses a dual threshold (hysteresis) to find speech runs. Silences shorter than “Min. silence” are bridged into one segment (default: only runs ≥ 0.5 s). Re-running carries over your annotations by time overlap.</div>',
+    helpWave:'<div class="note"><b>Speakers (overlap-ready):</b> add one with “+ Speaker”; the selected chip is the “active speaker”. New segments belong to it, and <b>different speakers may overlap in time</b> (overlap within one speaker is not allowed). Per-speaker lanes appear below the waveform. EAF is exported split per speaker (e.g. <code>text@speaker</code> with PARTICIPANT) so overlaps open correctly in ELAN.<br><br><b>Red bands</b> = speech not inside any segment (possible “missed” audio). Use ◀ ▶ to jump, “Preview” to listen, <b>“✓ Add as segment”</b> to keep it, or <b>“Ignore”</b> to drop it from the count.<br><br><b>Click a segment = play it</b>. <b>Double-click a segment = edit</b> (cursor lands in that row\'s text cell).<br>Click empty space = drop the playback cursor (<b>Space = play/pause from cursor</b>)<br>Drag empty space = select a range → <b>Enter to confirm as a segment</b> (Esc to cancel)<br>Drag a segment edge = move the boundary<br><b>Alt + double-click = split the segment</b><br>Horizontal scroll (or Shift + wheel) = pan, vertical wheel = zoom<br><br>Buttons below: <b>◀ Prev / Next ▶</b> step through and play segments; <b>Play selection / From cursor / Stop</b> control playback; <b>🗑 Delete selected</b> only removes the segment and its annotation — the audio is never changed.</div>',
+    helpAnno:'<div class="note">Click a cell to edit. When you edit a text or gloss cell, the <b>IPA palette appears at the bottom</b>; click a symbol to insert it. Enter in the text field = next row. Start/end (seconds) are editable too.<br><br>With a morph layer, hyphen (-), equals (=) and plus (+) in the text <b>split it into morphemes</b>, and you fill layers under morph (gloss · pos by default) per morpheme (Enter = next morpheme). Add layers freely: parent “segment” gives one field per segment; “morph” or its children give one field per morpheme.<br><br>When surface and underlying forms differ (e.g. text <code>kaita</code> / underlying <code>kak-ta</code>), add a segment-level layer for the underlying form (e.g. <code>udl</code>) and set “morph split source” to it.<br><br>“Show layer” focuses on one layer (data is kept). Records show 5 at a time; use ◀ ▶ to move.</div>',
+    helpExport:'<div class="note">EAF exports <code>ID</code>, <code>text</code>, <code>trans</code> plus your layers with ELAN\'s parent-child structure (<code>trans</code> = Symbolic Association of text, <code>morph</code> = Symbolic Subdivision of text/udl, other layers = Symbolic Association to the chosen parent; type and constraint declarations included). Put it beside the WAV to open in ELAN.<br><br>TSV / JSON include every layer (morph layers merged into a gloss line, e.g. <code>go-EP-PST</code>). The ZIP holds a WAV per segment plus <code>manifest.csv</code>.<br><br>“Save project” stores segments, annotations, layer setup and the ignore list as JSON. To resume, load the same WAV first, then this JSON.</div>'
   };
   let lang='ja'; try{lang=localStorage.getItem('blt_lang')||'ja';}catch(e){}
   const skip=n=>{let el=n.nodeType===3?n.parentElement:n;
@@ -3229,7 +3267,7 @@ $('dlDict').addEventListener('click',async()=>{
       if(el.isContentEditable)return true; el=el.parentElement;}
     return false;};
   function trNode(n){const raw=n.nodeValue,key=raw.trim();if(!key)return;
-    if(lang==='en'){const en=EN[key];if(en!=null&&n.__ja==null){n.__ja=raw;n.nodeValue=raw.replace(key,en);}}
+    if(lang==='en'){let en=EN[key];if(en==null)en=applyPat(key);if(en!=null&&n.__ja==null){n.__ja=raw;n.nodeValue=raw.replace(key,en);}}
     else if(n.__ja!=null){n.nodeValue=n.__ja;n.__ja=null;}};
   function walk(root){
     if(root.nodeType===3){if(!skip(root))trNode(root);return;}
@@ -3237,9 +3275,23 @@ $('dlDict').addEventListener('click',async()=>{
     const tw=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);const ns=[];
     while(tw.nextNode())ns.push(tw.currentNode);
     ns.forEach(n=>{if(!skip(n))trNode(n);});}
+  const PH={"さらに層を追加（名前）":"Add a layer (name)","値":"value",
+    "検索（形態素・グロス・語義）":"Search (morpheme / gloss / sense)","検索（形態素・グロス）":"Search (morpheme / gloss)",
+    "この形態素の語義・説明を記入（既定は gloss層から取り込み）":"Sense / note for this morpheme (defaults from the gloss layer)"};
   function applyLang(){document.documentElement.lang=lang==='en'?'en':'ja';
     walk(document.body);
+    // 入力欄プレースホルダ
+    document.querySelectorAll('[placeholder]').forEach(el=>{const o=el.getAttribute('placeholder');
+      if(lang==='en'){if(el.__phja==null&&PH[o]){el.__phja=o;el.setAttribute('placeholder',PH[o]);}}
+      else if(el.__phja!=null){el.setAttribute('placeholder',el.__phja);el.__phja=null;}});
+    // ヘルプ（?ポップアップ）の本文を丸ごと差し替え／復元
+    Object.keys(HELP_EN).forEach(id=>{const el=document.getElementById(id);if(!el)return;
+      if(lang==='en'){if(el.__ja==null)el.__ja=el.innerHTML;el.innerHTML=HELP_EN[id];}
+      else if(el.__ja!=null){el.innerHTML=el.__ja;el.__ja=null;}});
     const tg=document.getElementById('langToggle');if(tg)tg.textContent=lang==='en'?'日本語':'English';}
+  // アラートも英語化（固定文・数値文はパターンで。一致しなければ原文のまま）
+  const _alert=window.alert.bind(window);
+  window.alert=function(msg){let m=String(msg);if(lang==='en'){const k=m.trim();m=EN[k]||applyPat(k)||m;}return _alert(m);};
   new MutationObserver(ms=>{if(lang!=='en')return;
     ms.forEach(m=>m.addedNodes.forEach(n=>{try{if(n.nodeType===1)walk(n);else if(n.nodeType===3&&!skip(n))trNode(n);}catch(e){}}));
   }).observe(document.body,{childList:true,subtree:true});

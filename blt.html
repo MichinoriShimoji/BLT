@@ -230,8 +230,8 @@ td.numtime{text-align:center;white-space:nowrap;min-width:60px}
 .numtime .rtime:focus{color:var(--ink)}
 /* text と trans を縦に並べる列 */
 td.ttcell{min-width:220px}
-.ttline{cursor:text;padding:2px 3px;border-radius:3px;min-height:18px;font-family:var(--ipa);font-size:15px}
-.ttline.ttrans{font-family:inherit;font-size:12.5px;color:var(--muted);margin-top:3px;border-top:1px dashed var(--line);padding-top:3px}
+.ttline{cursor:text;padding:2px 3px;border-radius:3px;min-height:18px;font-family:var(--ipa);font-size:17px;font-weight:600;color:var(--ink)}
+.ttline.ttrans{font-family:inherit;font-size:14.5px;font-weight:500;color:#3b424d;margin-top:3px;border-top:1px dashed var(--line);padding-top:3px}
 tr.selrow td{background:#fdf6e6}
 .rowbtn{padding:1px 8px;font-size:11px}
 /* interlinear gloss */
@@ -242,14 +242,14 @@ tr.glossrow td{background:#f6faf8;padding:6px 8px}
 .ilg-word{display:flex;gap:3px;padding:0 8px 0 0;border-right:1px dotted var(--line)}
 .ilg-word:last-child{border-right:none}
 .ilg-col{display:flex;flex-direction:column;gap:2px}
-.ilg-m{height:24px;line-height:24px;font-family:var(--ipa);font-size:14.5px;color:var(--accent-ink);padding:0 4px;border-bottom:1px solid var(--line);white-space:nowrap}
-.ilg-g,.ilg-p{min-width:36px;height:24px;line-height:22px;border:1px dashed var(--line);border-radius:4px;padding:0 4px;font-size:12.5px;cursor:text;white-space:nowrap}
-.ilg-p{color:var(--muted);font-size:11.5px}
+.ilg-m{height:26px;line-height:26px;font-family:var(--ipa);font-size:16.5px;font-weight:600;color:var(--ink);padding:0 4px;border-bottom:1px solid var(--line);white-space:nowrap}
+.ilg-g,.ilg-p{min-width:36px;height:24px;line-height:22px;border:1px dashed var(--line);border-radius:4px;padding:0 4px;font-size:14.5px;font-weight:600;cursor:text;white-space:nowrap}
+.ilg-p{color:#3b424d;font-size:13.5px;font-weight:500}
 .ilg-g:focus,.ilg-p:focus{outline:2px solid var(--accent);outline-offset:-1px;background:#fff;border-style:solid}
 .ilg-g.ro{background:#f4f1f1;color:var(--accent-ink);cursor:default;font-size:10.5px;font-weight:600;border-style:dotted;text-align:center}
 .tline{display:flex;align-items:center;gap:8px;margin-top:5px}
 .tlbl{flex:none;min-width:60px;font-size:10.5px;color:var(--muted);text-align:right}
-.tval{flex:1;min-height:24px;line-height:22px;border:1px dashed var(--line);border-radius:4px;padding:0 6px;font-size:13px;cursor:text;background:#fff}
+.tval{flex:1;min-height:24px;line-height:22px;border:1px dashed var(--line);border-radius:4px;padding:0 6px;font-size:15px;font-weight:600;cursor:text;background:#fff;font-family:var(--ipa)}
 .tval:focus{outline:2px solid var(--accent);outline-offset:-1px;border-style:solid}
 #tierChips{display:flex;gap:5px;flex-wrap:wrap}
 .tierchip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:14px;padding:2px 6px 2px 11px;font-size:12px;background:var(--surface)}
@@ -532,7 +532,6 @@ tr.glossrow td{background:#f6faf8;padding:6px 8px}
     <button class="primary" id="dlEaf">EAF（ELAN用）</button>
     <button class="primary" id="dlTsv">TSV（Excel対応）</button>
     <button class="primary" id="dlJson">JSON</button>
-    <button class="primary" id="dlIndigo" title="電子辞書ツール InDIGO 用のフラットJSON（gloss/posを形態素に整列、start_time/end_time/speaker/audio_file 付き）">InDIGO用JSON</button>
     <button class="primary" id="dlGb4e" title="LaTeX gb4e 形式のインターリニアグロス（各区間が \ex / \gll に対応。\usepackage{gb4e} が必要）">LaTeX（gb4e）</button>
     <button class="primary" id="dlWord" title="MS Word（.docx）。タブ整列のインターリニアグロス＋gloss小型大文字＋略語リスト（外部ライブラリ不要・内蔵生成）">Word（.docx）</button>
     <button class="primary" id="dlZip">切り出しWAVのZIP</button>
@@ -2698,19 +2697,6 @@ $('dlJson').addEventListener('click',()=>{
     return o;
   });
   dl(baseName()+'_tokens.json',JSON.stringify(out,null,2),'application/json');
-});
-// InDIGO（電子辞書生成）用JSON：各文をフラット構造（gloss/posは形態素に整列した配列）で
-$('dlIndigo').addEventListener('click',()=>{
-  const base=baseName(), w=String(segs.length).length>3?String(segs.length).length:3;
-  const out=segs.map((s,i)=>{
-    const m=flatMorphs(s);
-    const cells=name=>m.map((_,k)=>(((s.tv||{})[name])||[])[k]||'');
-    return {text:s.text, morphs:m, gloss:cells('gloss'), pos:cells('pos'),
-      trans:s.note, speaker:s.spk||'',
-      start_time:+s.t0.toFixed(3), end_time:+s.t1.toFixed(3),
-      audio_file:base+'_'+String(i+1).padStart(w,'0')+'.wav'};
-  });
-  dl(base+'_indigo.json',JSON.stringify(out,null,2),'application/json');
 });
 $('dlProj').addEventListener('click',()=>{
   dl(baseName()+'_project.json',JSON.stringify({wavName:wavFile?wavFile.name:'',glossOn,morphSrc,tiersDef,speakers,segs,ignoredMiss,lexicon},null,1),'application/json');

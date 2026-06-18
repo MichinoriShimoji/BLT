@@ -1510,7 +1510,7 @@ wave.addEventListener('pointerdown',e=>{
   const hit=hitTest(x,targetSpk);
   downInsideSeg=-1;
   if(hit.mode==='edge0'||hit.mode==='edge1'){sel=hit.i;setActiveSpk(segs[hit.i].spk);drag={mode:hit.mode,i:hit.i}}
-  else if(hit.mode==='inside'){sel=hit.i;setActiveSpk(segs[hit.i].spk);drag=null;pend=null;rowIntoView(hit.i);downInsideSeg=hit.i}
+  else if(hit.mode==='inside'){sel=hit.i;setActiveSpk(segs[hit.i].spk);drag=null;pend=null;downInsideSeg=hit.i}
   else {pend=null;drag={mode:'create',ta:xt(x),tb:xt(x)}}
   afterSelChange();
 });
@@ -1660,10 +1660,14 @@ function afterSelChange(){
     if(p!==page){page=p;renderTable()}
   }
   document.querySelectorAll('#tb tr').forEach(tr=>tr.classList.toggle('selrow',+tr.dataset.i===sel));
+  const cb=$('ctxBody');
   document.querySelectorAll('#ctxBody .ctxrec').forEach(r=>{
-    const on=+r.dataset.i===sel;r.classList.toggle('cur',on);if(on)r.scrollIntoView({block:'nearest'});
+    const on=+r.dataset.i===sel;r.classList.toggle('cur',on);
+    if(on&&cb){const cr=cb.getBoundingClientRect(), rr=r.getBoundingClientRect();   // 文脈ペインは「枠内だけ」スクロール（ウィンドウは動かさない）
+      if(rr.top<cr.top)cb.scrollTop+=rr.top-cr.top-4; else if(rr.bottom>cr.bottom)cb.scrollTop+=rr.bottom-cr.bottom+4;}
   });
   draw();updateInfo();
+  if(sel>=0)rowIntoView(sel);   // 選択レコードを上部固定の波形の下に出す（隠れ防止）
 }
 // 表から選択・再生したとき、波形の窓をその区間中心の20秒にする
 function focusSeg(i){
@@ -1688,16 +1692,16 @@ function gotoSeg(delta){
   if(!segs||!segs.length)return;
   let i=sel<0?(delta>0?0:segs.length-1):sel+delta;
   if(i<0||i>=segs.length)return;
-  sel=i; setActiveSpk(segs[i].spk); afterSelChange(); focusSeg(i); playSeg(i);
+  sel=i; setActiveSpk(segs[i].spk); afterSelChange(); focusSeg(i); rowIntoView(i); playSeg(i);
 }
 $('btnPrevSeg').addEventListener('click',()=>gotoSeg(-1));
 $('btnNextSeg').addEventListener('click',()=>gotoSeg(1));
 // 区間をダブルクリック＝編集：選択してその行の text セルにフォーカス
 function editSeg(i){
   if(i<0||!segs[i])return;
-  sel=i; setActiveSpk(segs[i].spk); afterSelChange(); focusSeg(i);
+  sel=i; setActiveSpk(segs[i].spk); afterSelChange(); focusSeg(i); rowIntoView(i);
   const tr=$('tb').querySelector('tr[data-i="'+i+'"]:not(.glossrow)');
-  if(tr){tr.scrollIntoView({block:'center'});
+  if(tr){
     const cell=tr.querySelector('.ttline[data-k="text"]')||tr.querySelector('[data-k="text"]')||tr.querySelector('[contenteditable]');
     if(cell)setTimeout(()=>cell.focus(),0);
   }
@@ -2147,8 +2151,13 @@ $('btnPgPrev').addEventListener('click',()=>{page--;renderTable()});
 $('btnPgNext').addEventListener('click',()=>{page++;renderTable()});
 $('viewLayer').addEventListener('change',()=>{viewLayer=$('viewLayer').value;renderTable()});
 function rowIntoView(i){
-  const tr=$('tb').querySelector('tr[data-i="'+i+'"]');
-  if(tr)tr.scrollIntoView({block:'nearest',behavior:'smooth'});
+  const tr=$('tb').querySelector('tr[data-i="'+i+'"]:not(.glossrow)');
+  if(!tr)return;
+  // 上部固定の波形パネルの下端を求め、レコード行がその下に来るようにスクロール（隠れ防止）
+  const wc=$('waveCol'); const stickyBottom=wc?Math.max(0,wc.getBoundingClientRect().bottom):0;
+  const r=tr.getBoundingClientRect(), margin=14;
+  if(r.top<stickyBottom+margin) window.scrollBy(0, r.top-stickyBottom-margin);
+  else if(r.bottom>window.innerHeight-margin) window.scrollBy(0, r.bottom-(window.innerHeight-margin));
 }
 function updateRowTimes(i){
   const tr=$('tb').querySelector('tr[data-i="'+i+'"]:not(.glossrow)');

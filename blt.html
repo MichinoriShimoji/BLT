@@ -3235,7 +3235,9 @@ $('dlDict').addEventListener('click',async()=>{
     "層の名前を入力してください":"Please enter a layer name.",
     "先に挿入先のセル（text欄など）をクリックしてください":"Click a target cell (e.g. the text field) first.",
     "先に音声・注釈を読み込んでください":"Load audio and annotations first.",
-    "注釈データがありません":"No annotation data.","音声（WAV）が読み込まれていません":"No audio (WAV) loaded."
+    "注釈データがありません":"No annotation data.","音声（WAV）が読み込まれていません":"No audio (WAV) loaded.",
+    // ツアーのボタン
+    "次へ ›":"Next ›","完了":"Done","戻る":"Back","スキップ":"Skip"
   };
   // 数値混じりの動的文言（区間数・件数・秒など）はパターンで英訳
   const PAT=[
@@ -3295,6 +3297,7 @@ $('dlDict').addEventListener('click',async()=>{
   new MutationObserver(ms=>{if(lang!=='en')return;
     ms.forEach(m=>m.addedNodes.forEach(n=>{try{if(n.nodeType===1)walk(n);else if(n.nodeType===3&&!skip(n))trNode(n);}catch(e){}}));
   }).observe(document.body,{childList:true,subtree:true});
+  try{window.__bltLangEN=function(){return lang==='en';};}catch(e){}   // 他コード（ツアー等）が現在の言語を参照するため
   const tg=document.getElementById('langToggle');
   if(tg)tg.addEventListener('click',()=>{lang=lang==='en'?'ja':'en';try{localStorage.setItem('blt_lang',lang);}catch(e){}applyLang();});
   applyLang();
@@ -3345,6 +3348,28 @@ $('dlDict').addEventListener('click',async()=>{
     {sel:'.bcite', title:'引用情報（DOI）', body:'BLTには DOI が付いています。研究で使ったら、このCITE欄の文献情報で引用してください。', place:'bottom'},
     {sel:'#fbOpen', title:'フィードバック歓迎', body:'改善点・気づいた点はこのボタンからお寄せください。このツアーは右上の「🧭 使い方ツアー」でいつでも見られます。', place:'left'}
   ];
+  // ツアーの英訳（日本語タイトルをキーに t=title, b=body）
+  var TOUR_EN={
+'BLTへようこそ':{t:'Welcome to BLT',b:'A field-data editing tool that runs entirely in your browser. This tour walks you through everything from <b>loading audio to annotation, glossing, and ELAN (EAF) export</b>.'},
+'① 作業を始める':{t:'① Get started',b:'First choose <b>“Start new”</b> or <b>“Resume existing work.”</b><br><b>New</b> = load audio (WAV) → auto-segment → annotate. <b>Resume</b> = load the audio, then a previous .json or ELAN .eaf.<br><span style="color:var(--muted)">▶ No audio of your own? Click “Next” to continue with the demo audio.</span>'},
+'② 自動区切り（無音検出で発話に分割）':{t:'② Auto-segment (split into utterances by silence)',b:'Once audio is loaded, press <b>“Run auto-detect”</b> in panel 2. Using silences as cues, the audio is <b>split into utterance segments (records) automatically</b>.<br>Leave <b>“Auto-estimate threshold”</b> on. If the cuts are off, adjust the threshold, min. silence and min. segment and re-run (boundaries can also be dragged on the waveform later).'},
+'→ 発話区間に分割されました':{t:'→ Split into utterance segments',b:'Pressing “Run auto-detect” splits the audio into <b>colored segments (utterances)</b> like this. Next we look at how to check and fix them.'},
+'波形で区間を確認・修正':{t:'Check / fix segments on the waveform',b:'This is the waveform of your audio. Segments (colored bands) can be <b>resized by dragging an edge</b> and <b>played by clicking + Space</b>. Speech left out of any segment (“missed”) is flagged with a <b>red band</b> — there is one in this demo too. Review with ◀▶ and “Preview”, then <b>“✓ Add as segment”</b> to keep it, or “Ignore”. Use <b>“⟳ Re-run auto-segmentation”</b> to tune the sensitivity.'},
+'複数話者に対応':{t:'Multiple speakers',b:'The waveform is <b>color-coded and split into lanes per speaker</b> (above, different colors per segment mean different speakers). Add speakers with <b>+ Speaker</b> below the waveform.<br><b>Different speakers may overlap in time</b> (not within one speaker), so conversational overlap is handled as-is.<br>Example: a <b>Speaker B</b> was added and the 2nd segment assigned to it (its color changes).'},
+'② 文字起こし（text）と訳（trans）':{t:'② Transcription (text) and translation (trans)',b:'Type the transcription in the <b>text</b> field and the translation in the <b>trans</b> field.<br>e.g. <i style="font-family:var(--ipa)">nkjaan=du anna=tu uja=tu tamamiga=ti asɨ ffa-gama=nu u-tar=ca.</i><br>Translation: “Long ago there were a mother, a father, and a child named Tamamiga.”'},
+'IPAパレットで発音記号を挿入':{t:'Insert phonetic symbols with the IPA palette',b:'Symbols that are hard to type go in via this <b>IPA palette</b> (it appears at the bottom while editing).<br>Here, after “<b>as</b>” we inserted <b style="outline:2px solid var(--sel);border-radius:3px;padding:0 3px">ɨ</b> (a central vowel) to make <b>asɨ</b>. Clicking a button in the vowels section inserts it at the cursor in the cell being edited.'},
+'morph層：形態素が自動で区切られる':{t:'morph layer: morphemes split automatically',b:'Using <b>-</b> (affix), <b>=</b> (clitic) and spaces in the text as cues, morphemes are split automatically into an interlinear display.<br>e.g. <i>nkjaan / =du / anna / =tu …</i> (the = clitic and - affix boundaries are kept).'},
+'③ gloss層：グロスを付ける':{t:'③ gloss layer: add glosses',b:'Enter a gloss in the field under each morpheme.<br>e.g. <b>nkjaan→昔 (long ago)</b>, <b>du→FOC</b>, <b>anna→母親 (mother)</b>, <b>tu→COM</b> … Now you have <b>text + morph + gloss + trans</b>.'},
+'④ 文境界の設定（パネル操作）':{t:'④ Sentence-boundary setting',b:'Check <b>“Sentence bdry (bdr)”</b> at the top of the records table (it gets checked here). The <b>period (.)</b> in the text is used as the sentence-end cue.'},
+'→ bdr に BOS / EOS が付く':{t:'→ bdr gets BOS / EOS',b:'When checked, each morpheme is tagged <b>BOS (sentence start) / EOS (sentence end) / I (internal)</b> automatically (for the example, <b>nkjaan=BOS … ca.=EOS</b>). The context view also marks sentence breaks with <b>‖</b>.'},
+'発話境界 ≠ 文境界（対比）':{t:'Utterance boundary ≠ sentence boundary',b:'The <b>segment = utterance</b> that BLT cut at pauses (utterance boundary) and the <b>period-based sentence</b> of bdr (sentence boundary) <b>do not always coincide</b>. Compare two consecutive utterances:<br>① <i style="font-family:var(--ipa)">…sudac-i-i<b>,</b></i> (comma = sentence not finished; includes the repair bizin→nn=FRG→aparagi) → bdr ends in <b>I</b> (<b>no EOS</b>) = <b>utterance end ≠ sentence end</b><br>② <i style="font-family:var(--ipa)">…nar-i-u-tar=ca<b>.</b></i> (period = sentence end) → bdr ends in <b>EOS</b> = <b>utterance end = sentence end</b>.<br>So utterance breaks may or may not match sentence breaks. <b>You can annotate per utterance without worrying about sentences</b> (the bdr layer carries the sentence structure).'},
+'層（レイヤー）の追加・カスタマイズ':{t:'Add / customize layers',b:'Annotation <b>layers</b> are fully configurable.<br>· <b>Layer preset</b>: switch between <i>text+trans</i> / <i>+morph+gloss</i> / <i>+udl</i> in one click.<br>· <b>“Add a layer”</b> adds your own layers (e.g. <b>pos · kana · note</b>). When adding, pick a <b>parent</b> — <b>segment</b> (one per segment, like trans) or <b>morph</b> (per morpheme, like gloss).<br>· Added layers appear as <b>chips</b> below and can be removed with ✕ anytime.'},
+'udl層：基底形の境界で morph 分割':{t:'udl layer: split morphs by underlying-form boundaries',b:'Add a <b>udl layer (underlying form)</b> and morphemes are split by <b>the boundaries in udl</b> instead of the <b>surface text</b>. Leave the surface text unsegmented and just write the boundaries in udl.<br>e.g. <div style="background:var(--accent-soft);border-left:3px solid var(--accent);border-radius:5px;padding:8px 12px;margin:8px 0;font-family:var(--ipa);font-size:16px"><b>midummasii</b> (surface)&nbsp;→&nbsp;<b>midum -as -i -i</b> (udl = morph)</div>Even when surface and underlying differ, morphs are split exactly as written in udl.'},
+'⑤ 書き出し・保存':{t:'⑤ Export / save',b:'When you are done, export as <b>EAF / TSV / JSON / WAV ZIP</b>. <b>Save project</b> (.json) lets you resume later by loading the same WAV.'},
+'引用情報（DOI）':{t:'Citation (DOI)',b:'BLT has a DOI. If you use it in your research, please cite it using the reference in this CITE box.'},
+'フィードバック歓迎':{t:'Feedback welcome',b:'Share suggestions or issues via this button. You can reopen this tour anytime from “🧭 Guided tour” at the top right.'}
+  };
+  function stepTB(s){ if(window.__bltLangEN&&window.__bltLangEN()&&TOUR_EN[s.title])return TOUR_EN[s.title]; return {t:s.title,b:s.body}; }
   var spot, pop, idx=-1, watch=null, demoMode=false;
   // 実演用の例文（埋め込みデモ音声に対応）
   var EX_TEXT='nkjaan=du anna=tu uja=tu tamamiga=ti as ffa-gama=nu u-tar=ca.';  // ɨ は IPA実演ステップで挿入
@@ -3574,8 +3599,9 @@ $('dlDict').addEventListener('click',async()=>{
     if(!el || !isVisible(el)){ go(n+dir, dir); return; }  // 非表示の要素はスキップ
     idx=n;
     if(s.scrollTop) window.scrollTo(0,0); else el.scrollIntoView({block:'center'});
+    var _tb=stepTB(s);
     pop.innerHTML='<button type="button" class="tour-skip" aria-label="ツアーをスキップ" title="ツアーをスキップ（Escキーでも終了）">×</button>'
-      +'<h4>'+s.title+'</h4><p>'+s.body+'</p>'
+      +'<h4>'+_tb.t+'</h4><p>'+_tb.b+'</p>'
       +'<div class="tour-row"><span class="tour-step">'+(n+1)+' / '+STEPS.length
       +'<button type="button" class="tour-quit">スキップ</button></span>'
       +'<span class="tour-btns">'

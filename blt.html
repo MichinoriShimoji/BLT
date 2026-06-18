@@ -875,9 +875,10 @@ function importEaf(xmlText){
   ignoredMiss=[]; sel=-1;
   renderSpkBar(); refreshTierUI(); afterSegChange();
   hideSetup();   // 取り込んだ区間を自動区切りで上書きしないよう、検出パネルは隠す
-  alert('EAFを取り込みました：'+segs.length+'区間 / 話者 '+speakers.join('・')
-    +(tiersDef.length?'\n層: '+tiersDef.map(t=>t.name).join('・'):'')
-    +(segs.some(s=>Array.isArray(s.morphs)&&s.morphs.length)?'\n（形態素は元の区切りを保持しています）':''));
+  const _en=window.__bltLangEN&&window.__bltLangEN();
+  alert((_en?'Imported EAF: '+segs.length+' segments / speakers '+speakers.join(', '):'EAFを取り込みました：'+segs.length+'区間 / 話者 '+speakers.join('・'))
+    +(tiersDef.length?(_en?'\nLayers: ':'\n層: ')+tiersDef.map(t=>t.name).join(_en?', ':'・'):'')
+    +(segs.some(s=>Array.isArray(s.morphs)&&s.morphs.length)?(_en?'\n(morpheme segmentation preserved)':'\n（形態素は元の区切りを保持しています）'):''));
 }
 
 // 進捗バー
@@ -1043,13 +1044,16 @@ function applyDetect(a,b){
   const hasMorphAnno=s=>(s.morphs&&s.morphs.length)||(s.tv&&Object.keys(s.tv).some(k=>{const v=s.tv[k];return Array.isArray(v)?v.some(Boolean):!!v}));
   const hasAnno=affected.some(s=>s.text||s.note||hasMorphAnno(s));
   const hasMorph=affected.some(hasMorphAnno);
-  const spkNote=speakers.length>1?'話者「'+activeSpk+'」の':'';
-  if(affected.length&&!confirm(
-     hasMorph
-      ?'⚠ '+spkNote+'範囲内の'+affected.length+'区間には形態素・グロスなどの注釈が含まれています。\n自動区切りで区間の境界が変わると、これらの注釈が新しい区間に正しく対応しなくなる場合があります。\n（既存のEAFやプロジェクトを取り込んだ場合、通常この操作は不要です）\n\n本当に自動区切りで置き換えますか？'
-      :hasAnno
-      ?spkNote+'範囲内の'+affected.length+'区間は置き換えられ、入力済みの注釈は新しい区間と時間が重なるものに引き継がれます。よろしいですか？'
-      :spkNote+'範囲内の'+affected.length+'区間を自動検出の結果で置き換えます。よろしいですか？'))return;
+  const _en=window.__bltLangEN&&window.__bltLangEN();
+  const spkNote=speakers.length>1?(_en?'speaker “'+activeSpk+'”: ':'話者「'+activeSpk+'」の'):'';
+  const N=affected.length, msg=_en
+    ?(hasMorph?'⚠ '+spkNote+'The '+N+' segments in range contain morpheme/gloss annotations.\nIf auto-segmentation changes the boundaries, those annotations may no longer line up correctly.\n(For an imported EAF or project, you normally do not need this.)\n\nReally replace them by auto-segmentation?'
+      :hasAnno?spkNote+'The '+N+' segments in range will be replaced; entered annotations are carried over to the new segments they overlap. Continue?'
+      :spkNote+'Replace the '+N+' segments in range with the auto-detect result. Continue?')
+    :(hasMorph?'⚠ '+spkNote+'範囲内の'+N+'区間には形態素・グロスなどの注釈が含まれています。\n自動区切りで区間の境界が変わると、これらの注釈が新しい区間に正しく対応しなくなる場合があります。\n（既存のEAFやプロジェクトを取り込んだ場合、通常この操作は不要です）\n\n本当に自動区切りで置き換えますか？'
+      :hasAnno?spkNote+'範囲内の'+N+'区間は置き換えられ、入力済みの注釈は新しい区間と時間が重なるものに引き継がれます。よろしいですか？'
+      :spkNote+'範囲内の'+N+'区間を自動検出の結果で置き換えます。よろしいですか？');
+  if(N&&!confirm(msg))return;
   const fresh=runDetect(a,b);
   // 注釈の引き継ぎ（重なり最大の旧区間から）
   if(hasAnno){
@@ -1158,8 +1162,10 @@ function updateMissUI(){
   else if(!$('missNote').classList.contains('hidden'))renderMissNoteText();
 }
 function renderMissNoteText(){
-  const ms=+$('minSeg').value||500;
-  $('missNoteText').innerHTML='<b>注意：</b>区間化されなかった有音が <b>'+missed.length+'件</b> あります（最小区間長 '+ms+'ms 未満の短い有音など、取りこぼしの可能性）。赤い帯が該当箇所です。◀ ▶で順に移動し、「確認再生」で聞いて、レコードにするなら<b>「✓ 区間に追加」</b>（Enterでも可）、対象外なら<b>「無視」</b>で除外してください。';
+  const ms=+$('minSeg').value||500, en=window.__bltLangEN&&window.__bltLangEN();
+  $('missNoteText').innerHTML=en
+    ?'<b>Note:</b> there are <b>'+missed.length+'</b> stretches of speech not inside any segment (short speech under '+ms+'ms etc. — possibly missed). The red bands mark them. Step through with ◀ ▶, listen with “Preview”, then <b>“✓ Add as segment”</b> to keep one (Enter also works), or <b>“Ignore”</b> to drop it from the count.'
+    :'<b>注意：</b>区間化されなかった有音が <b>'+missed.length+'件</b> あります（最小区間長 '+ms+'ms 未満の短い有音など、取りこぼしの可能性）。赤い帯が該当箇所です。◀ ▶で順に移動し、「確認再生」で聞いて、レコードにするなら<b>「✓ 区間に追加」</b>（Enterでも可）、対象外なら<b>「無視」</b>で除外してください。';
 }
 function showMissNote(){
   renderMissNoteText();
@@ -1390,9 +1396,10 @@ function draw(){
     g.strokeRect(x0+.5,wy0+.5,Math.max(1,x1-x0),wy1-wy0-1);
     g.setLineDash([]);
     g.fillStyle='#9a6b07';
-    g.fillText(a.toFixed(2)+' – '+b.toFixed(2)+' 秒（長さ '+(b-a).toFixed(2)+'）',x0+6,wy0+16);
+    const _en=window.__bltLangEN&&window.__bltLangEN();
+    g.fillText(a.toFixed(2)+' – '+b.toFixed(2)+(_en?'s (length '+(b-a).toFixed(2)+')':' 秒（長さ '+(b-a).toFixed(2)+'）'),x0+6,wy0+16);
     if(!drag){
-      g.fillText('Enterで確定 ／ Escで取消',x0+6,wy0+32);
+      g.fillText(_en?'Enter to confirm / Esc to cancel':'Enterで確定 ／ Escで取消',x0+6,wy0+32);
       g.fillStyle='#d99a14';
       g.fillRect(x0-4,cy-11,8,22);g.fillRect(x1-4,cy-11,8,22);
       g.strokeStyle='#fff';g.strokeRect(x0-3.5,cy-10.5,7,21);g.strokeRect(x1-3.5,cy-10.5,7,21);
@@ -3236,6 +3243,10 @@ $('dlDict').addEventListener('click',async()=>{
     "先に挿入先のセル（text欄など）をクリックしてください":"Click a target cell (e.g. the text field) first.",
     "先に音声・注釈を読み込んでください":"Load audio and annotations first.",
     "注釈データがありません":"No annotation data.","音声（WAV）が読み込まれていません":"No audio (WAV) loaded.",
+    "注釈が入っています。削除しますか？":"This record has annotations. Delete it?",
+    "区間（注釈も含む）をすべて削除します。よろしいですか？":"Delete all segments (including annotations)?",
+    "注釈区間が見つかりません":"No annotation segments found.","XMLを解析できません":"Could not parse the XML.",
+    "テキスト層（時間整列）が見つかりません":"No time-aligned text tier found.",
     // 検索タブ
     "条件を入力して「検索」を押してください。":"Enter conditions and press “Search”.",
     "＋ 条件を追加":"+ Add condition","組み合わせ：":"Combine:","すべて満たす（AND）":"Match all (AND)","いずれか満たす（OR）":"Match any (OR)",
@@ -3317,10 +3328,14 @@ $('dlDict').addEventListener('click',async()=>{
     Object.keys(HELP_EN).forEach(id=>{const el=document.getElementById(id);if(!el)return;
       if(lang==='en'){if(el.__ja==null)el.__ja=el.innerHTML;el.innerHTML=HELP_EN[id];}
       else if(el.__ja!=null){el.innerHTML=el.__ja;el.__ja=null;}});
+    // 補間を含む動的バナー（取りこぼし）は専用の再描画で言語を反映
+    try{const mn=document.getElementById('missNote');if(mn&&!mn.classList.contains('hidden')&&typeof renderMissNoteText==='function')renderMissNoteText();}catch(e){}
     const tg=document.getElementById('langToggle');if(tg)tg.textContent=lang==='en'?'日本語':'English';}
-  // アラートも英語化（固定文・数値文はパターンで。一致しなければ原文のまま）
-  const _alert=window.alert.bind(window);
-  window.alert=function(msg){let m=String(msg);if(lang==='en'){const k=m.trim();m=EN[k]||applyPat(k)||m;}return _alert(m);};
+  // アラート・確認ダイアログも英語化（固定文・数値文はパターンで。一致しなければ原文のまま）
+  const trMsg=m=>{m=String(m);if(lang==='en'){const k=m.trim();m=EN[k]||applyPat(k)||m;}return m;};
+  const _alert=window.alert.bind(window), _confirm=window.confirm.bind(window);
+  window.alert=function(msg){return _alert(trMsg(msg));};
+  window.confirm=function(msg){return _confirm(trMsg(msg));};
   new MutationObserver(ms=>{if(lang!=='en')return;
     ms.forEach(m=>m.addedNodes.forEach(n=>{try{if(n.nodeType===1)walk(n);else if(n.nodeType===3&&!skip(n))trNode(n);}catch(e){}}));
   }).observe(document.body,{childList:true,subtree:true});

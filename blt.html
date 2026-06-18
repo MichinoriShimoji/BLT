@@ -3236,6 +3236,29 @@ $('dlDict').addEventListener('click',async()=>{
     "先に挿入先のセル（text欄など）をクリックしてください":"Click a target cell (e.g. the text field) first.",
     "先に音声・注釈を読み込んでください":"Load audio and annotations first.",
     "注釈データがありません":"No annotation data.","音声（WAV）が読み込まれていません":"No audio (WAV) loaded.",
+    // 検索タブ
+    "条件を入力して「検索」を押してください。":"Enter conditions and press “Search”.",
+    "＋ 条件を追加":"+ Add condition","組み合わせ：":"Combine:","すべて満たす（AND）":"Match all (AND)","いずれか満たす（OR）":"Match any (OR)",
+    "同じ形態素で揃える":"Same morpheme","形態素レベルの複数条件を、同じ1つの形態素が満たすことを要求します":"Require the morpheme-level conditions to be met by one and the same morpheme",
+    "結果の単位：":"Result unit:","区間（レコード）":"Segment (record)","形態素":"Morpheme",
+    "検索":"Search","を含む":"contains","に一致":"equals","正規表現":"regex","空でない":"non-empty","空":"empty",
+    "該当なし":"No matches","注釈で開く":"Open in Annotate",
+    "text（表層形）":"text (surface)","trans（訳）":"trans (translation)","spk（話者）":"spk (speaker)","morph（形態素）":"morph (morpheme)",
+    "区間レベル":"Segment level","形態素レベル":"Morpheme level",
+    // 分析・辞書タブ
+    "辞書":"Lexicon","語根":"root","接語":"clitic","接辞":"affix",
+    "全品詞":"All POS","全種類":"All types","頻度順":"By frequency","字順":"Alphabetical","品詞順":"By POS",
+    "種類順（語根→接辞→接語）":"By type (root → affix → clitic)",
+    "集計":"Summary","形態素リスト":"Morpheme list","辞書・用例":"Lexicon · examples",
+    "まず「注釈」タブで音声・注釈を読み込んでください。":"Load audio and annotations in the “Annotate” tab first.",
+    "左の形態素を選ぶと、語義の編集と用例（音声付き）が表示されます。":"Select a morpheme on the left to edit its sense and see examples (with audio).",
+    "語義（辞書用・自由に編集可）":"Sense (for the lexicon; freely editable)",
+    "左の見出しを選んでください。":"Select an entry on the left.","左の形態素を選んでください。":"Select a morpheme on the left.",
+    "↺ glossから取り込み直す":"↺ Re-import from gloss",
+    "※ここの編集は gloss層には反映されません（辞書だけに保存）":"Edits here do not change the gloss layer (saved only in the lexicon).",
+    "▶ 再生":"▶ Play","音声の場所：":"Audio location:","読み込んでいます…":"Loading…",
+    "辞書をHTML＋音声でダウンロード（ZIP）":"Download lexicon as HTML + audio (ZIP)",
+    "こちらから直接開く":"open directly here","注釈タブでこのレコードを開く":"Open this record in Annotate",
     // ツアーのボタン
     "次へ ›":"Next ›","完了":"Done","戻る":"Back","スキップ":"Skip"
   };
@@ -3246,7 +3269,11 @@ $('dlDict').addEventListener('click',async()=>{
     [/^(\d+)–(\d+) \/ (\d+)件$/, m=>m[1]+'–'+m[2]+' / '+m[3]],
     [/^(\d+)件$/, m=>m[1]],
     [/^⚠ 取りこぼし (\d+)件$/, m=>'⚠ Missed: '+m[1]],
-    [/^カーソル位置 ([\d.]+) 秒$/, m=>'Cursor '+m[1]+' s']
+    [/^カーソル位置 ([\d.]+) 秒$/, m=>'Cursor '+m[1]+' s'],
+    [/^(.+)（区間層）$/, m=>m[1]+' (seg. layer)'],
+    [/^(.+)（形態素層）$/, m=>m[1]+' (morph layer)'],
+    [/^用例（(\d+)）$/, m=>'Examples ('+m[1]+')'],
+    [/^(.+)のみ$/, m=>m[1]+' only']
   ];
   function applyPat(key){
     for(const p of PAT){const m=key.match(p[0]);if(m)return p[1](m);}

@@ -138,6 +138,20 @@ code{background:var(--accent-soft);padding:1px 5px;border-radius:4px;font-size:1
 .wavebar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px}
 .wavebar button{font-size:12px;padding:3px 9px}
 .wavebar .sep{width:1px;height:18px;background:var(--line)}
+/* 「全体表示」：波形直下・話者行の中央に孤立 */
+.btn-fit{font-size:12px;padding:4px 14px;border-radius:14px;background:var(--accent-soft);border:1px solid var(--accent);color:var(--accent-ink);font-weight:600}
+.btn-fit:hover{background:#d9e3f2}
+/* 「自動区切りをやり直す」：目立つ大ボタン */
+.btn-big{font-size:13.5px!important;font-weight:700;padding:7px 16px!important;background:var(--accent);color:#fff;border:1px solid var(--accent-ink);border-radius:8px}
+.btn-big:hover{background:#1c3c6e}
+/* 拡大・縮小：アイコンだけの正方形ボタン */
+.btn-icon{width:30px;height:30px;padding:0!important;font-size:17px;font-weight:700;line-height:1;border-radius:7px}
+/* 再生・移動・削除：同系色（ティール）でひとまとめ */
+.playgrp{display:inline-flex;gap:4px;align-items:center;flex-wrap:wrap}
+.btn-play{background:#0f7d8c;color:#fff;border:1px solid #0b606c;border-radius:7px;font-weight:600}
+.btn-play:hover{background:#0c6c79}
+.btn-play.btn-del{background:#1a8a99;border-style:dashed}
+.btn-play.btn-del:hover{background:#15737f}
 #waveCol .card{padding:10px 14px}
 #segInfo{font-size:12px;color:var(--muted);font-family:var(--mono)}
 #missNote{display:flex;align-items:flex-start;gap:10px;background:#fdecea;border:1px solid #d92626;color:#8f1d1d;border-radius:7px;padding:7px 11px;font-size:12.5px;line-height:1.5;margin:0 0 7px}
@@ -385,31 +399,36 @@ tr.glossrow td{background:#f6faf8;padding:6px 8px}
 <div class="card hidden" id="cardWave">
   <h2><span class="steplabel">3</span>波形（区切りの確認・修正）<button type="button" class="helpbtn" data-help="helpWave" data-title="波形の操作方法">?</button><span class="pipbtns"><button type="button" id="btnWaveSize" title="波形を大きく／小さく">⤢ 大きく</button><button type="button" id="pipMin" title="最小化／復元">－</button></span></h2>
   <div class="helpsrc" id="helpWave">
-    <div class="note"><b>話者（オーバーラップ対応）：</b>「＋話者」で話者を追加し、チップで選んだ話者が「アクティブ話者」になります。新しく作る区間はアクティブ話者のものになり、<b>別話者どうしの区間は時刻が重なってもOK</b>です（同じ話者内の重なりは不可）。波形下部に話者ごとのレーンが並び、各レコードは自分の話者のレーンに表示されます。レーンのブロックをクリックするとその話者・レコードが選べます。spk列でも話者を変更できます。EAFは話者ごとに <code>text@話者</code> などのレイヤー（PARTICIPANT付き）に分けて書き出すので、ELANで重複発話が正しく開けます。<br><br><b>赤い帯</b>＝どの区間にも入っていない有音（取りこぼし候補）。◀ ▶で候補へジャンプすると仮選択になるので、「確認再生」で聞いて<b>「✓ 区間に追加」でレコード化</b>（Enterでも可）、対象外なら<b>「無視」で件数から除外</b>できます（無視はプロジェクト保存に記録されます）。<br><br>クリック＝再生カーソルを置く（<b>Space＝カーソルから再生／一時停止</b>）<br>何もない所をドラッグ＝範囲を選択 → <b>Enterで区間として確定</b>（Escで取消。確定前も端の調整や▶試聴ができます）<br>区間の端をドラッグ＝境界の移動（選択中はオレンジのつまみ）<br>区間内をダブルクリック＝分割<br>横スクロール（またはShift＋ホイール）＝横移動、縦ホイール＝ズーム<br><br>「選択レコードを削除」は区間の指定と注釈を削除するだけで、音声データ自体は変更されません。</div>
+    <div class="note"><b>話者（オーバーラップ対応）：</b>「＋話者」で話者を追加し、チップで選んだ話者が「アクティブ話者」になります。新しく作る区間はアクティブ話者のものになり、<b>別話者どうしの区間は時刻が重なってもOK</b>です（同じ話者内の重なりは不可）。波形下部に話者ごとのレーンが並び、各レコードは自分の話者のレーンに表示されます。レーンのブロックをクリックするとその話者・レコードが選べます。spk列でも話者を変更できます。EAFは話者ごとに <code>text@話者</code> などのレイヤー（PARTICIPANT付き）に分けて書き出すので、ELANで重複発話が正しく開けます。<br><br><b>赤い帯</b>＝どの区間にも入っていない有音（取りこぼし候補）。◀ ▶で候補へジャンプすると仮選択になるので、「確認再生」で聞いて<b>「✓ 区間に追加」でレコード化</b>（Enterでも可）、対象外なら<b>「無視」で件数から除外</b>できます（無視はプロジェクト保存に記録されます）。<br><br><b>区間をクリック＝その区間を再生</b>。<b>区間をダブルクリック＝編集</b>（その行の text 欄にカーソルが入ります）。<br>何もない所をクリック＝再生カーソルを置く（<b>Space＝カーソルから再生／一時停止</b>）<br>何もない所をドラッグ＝範囲を選択 → <b>Enterで区間として確定</b>（Escで取消。確定前も端の調整や▶試聴ができます）<br>区間の端をドラッグ＝境界の移動（選択中はオレンジのつまみ）<br><b>Alt＋ダブルクリック＝区間を分割</b><br>横スクロール（またはShift＋ホイール）＝横移動、縦ホイール＝ズーム<br><br>下のボタン：<b>◀ 前の区間／次の区間 ▶</b>で区間を順に再生、<b>選択を再生／カーソルから／停止</b>で再生操作、<b>🗑 選択を削除</b>は区間の指定と注釈を削除するだけで音声データは変更されません。</div>
   </div>
   <div id="missNote" class="hidden"><span id="missNoteText"></span><button type="button" id="missNoteClose" title="閉じる">✕</button></div>
   <canvas id="ovw"></canvas>
   <canvas id="wave"></canvas>
-  <div class="wavebar" id="spkBar" style="margin-top:5px">
+  <div class="wavebar" id="spkBar" style="margin-top:6px;align-items:center">
     <span class="note">話者：</span>
     <span id="spkChips" style="display:inline-flex;gap:4px;flex-wrap:wrap"></span>
     <button id="btnAddSpk" title="話者を追加">＋話者</button>
-    <span class="note" style="margin-left:4px">新しいレコードは選択中の話者になります。別話者どうしの区間は時刻が重なってもOKです。</span>
+    <span style="flex:1"></span>
+    <button id="btnZoomFit" class="btn-fit" title="波形全体を表示">全体表示</button>
+    <span style="flex:1"></span>
   </div>
-  <div class="wavebar">
-    <button id="btnRedetect" title="パネル1・2（ファイル選択・自動区切り設定）を再表示します">⟳ 自動区切りをやり直し</button>
+  <div class="wavebar" id="waveCtl" style="margin-top:8px">
+    <button id="btnRedetect" class="btn-big" title="パネル1・2（ファイル選択・自動区切り設定）を再表示して、区切りをやり直します">⟳ 自動区切りをやり直す</button>
     <span class="sep"></span>
-    <button id="btnZoomIn">拡大 ＋</button>
-    <button id="btnZoomOut">縮小 −</button>
-    <button id="btnZoomFit">全体表示</button>
+    <button id="btnZoomIn" class="btn-icon" title="拡大（ズームイン）">＋</button>
+    <button id="btnZoomOut" class="btn-icon" title="縮小（ズームアウト）">－</button>
     <span class="sep"></span>
-    <button id="btnPlaySel">▶ 選択区間を再生</button>
-    <button id="btnPlayCur">▶ カーソルから再生</button>
-    <button id="btnStop">■ 停止</button>
+    <span class="playgrp">
+      <button id="btnPrevSeg" class="btn-play" title="前の区間を選んで再生">◀ 前の区間</button>
+      <button id="btnPlaySel" class="btn-play" title="選択中の区間を再生">▶ 選択を再生</button>
+      <button id="btnPlayCur" class="btn-play" title="カーソル位置から再生">▶ カーソルから</button>
+      <button id="btnStop" class="btn-play" title="停止">■ 停止</button>
+      <button id="btnNextSeg" class="btn-play" title="次の区間を選んで再生">次の区間 ▶</button>
+      <button id="btnDelete" class="btn-play btn-del" title="選択レコード（区間指定と注釈）を削除します。音声データ自体は変更されません">🗑 選択を削除</button>
+    </span>
     <span class="sep"></span>
-    <button id="btnMergePrev">← 前と結合</button>
-    <button id="btnMergeNext">次と結合 →</button>
-    <button id="btnDelete" title="区間の指定と注釈（レコード）を削除します。音声データ自体は変更されません">選択レコードを削除</button>
+    <button id="btnMergePrev" title="前の区間と結合">← 前と結合</button>
+    <button id="btnMergeNext" title="次の区間と結合">次と結合 →</button>
     <span class="sep"></span>
     <label class="note" style="display:flex;align-items:center;gap:4px"><input type="checkbox" id="chkMissed" checked> 取りこぼし表示</label>
     <div id="missCtl">
@@ -1420,6 +1439,7 @@ function drawOvw(){
 /* ---------- 波形操作 ---------- */
 let drag=null, pend=null;   // pend: Enter確定待ちの選択範囲 {t0,t1}
 let cursorT=null, downX=null;   // cursorT: 再生カーソル位置（秒）
+let downInsideSeg=-1, clickPlayTimer=null;   // 波形クリック＝区間再生／ダブルクリック＝編集 の判別用
 const evX=(e,c)=>e.clientX-c.getBoundingClientRect().left;
 function confirmPend(){
   if(!pend)return;
@@ -1489,8 +1509,9 @@ wave.addEventListener('pointerdown',e=>{
   const targetSpk=laneSpk||activeSpk;
   if(laneSpk)setActiveSpk(laneSpk);
   const hit=hitTest(x,targetSpk);
+  downInsideSeg=-1;
   if(hit.mode==='edge0'||hit.mode==='edge1'){sel=hit.i;setActiveSpk(segs[hit.i].spk);drag={mode:hit.mode,i:hit.i}}
-  else if(hit.mode==='inside'){sel=hit.i;setActiveSpk(segs[hit.i].spk);drag=null;pend=null;rowIntoView(hit.i)}
+  else if(hit.mode==='inside'){sel=hit.i;setActiveSpk(segs[hit.i].spk);drag=null;pend=null;rowIntoView(hit.i);downInsideSeg=hit.i}
   else {pend=null;drag={mode:'create',ta:xt(x),tb:xt(x)}}
   afterSelChange();
 });
@@ -1536,18 +1557,30 @@ wave.addEventListener('pointerup',e=>{
     drag=null;draw();return;
   }
   if(drag)drawOvw();
-  if(isClick){cursorT=Math.max(0,Math.min(env.dur,xt(x)));draw()}
+  if(isClick){
+    if(downInsideSeg>=0){
+      // 区間内クリック＝その区間を再生（ダブルクリック＝編集 と区別するため少し待つ）
+      const i=downInsideSeg; clearTimeout(clickPlayTimer);
+      clickPlayTimer=setTimeout(()=>{playSeg(i);},230);
+    }else{
+      cursorT=Math.max(0,Math.min(env.dur,xt(x)));draw();   // 何もない所＝再生カーソルを置く
+    }
+  }
   drag=null;
 });
 wave.addEventListener('dblclick',e=>{
+  clearTimeout(clickPlayTimer);   // クリック再生をキャンセル
   const x=evX(e,wave), y=e.clientY-wave.getBoundingClientRect().top;
   const hit=hitTest(x,laneSpkAt(y)||activeSpk);
   if(hit.mode!=='inside'&&hit.mode!=='edge0'&&hit.mode!=='edge1')return;
-  const i=hit.i, t=xt(x), s=segs[i];
-  if(t-s.t0<0.02||s.t1-t<0.02)return;
-  segs.splice(i+1,0,{t0:t,t1:s.t1,id:'',spk:s.spk,text:'',note:'',tv:{}});
-  s.t1=t;
-  sel=i+1;afterSegChange();
+  const i=hit.i, s=segs[i];
+  if(e.altKey){   // Alt＋ダブルクリック＝分割（従来の分割機能を温存）
+    const t=xt(x);
+    if(t-s.t0<0.02||s.t1-t<0.02)return;
+    segs.splice(i+1,0,{t0:t,t1:s.t1,id:'',spk:s.spk,text:'',note:'',tv:{}});
+    s.t1=t; sel=i+1; afterSegChange(); return;
+  }
+  editSeg(i);   // 通常のダブルクリック＝編集（その区間の text 欄へ）
 });
 wave.addEventListener('wheel',e=>{
   if(!env)return;e.preventDefault();
@@ -1651,6 +1684,25 @@ $('btnDelete').addEventListener('click',()=>{
 });
 $('btnMergePrev').addEventListener('click',()=>mergeSel(-1));
 $('btnMergeNext').addEventListener('click',()=>mergeSel(1));
+// 前の区間に戻る／次の区間にスキップ（選択を移動して再生）
+function gotoSeg(delta){
+  if(!segs||!segs.length)return;
+  let i=sel<0?(delta>0?0:segs.length-1):sel+delta;
+  if(i<0||i>=segs.length)return;
+  sel=i; setActiveSpk(segs[i].spk); afterSelChange(); focusSeg(i); playSeg(i);
+}
+$('btnPrevSeg').addEventListener('click',()=>gotoSeg(-1));
+$('btnNextSeg').addEventListener('click',()=>gotoSeg(1));
+// 区間をダブルクリック＝編集：選択してその行の text セルにフォーカス
+function editSeg(i){
+  if(i<0||!segs[i])return;
+  sel=i; setActiveSpk(segs[i].spk); afterSelChange(); focusSeg(i);
+  const tr=$('tb').querySelector('tr[data-i="'+i+'"]:not(.glossrow)');
+  if(tr){tr.scrollIntoView({block:'center'});
+    const cell=tr.querySelector('.ttline[data-k="text"]')||tr.querySelector('[data-k="text"]')||tr.querySelector('[contenteditable]');
+    if(cell)setTimeout(()=>cell.focus(),0);
+  }
+}
 function mergeSel(dir){
   if(sel<0)return;
   const j=sel+dir;

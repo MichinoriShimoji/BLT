@@ -25,8 +25,8 @@ identifiers:
     description: "DOI for version 1.0.1"
 repository-code: "https://github.com/MichinoriShimoji/BLT"
 url: "https://michinorishimoji.github.io/mshimoji.com/blt.html"
-version: "1.0.1"
-date-released: "2026-06-16"
+version: "1.0.2"
+date-released: "2026-06-19"
 keywords:
   - field linguistics
   - language documentation

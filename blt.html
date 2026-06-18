@@ -1706,12 +1706,24 @@ function mergeSel(dir){
   if(sel<0)return;
   const j=sel+dir;
   if(j<0||j>=segs.length)return;
-  const a=segs[Math.min(sel,j)], b=segs[Math.max(sel,j)];
+  const lo=Math.min(sel,j), hi=Math.max(sel,j);
+  const a=segs[lo], b=segs[hi];
+  const aN=flatMorphs(a).length, bN=flatMorphs(b).length;   // 各区間の形態素数（層配列の整列用）
+  const pad=(arr,n)=>{const r=(arr||[]).slice();while(r.length<n)r.push('');r.length=n;return r;};
   a.t1=b.t1;
   a.text=[a.text,b.text].filter(Boolean).join(' ');
   a.note=[a.note,b.note].filter(Boolean).join(' / ');
-  segs.splice(Math.max(sel,j),1);
-  sel=Math.min(sel,j);afterSegChange();
+  // 明示形態素は連結（gloss/pos などと整列がずれないように）
+  if((a.morphs&&a.morphs.length)||(b.morphs&&b.morphs.length))
+    a.morphs=(a.morphs||[]).concat(b.morphs||[]);
+  // 層の値：morph層（配列）は形態素数に合わせて連結、区間層（文字列）はスペース結合
+  const av=a.tv||(a.tv={}), bv=b.tv||{};
+  new Set([...Object.keys(av),...Object.keys(bv)]).forEach(k=>{
+    if(Array.isArray(av[k])||Array.isArray(bv[k]))av[k]=pad(av[k],aN).concat(pad(bv[k],bN));
+    else av[k]=[av[k],bv[k]].filter(Boolean).join(' ');
+  });
+  segs.splice(hi,1);
+  sel=lo;afterSegChange();
 }
 
 /* ---------- 再生 ---------- */

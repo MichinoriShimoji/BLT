@@ -271,6 +271,8 @@ tr.glossrow td{background:#f6faf8;padding:6px 8px}
 .fb-fallback a{color:var(--accent);font-weight:600;text-decoration:none}
 .fb-fallback a:hover{text-decoration:underline}
 #tourBtn{margin-left:auto;background:var(--sel);color:#4a3500;border:1px solid #e0a52e;border-radius:16px;padding:5px 13px;font-size:12px;font-weight:700;cursor:pointer;align-self:center}
+#langToggle{background:var(--surface);color:var(--accent);border:1px solid var(--accent);border-radius:16px;padding:5px 13px;font-size:12px;font-weight:700;cursor:pointer;align-self:center}
+#langToggle:hover{background:var(--accent-soft)}
 #tourBtn:hover{background:#e9a92f}
 .tour-spot{position:fixed;border-radius:8px;box-shadow:0 0 0 9999px rgba(15,23,42,.62);z-index:10000;pointer-events:none;transition:top .25s,left .25s,width .25s,height .25s;outline:2px solid var(--accent);outline-offset:2px}
 .tour-pop{position:fixed;z-index:10001;background:var(--surface);border-radius:12px;width:480px;max-width:calc(100vw - 28px);padding:24px 28px 20px;box-shadow:0 14px 50px rgba(0,0,0,.36)}
@@ -333,6 +335,7 @@ tr.glossrow td{background:#f6faf8;padding:6px 8px}
     <button type="button" class="tab" data-tab="search">検索</button>
     <button type="button" class="tab" data-tab="analysis">分析・辞書</button>
     <button type="button" id="tourBtn" title="BLTの使い方を順に案内します">🧭 使い方ツアー</button>
+    <button type="button" id="langToggle" data-i18n-skip title="Switch language / 言語切替">English</button>
   </div>
 </header>
 <main>
@@ -3173,6 +3176,77 @@ $('dlDict').addEventListener('click',async()=>{
   }catch(e){alert('エラー：'+e.message)}
   finally{btn.disabled=false;btn.textContent=orig}
 });
+
+/* ---------- i18n：日本語 ⇄ English 切替（主要UI） ---------- */
+(function(){
+  const EN={
+    // ヘッダ・タブ・保存
+    "A simple, intuitive toolkit for transcription, annotation, glossing, and conversion.":"A simple, intuitive toolkit for transcription, annotation, glossing, and conversion.",
+    "下地理則の研究室":"Shimoji Lab","保存：":"Save:","プロジェクト途中保存":"Save project",
+    "注釈":"Annotate","検索":"Search","分析・辞書":"Analyze / Lexicon","🧭 使い方ツアー":"🧭 Guided tour","💬 フィードバック":"💬 Feedback",
+    // パネル1（開始）
+    "作業を始める":"Get started","どちらから始めますか？":"How would you like to start?",
+    "🆕 新規に始める":"🆕 Start new","📂 既存の作業を再開する":"📂 Resume existing work",
+    "新規":"New","既存再開":"Resume",
+    "＝音声（WAV）を読み込んで自動区切り→注釈。":"= load audio (WAV), auto-segment, then annotate.",
+    "＝音声を読み込んでから、以前の保存（.json）や ELAN（.eaf）を読み込み。":"= load the audio first, then a saved project (.json) or ELAN (.eaf).",
+    "① 音声ファイル（WAV・PCM）を選択":"① Choose an audio file (WAV / PCM)",
+    "未選択":"None selected","② プロジェクト（.json）を読み込む":"② Load a project (.json)",
+    "② ELANの .eaf を読み込む":"② Load an ELAN .eaf","← 最初に戻る":"← Back",
+    // パネル2（区間作成）
+    "区間を作る（手動 または 自動検出）":"Create segments (manual or auto-detect)",
+    "手動：":"Manual:","すると区間になります。":" makes it a segment.","自動：":"Auto:",
+    "自動検出を実行":"Run auto-detect","表示範囲だけ検出":"Detect visible range only","しきい値を自動推定":"Auto-estimate threshold",
+    "しきい値":"Threshold","自動":"auto","最小無音長（ms）":"Min. silence (ms)","最小区間長（ms）":"Min. segment (ms)",
+    "前後余白（ms）":"Padding (ms)","全区間をクリア":"Clear all segments",
+    // パネル3（波形）
+    "波形（区切りの確認・修正）":"Waveform (check / fix segments)","⤢ 大きく":"⤢ Larger","⤡ 小さく":"⤡ Smaller",
+    "話者：":"Speaker:","＋話者":"+ Speaker","全体表示":"Fit all","⟳ 自動区切りをやり直す":"⟳ Re-run auto-segmentation",
+    "◀ 前の区間":"◀ Prev","▶ 選択を再生":"▶ Play selection","▶ カーソルから":"▶ From cursor","■ 停止":"■ Stop",
+    "次の区間 ▶":"Next ▶","🗑 選択を削除":"🗑 Delete selected","← 前と結合":"← Merge prev","次と結合 →":"Merge next →",
+    "取りこぼし表示":"Show missed","確認再生":"Preview","✓ 区間に追加":"✓ Add as segment","無視":"Ignore",
+    // パネル4（注釈）
+    "注釈を付ける":"Annotate","層構成：":"Layers:","さらに層を追加（名前）":"Add a layer (name)","＋ 追加":"+ Add",
+    "詳細設定（morphの分割元）":"Advanced (morph split source)","表示レイヤー":"Show layer",
+    "◀ 前の5件":"◀ Prev 5","次の5件 ▶":"Next 5 ▶","文境界(bdr)":"Sentence bdry (bdr)","語境界(wbdr)":"Word bdry (wbdr)",
+    "文脈表示：":"Context:","クリックでそのレコードへ":"Click to jump to the record","すべてのレイヤー":"All layers",
+    "親：区間（text直下）":"Parent: segment (under text)","親：morph":"Parent: morph",
+    "text＋trans":"text + trans","text＋morph＋gloss＋trans":"text + morph + gloss + trans",
+    "text＋udl＋morph＋gloss＋trans（基底形から分割）":"text + udl + morph + gloss + trans (split from underlying)",
+    "カスタム（独自の構成）":"Custom","IDを連番で振り直す":"Renumber IDs",
+    // パネル5（書き出し）
+    "書き出し":"Export","EAF（ELAN用）":"EAF (for ELAN)","TSV（Excel対応）":"TSV (Excel-ready)",
+    "Word（.docx）":"Word (.docx)","切り出しWAVのZIP":"Per-segment WAV ZIP","glossを小型大文字":"gloss in small caps",
+    "プロジェクトを途中保存（.json）":"Save project (.json)","辞書をHTML＋音声でダウンロード（ZIP）":"Download lexicon as HTML + audio (ZIP)",
+    // 表ヘッダ
+    "text / trans":"text / trans"
+  };
+  let lang='ja'; try{lang=localStorage.getItem('blt_lang')||'ja';}catch(e){}
+  const skip=n=>{let el=n.nodeType===3?n.parentElement:n;
+    while(el){const t=el.tagName;
+      if(t==='SCRIPT'||t==='STYLE'||t==='TEXTAREA'||t==='INPUT'||t==='CANVAS'||t==='OPTION'&&false)return true;
+      if(el.getAttribute&&el.getAttribute('data-i18n-skip')!=null)return true;
+      if(el.isContentEditable)return true; el=el.parentElement;}
+    return false;};
+  function trNode(n){const raw=n.nodeValue,key=raw.trim();if(!key)return;
+    if(lang==='en'){const en=EN[key];if(en!=null&&n.__ja==null){n.__ja=raw;n.nodeValue=raw.replace(key,en);}}
+    else if(n.__ja!=null){n.nodeValue=n.__ja;n.__ja=null;}};
+  function walk(root){
+    if(root.nodeType===3){if(!skip(root))trNode(root);return;}
+    if(root.nodeType!==1)return;
+    const tw=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);const ns=[];
+    while(tw.nextNode())ns.push(tw.currentNode);
+    ns.forEach(n=>{if(!skip(n))trNode(n);});}
+  function applyLang(){document.documentElement.lang=lang==='en'?'en':'ja';
+    walk(document.body);
+    const tg=document.getElementById('langToggle');if(tg)tg.textContent=lang==='en'?'日本語':'English';}
+  new MutationObserver(ms=>{if(lang!=='en')return;
+    ms.forEach(m=>m.addedNodes.forEach(n=>{try{if(n.nodeType===1)walk(n);else if(n.nodeType===3&&!skip(n))trNode(n);}catch(e){}}));
+  }).observe(document.body,{childList:true,subtree:true});
+  const tg=document.getElementById('langToggle');
+  if(tg)tg.addEventListener('click',()=>{lang=lang==='en'?'ja':'en';try{localStorage.setItem('blt_lang',lang);}catch(e){}applyLang();});
+  applyLang();
+})();
 </script>
 
 <script>

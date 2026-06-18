@@ -1946,6 +1946,13 @@ function alignIGT(s){
   return words.map(w=>({text:w.t.join(''),gloss:w.g.join('')}));
 }
 function flatMorphs(s){return hasExplicitMorphs(s)?s.morphs.slice():morphSplit(morphSrcText(s)).flat()}
+// 分割元テキスト（text または udl）が短くなったら、行き場のない明示形態素と morph 層の値（gloss/pos 等）を末尾から削除して整合させる
+function trimMorphData(s){
+  const n=morphSplit(morphSrcText(s)).flat().length;   // 現在の分割元から得られる形態素数
+  if(hasExplicitMorphs(s)&&s.morphs.length>n){s.morphs.length=n;if(!s.morphs.length)delete s.morphs;}
+  const tv=s.tv;
+  if(tv)Object.keys(tv).forEach(k=>{if(Array.isArray(tv[k])&&tv[k].length>n)tv[k].length=n;});
+}
 function morphLineOf(s){
   if(hasExplicitMorphs(s))return s.morphs.join('-');
   return morphSplit(morphSrcText(s)).map(w=>w.join('')).join(' ');
@@ -2199,6 +2206,7 @@ $('tb').addEventListener('focusout',e=>{
       gs2.tv=gs2.tv||{};gs2.tv[tp.dataset.t]=tp.textContent.replace(/\u00a0/g,' ').trim();
       // morph\u306e\u5206\u5272\u5143\u304c\u5909\u308f\u3063\u305f\u3089\u5f62\u614b\u7d20\u5206\u5272\u3092\u3084\u308a\u76f4\u3059
       if(glossOn&&tp.dataset.t===morphSrc){
+        trimMorphData(gs2);   // 分割元の層を削った分、紐づく形態素・gloss等も削除
         const gr2=$('tb').querySelector('tr.glossrow[data-i="'+gi2+'"]');
         if(gr2)gr2.outerHTML=glossRowHtml(gs2,gi2);
       }
@@ -2230,11 +2238,14 @@ $('tb').addEventListener('focusout',e=>{
     td.textContent=s.spk;
   }else{
     s[k]=v;
-    // テクストが変わったら形態素分割をやり直してグロス行を更新
-    if(k==='text'&&tierRowsOn()){
-      // 境界コーディング中は文がレコードをまたぐので全体を再計算・再描画
-      if(hasBdr()||hasWbdr()){computeBoundaries();renderTable();renderContext()}
-      else{const gr=$('tb').querySelector('tr.glossrow[data-i="'+i+'"]');if(gr)gr.outerHTML=glossRowHtml(s,i)}
+    // テクストが変わったら、行き場のない形態素・glossなどを削除してから形態素分割をやり直してグロス行を更新
+    if(k==='text'){
+      trimMorphData(s);
+      if(tierRowsOn()){
+        // 境界コーディング中は文がレコードをまたぐので全体を再計算・再描画
+        if(hasBdr()||hasWbdr()){computeBoundaries();renderTable();renderContext()}
+        else{const gr=$('tb').querySelector('tr.glossrow[data-i="'+i+'"]');if(gr)gr.outerHTML=glossRowHtml(s,i)}
+      }
     }
   }
 });

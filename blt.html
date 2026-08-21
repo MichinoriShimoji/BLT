@@ -248,10 +248,12 @@ code{background:var(--accent-soft);padding:1px 5px;border-radius:4px;font-size:1
 #palToggle{font-size:12px;padding:2px 12px;cursor:pointer;border:1px solid var(--accent);color:var(--accent);background:var(--surface);border-radius:14px;font-weight:600}
 #palEdit,#palReset{font-size:12px;padding:2px 10px;cursor:pointer;border:1px solid var(--line);color:var(--muted);background:var(--surface);border-radius:14px}
 #palEdit:hover,#palReset:hover{border-color:var(--warn);color:var(--warn)}
-#paletteCard.editing #palEdit{border-color:var(--warn);color:#fff;background:var(--warn)}
-/* 編集モード：記号クリック＝非表示。見た目でモード中と分かるように */
-#paletteCard.editing .pgroup button,#paletteCard.editing #palFav button{outline:1px dashed var(--warn);outline-offset:-1px}
-#paletteCard.editing .pgroup button:hover,#paletteCard.editing #palFav button:hover{background:#f6d9d9;border-color:var(--warn);color:var(--warn);text-decoration:line-through}
+#paletteCard.editing #palEdit{border-color:var(--accent);color:#fff;background:var(--accent)}
+/* 選択モード（ポジティブリスト）：全記号を表示し、クリックで「使う記号」を選ぶ。選択済み＝ハイライト、未選択＝薄く */
+#paletteCard.editing .pgroup button{opacity:.45}
+#paletteCard.editing .pgroup button.keep{opacity:1;background:var(--accent-soft);border-color:var(--accent);color:var(--accent-ink);font-weight:700}
+#paletteCard.editing .pgroup button:hover{opacity:1;border-color:var(--accent)}
+#paletteCard.editing #palFav{opacity:.35;pointer-events:none}   /* 選択中は帯を無効化（混乱防止） */
 #palToggle:hover{background:var(--accent);color:#fff}
 #paletteCard.min{padding-top:6px;padding-bottom:6px}
 #paletteCard.min #palHead{margin-bottom:0}
@@ -603,7 +605,7 @@ html[data-theme="dark"] code{color:var(--accent-ink)}
 <div class="card hidden" id="cardAnnoCtl">
   <h2><span class="steplabel">4</span>注釈を付ける<button type="button" class="helpbtn" data-help="helpAnno" data-title="注釈の付け方・層の使い方">?</button></h2>
   <div class="helpsrc" id="helpAnno">
-    <div class="note">セルをクリックして編集。<b>IPAパレットは画面下に常設</b>（出たり引っ込んだりしません）で、記号をクリックでカーソル位置に挿入できます。「↓最小化」でたたむと、よく使う記号の帯だけが残ります。<b>「✎ 編集」で使わない記号をクリックして非表示</b>にでき（リセットで全復元）、よく使う記号は使うほど帯に自動で並びます。<b>入力中でも、パレットの「▶ この区間を再生」ボタンか Shift+Space で、その区間の音声を聞き直せます</b>（入力位置はそのまま）。<b>パレットの小さな波形</b>をクリック＝そこから再生／ドラッグ＝その範囲だけ再生で、<b>区間内の任意の箇所・範囲を自由に聞けます</b>。text欄でEnter＝次の行へ。開始・終了（秒）も直接編集できます。<br><br>morph層を使うと、text中のハイフン（-）・イコール（=）・プラス（+）で<b>形態素が自動分割</b>され、morphを親とする層（既定で gloss・pos）に形態素ごとに入力できます（Enter＝次の形態素へ）。層は自由に追加でき、親に「区間」を選ぶと区間ごとの欄、「morph」やその子を選ぶと形態素ごとの欄になります。<br><br>表層形と基底形が乖離する場合（例: text <code>kaita</code> ／ 基底形 <code>kak-ta</code>）は、基底形用の区間層（例: <code>udl</code>）を追加して「morphの親」をその層に切り替えると、その欄の区切り記号で形態素分割されます。<br><br>「表示レイヤー」で特定の層だけに絞った表示にできます（データは保持されます）。レコードは5件ずつ表示され、◀ ▶で移動します。</div>
+    <div class="note">セルをクリックして編集。<b>IPAパレットは画面下に常設</b>（出たり引っ込んだりしません）で、記号をクリックでカーソル位置に挿入できます。「↓最小化」でたたむと、よく使う記号の帯だけが残ります。<b>「✎ 記号を選ぶ」で、使う記号だけを選んで表示</b>できます（クリックで選択/解除。何も選ばなければ全表示。リセットで全表示に戻る）。よく使う記号は使うほど帯に自動で並びます。<b>入力中でも、パレットの「▶ この区間を再生」ボタンか Shift+Space で、その区間の音声を聞き直せます</b>（入力位置はそのまま）。<b>パレットの小さな波形</b>をクリック＝そこから再生／ドラッグ＝その範囲だけ再生で、<b>区間内の任意の箇所・範囲を自由に聞けます</b>。text欄でEnter＝次の行へ。開始・終了（秒）も直接編集できます。<br><br>morph層を使うと、text中のハイフン（-）・イコール（=）・プラス（+）で<b>形態素が自動分割</b>され、morphを親とする層（既定で gloss・pos）に形態素ごとに入力できます（Enter＝次の形態素へ）。層は自由に追加でき、親に「区間」を選ぶと区間ごとの欄、「morph」やその子を選ぶと形態素ごとの欄になります。<br><br>表層形と基底形が乖離する場合（例: text <code>kaita</code> ／ 基底形 <code>kak-ta</code>）は、基底形用の区間層（例: <code>udl</code>）を追加して「morphの親」をその層に切り替えると、その欄の区切り記号で形態素分割されます。<br><br>「表示レイヤー」で特定の層だけに絞った表示にできます（データは保持されます）。レコードは5件ずつ表示され、◀ ▶で移動します。</div>
   </div>
   <div id="annoCtlRow">
    <div id="annoCtlLeft">
@@ -661,8 +663,8 @@ html[data-theme="dark"] code{color:var(--accent-ink)}
     <span class="note" id="palHeadLabel" style="font-size:11.5px;font-weight:600">IPA入力パレット</span>
     <span id="palFav" title="よく使う記号（使うほど自動で並びます）。最小化中もここから挿入できます"></span>
     <span style="flex:1"></span>
-    <button type="button" id="palReset" title="非表示にした記号をすべて元に戻します" hidden>リセット</button>
-    <button type="button" id="palEdit" title="使わない記号を非表示にできます（クリックで非表示。リセットで全復元）">✎ 編集</button>
+    <button type="button" id="palReset" title="選択をリセットして、すべての記号を表示します" hidden>リセット</button>
+    <button type="button" id="palEdit" title="使う記号を選べます（選んだものだけ表示。何も選ばなければ全表示）">✎ 記号を選ぶ</button>
     <button type="button" id="palToggle" title="IPAパレットを下に格納">↓ 最小化</button>
   </div>
   <div id="palBody">
@@ -2922,15 +2924,25 @@ const IPA={
   '補助記号':'̥ ̬ ʰ ̤ ̰ ̼ ̪ ̺ ̻ ̹ ̜ ̟ ̠ ̈ ̽ ̩ ̯ ˞ ʷ ʲ ˠ ˤ ̴ ̝ ̞ ̘ ̙ ̃ ̚ ⁿ ˡ'
 };
 const isComb=ch=>/[̀-ͯ᪰-᫿⃐-⃿]/.test(ch);
-// カスタマイズ：非表示にした記号（リセットするまで出さない）。localStorageに永続化
-let palHidden=new Set(); try{palHidden=new Set(JSON.parse(localStorage.getItem('pal_hidden')||'[]'));}catch(e){palHidden=new Set();}
-function savePalHidden(){try{localStorage.setItem('pal_hidden',JSON.stringify([...palHidden]));}catch(e){}}
-let palEditing=false;   // ✎編集モード（記号クリックで非表示にする）
+// カスタマイズ（ポジティブリスト）：使う記号を選ぶ。選択が空なら全記号を表示。localStorageに永続化
+function savePalKeep(){try{localStorage.setItem('pal_keep',JSON.stringify([...palKeep]));}catch(e){}}
+let palKeep=new Set(); try{palKeep=new Set(JSON.parse(localStorage.getItem('pal_keep')||'[]'));}catch(e){palKeep=new Set();}
+// 旧・非表示リスト（pal_hidden）からの移行：反転してポジティブリストに
+try{
+  const old=JSON.parse(localStorage.getItem('pal_hidden')||'[]');
+  if(Array.isArray(old)&&old.length&&!palKeep.size){
+    const all=Object.values(IPA).join(' ').split(' ').filter(Boolean);
+    palKeep=new Set(all.filter(ch=>!old.includes(ch)));
+    savePalKeep();
+  }
+  localStorage.removeItem('pal_hidden');
+}catch(e){}
+let palEditing=false;   // ✎選択モード（全記号を表示し、クリックで使う記号を選ぶ）
 function renderPalette(){
   $('palette').innerHTML=Object.entries(IPA).map(([g,chars])=>{
-    const btns=chars.split(' ').filter(Boolean).filter(ch=>!palHidden.has(ch)).map(ch=>
-      '<button type="button"'+(isComb(ch)||g==='補助記号'?' class="comb"':'')+' data-ch="'+ch+'">'+(isComb(ch)?'◌'+ch:ch)+'</button>'
-    ).join('');
+    const btns=chars.split(' ').filter(Boolean)
+      .filter(ch=>palEditing||!palKeep.size||palKeep.has(ch))   // 選択モード中は全表示、通常は選択のみ（空なら全）
+      .map(ch=>'<button type="button" class="'+((isComb(ch)||g==='補助記号')?'comb':'')+(palEditing&&palKeep.has(ch)?' keep':'')+'" data-ch="'+ch+'">'+(isComb(ch)?'◌'+ch:ch)+'</button>').join('');
     return btns?'<div class="pgroup"><span class="glabel">'+g+'</span>'+btns+'</div>':'';
   }).join('');
 }
@@ -3024,39 +3036,42 @@ function bumpPalFreq(ch){
 const PAL_FAV_N=14;   // 帯に出す最大数
 function renderPalFav(){
   const wrap=$('palFav'); if(!wrap)return;
-  const top=Object.entries(palFreq).filter(([ch,n])=>n>0&&!palHidden.has(ch)).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0])).slice(0,PAL_FAV_N);
+  const top=Object.entries(palFreq).filter(([ch,n])=>n>0&&(!palKeep.size||palKeep.has(ch))).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0])).slice(0,PAL_FAV_N);   // 帯もポジティブリストに従う
   wrap.innerHTML=top.map(([ch])=>'<button type="button"'+(isComb(ch)?' class="comb"':'')+' data-ch="'+escHtml(ch)+'" title="'+escHtml(ch)+' を挿入">'+(isComb(ch)?'◌'+ch:ch)+'</button>').join('');
 }
-// 記号クリックの共通処理：通常＝挿入、✎編集モード＝その記号を非表示にする
-function onPalSymbolClick(ch){
+// 記号クリックの共通処理：通常＝挿入、✎選択モード＝使う記号の選択/解除（ボタンのハイライトを直接切替＝スクロール位置を保つ）
+function onPalSymbolClick(ch,btn){
   if(palEditing){
-    palHidden.add(ch); savePalHidden();
-    renderPalette(); renderPalFav(); reservePalSpace();
+    if(palKeep.has(ch)){palKeep.delete(ch);if(btn)btn.classList.remove('keep');}
+    else{palKeep.add(ch);if(btn)btn.classList.add('keep');}
+    savePalKeep();
     return;
   }
   if(insertIpaChar(ch))bumpPalFreq(ch);   // 挿入は回数に加算（帯の並び替えは次回表示時）
 }
 $('palFav').addEventListener('mousedown',e=>{if(e.target.hasAttribute('data-ch'))e.preventDefault()});   // フォーカス保持
-$('palFav').addEventListener('click',e=>{if(e.target.hasAttribute('data-ch'))onPalSymbolClick(e.target.getAttribute('data-ch'))});
+$('palFav').addEventListener('click',e=>{if(!palEditing&&e.target.hasAttribute('data-ch'))onPalSymbolClick(e.target.getAttribute('data-ch'),e.target)});   // 選択モード中は帯からは選ばない
 $('palette').addEventListener('mousedown',e=>{if(e.target.hasAttribute('data-ch'))e.preventDefault()});
-$('palette').addEventListener('click',e=>{if(e.target.hasAttribute('data-ch'))onPalSymbolClick(e.target.getAttribute('data-ch'))});
-// ✎編集モードの出入り（見出しラベルをヒントに切替）と、非表示のリセット
+$('palette').addEventListener('click',e=>{if(e.target.hasAttribute('data-ch'))onPalSymbolClick(e.target.getAttribute('data-ch'),e.target)});
+// ✎選択モードの出入り（全記号を表示して選ぶ）と、選択のリセット（＝全表示に戻す）
 function setPalEditing(on){
   palEditing=on;
   $('paletteCard').classList.toggle('editing',on);
   $('palReset').hidden=!on;
   const lbl=$('palHeadLabel');
-  if(on){if(lbl.__norm==null)lbl.__norm=lbl.textContent;lbl.textContent='編集中：記号をクリックで非表示（リセットで全復元）';lbl.style.color='var(--warn)';}
+  if(on){if(lbl.__norm==null)lbl.__norm=lbl.textContent;lbl.textContent='使う記号をクリックで選択（選んだものだけ表示。何も選ばなければ全表示）';lbl.style.color='var(--accent)';}
   else{if(lbl.__norm!=null)lbl.textContent=lbl.__norm;lbl.style.color='';}
-  if(on&&palMin){palMin=false;try{localStorage.setItem('pal_min','0');}catch(e){}showPalette();}   // 編集は全体が見える状態で
+  if(on&&palMin){palMin=false;try{localStorage.setItem('pal_min','0');}catch(e){}$('paletteCard').classList.remove('min');setPalToggleLabel();}   // 選択は全体が見える状態で
+  renderPalette();   // 選択モード＝全記号＋ハイライト／通常＝選択のみ
+  renderPalFav();
   reservePalSpace();
 }
 $('palEdit').addEventListener('mousedown',e=>e.preventDefault());
 $('palEdit').addEventListener('click',()=>setPalEditing(!palEditing));
 $('palReset').addEventListener('mousedown',e=>e.preventDefault());
 $('palReset').addEventListener('click',()=>{
-  if(palHidden.size&&!confirm('非表示にした '+palHidden.size+' 個の記号をすべて元に戻します。よろしいですか？'))return;
-  palHidden.clear(); savePalHidden();
+  if(palKeep.size&&!confirm('選択をリセットして、すべての記号を表示します。よろしいですか？'))return;
+  palKeep.clear(); savePalKeep();
   renderPalette(); renderPalFav(); reservePalSpace();
 });
 // 編集中のセルが属する区間の番号（無ければ選択中の区間）
@@ -4482,8 +4497,9 @@ $('dlDict').addEventListener('click',async()=>{
     "▶ この区間を再生":"▶ Play this segment","入力中も":"While typing,","で再生／停止できます":"plays / pauses",
     "この区間の波形：クリック＝そこから再生／ドラッグ＝範囲を再生（入力位置はそのまま）":"This segment’s waveform — click: play from there / drag: play a range (caret stays put)",
     "IPA入力パレット":"IPA palette","↓ 最小化":"↓ Minimize","↑ 開く":"↑ Open",
-    "✎ 編集":"✎ Edit","リセット":"Reset",
-    "編集中：記号をクリックで非表示（リセットで全復元）":"Editing: click a symbol to hide it (Reset restores all)",
+    "✎ 記号を選ぶ":"✎ Choose symbols","リセット":"Reset",
+    "使う記号をクリックで選択（選んだものだけ表示。何も選ばなければ全表示）":"Click the symbols you use (only those stay; none selected = all shown)",
+    "選択をリセットして、すべての記号を表示します。よろしいですか？":"Reset the selection and show all symbols?",
     "次の区間 ▶":"Next ▶","🗑 選択を削除":"🗑 Delete selected","← 前と結合":"← Merge prev","次と結合 →":"Merge next →",
     "取りこぼし表示":"Show missed","確認再生":"Preview","✓ 区間に追加":"✓ Add as segment","無視":"Ignore",
     // パネル4（注釈）
@@ -4561,7 +4577,6 @@ $('dlDict').addEventListener('click',async()=>{
     [/^読み込み中… (\d+)%　\((\d+) MB\)$/, m=>'Loading… '+m[1]+'% ('+m[2]+' MB)'],
     [/^読み込み中… (\d+)%$/, m=>'Loading… '+m[1]+'%'],
     [/^切り出し中… (\d+)\/(\d+)$/, m=>'Extracting… '+m[1]+'/'+m[2]],
-    [/^非表示にした (\d+) 個の記号をすべて元に戻します。よろしいですか？$/, m=>'Restore all '+m[1]+' hidden symbols?'],
     [/^音声切り出し中… (\d+)\/(\d+)$/, m=>'Extracting audio… '+m[1]+'/'+m[2]],
     [/^(.+)のみ$/, m=>m[1]+' only']
   ];
@@ -4578,7 +4593,7 @@ $('dlDict').addEventListener('click',async()=>{
     helpFile:'<div class="note">Audio is expected to be uncompressed WAV (PCM). Files are never sent outside your browser — everything is processed locally, and the audio file itself is never modified.<br><br>To use “Load a project (.json)”, <b>load the matching WAV first</b> (the project does not contain the audio itself).</div>',
     helpSeg:'<div class="note"><b>Manual:</b> drag over an empty part of the waveform to select a range, then <b>press Enter</b> to make it a segment. <b>Auto:</b> detects runs of speech (allowing very short silences) and segments them at once (you can fix them by hand afterwards).<br><br>Auto-detect estimates a threshold from the noise floor and speech level and uses a dual threshold (hysteresis) to find speech runs. Silences shorter than “Min. silence” are bridged into one segment (default: only runs ≥ 0.5 s). Re-running carries over your annotations by time overlap.</div>',
     helpWave:'<div class="note"><b>Speakers (overlap-ready):</b> add one with “+ Speaker”; the selected chip is the “active speaker”. New segments belong to it, and <b>different speakers may overlap in time</b> (overlap within one speaker is not allowed). Per-speaker lanes appear below the waveform. EAF is exported split per speaker (e.g. <code>text@speaker</code> with PARTICIPANT) so overlaps open correctly in ELAN.<br><br><b>Multi-channel (one mic per speaker):</b> load a separate WAV per speaker via “🎙 Multi-channel” in Panel 1 and each speaker gets its own stacked waveform (all assumed to start at the same instant). Drag inside a speaker’s band to create/adjust segments for that speaker. “Run auto-detect” detects each speaker on their own channel, so no cross-talk leaks in; playback and clipping also use that speaker’s channel.<br><br><b>Red bands</b> = speech not inside any segment (possible “missed” audio). Use ◀ ▶ to jump, “Preview” to listen, <b>“✓ Add as segment”</b> to keep it, or <b>“Ignore”</b> to drop it from the count.<br><br><b>Click a segment = play it</b>. <b>Double-click a segment = edit</b> (cursor lands in that row\'s text cell).<br>Click empty space = drop the playback cursor (<b>Space = play/pause from cursor</b>)<br>Drag empty space = select a range → <b>Enter to confirm as a segment</b> (Esc to cancel)<br>Drag a segment edge = move the boundary<br><b>Alt + double-click = split the segment</b><br>Horizontal scroll (or Shift + wheel) = pan, vertical wheel = zoom<br><br>Buttons below: <b>◀ Prev / Next ▶</b> step through and play segments; <b>Play selection / From cursor / Stop</b> control playback; <b>🗑 Delete selected</b> only removes the segment and its annotation — the audio is never changed.</div>',
-    helpAnno:'<div class="note">Click a cell to edit. The <b>IPA palette is docked at the bottom</b> (it no longer pops in and out); click a symbol to insert it at the caret. “↓ Minimize” collapses it to just the frequent-symbols strip. With <b>“✎ Edit” you can click symbols to hide the ones you never use</b> (Reset restores all), and your most-used symbols line up in the strip automatically. <b>While typing you can replay the segment’s audio with the palette’s “▶ Play this segment” button or Shift+Space</b> (your cursor stays put). On the palette’s <b>mini waveform</b>, click to play from that point or drag to play just that range — <b>freely hear any spot or span inside the segment</b>. Enter in the text field = next row. Start/end (seconds) are editable too.<br><br>With a morph layer, hyphen (-), equals (=) and plus (+) in the text <b>split it into morphemes</b>, and you fill layers under morph (gloss · pos by default) per morpheme (Enter = next morpheme). Add layers freely: parent “segment” gives one field per segment; “morph” or its children give one field per morpheme.<br><br>When surface and underlying forms differ (e.g. text <code>kaita</code> / underlying <code>kak-ta</code>), add a segment-level layer for the underlying form (e.g. <code>udl</code>) and set “morph split source” to it.<br><br>“Show layer” focuses on one layer (data is kept). Records show 5 at a time; use ◀ ▶ to move.</div>',
+    helpAnno:'<div class="note">Click a cell to edit. The <b>IPA palette is docked at the bottom</b> (it no longer pops in and out); click a symbol to insert it at the caret. “↓ Minimize” collapses it to just the frequent-symbols strip. With <b>“✎ Choose symbols” you pick just the symbols you use</b> (click to select/deselect; none selected = all shown; Reset shows all again), and your most-used symbols line up in the strip automatically. <b>While typing you can replay the segment’s audio with the palette’s “▶ Play this segment” button or Shift+Space</b> (your cursor stays put). On the palette’s <b>mini waveform</b>, click to play from that point or drag to play just that range — <b>freely hear any spot or span inside the segment</b>. Enter in the text field = next row. Start/end (seconds) are editable too.<br><br>With a morph layer, hyphen (-), equals (=) and plus (+) in the text <b>split it into morphemes</b>, and you fill layers under morph (gloss · pos by default) per morpheme (Enter = next morpheme). Add layers freely: parent “segment” gives one field per segment; “morph” or its children give one field per morpheme.<br><br>When surface and underlying forms differ (e.g. text <code>kaita</code> / underlying <code>kak-ta</code>), add a segment-level layer for the underlying form (e.g. <code>udl</code>) and set “morph split source” to it.<br><br>“Show layer” focuses on one layer (data is kept). Records show 5 at a time; use ◀ ▶ to move.</div>',
     helpExport:'<div class="note">EAF exports <code>ID</code>, <code>text</code>, <code>trans</code> plus your layers with ELAN\'s parent-child structure (<code>trans</code> = Symbolic Association of text, <code>morph</code> = Symbolic Subdivision of text/udl, other layers = Symbolic Association to the chosen parent; type and constraint declarations included). Put it beside the WAV to open in ELAN.<br><br>TSV / JSON include every layer (morph layers merged into a gloss line, e.g. <code>go-EP-PST</code>). The ZIP holds a WAV per segment plus <code>manifest.csv</code>.<br><br>“Save project” stores segments, annotations, layer setup and the ignore list as JSON. To resume, load the same WAV first, then this JSON.</div>'
   };
   let lang='ja'; try{lang=localStorage.getItem('blt_lang')||'ja';}catch(e){}

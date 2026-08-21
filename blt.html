@@ -6,9 +6,10 @@
 <title>BLT — Browser-based Lightweight Toolkit for Editing Field Data</title>
 <style>
 :root{
-  --bg:#eef1f6; --surface:#ffffff; --ink:#222730; --muted:#5f6672;
-  --line:#d8dde7; --accent:#234a86; --accent-soft:#e6ecf5; --accent-ink:#152e57;
+  --bg:#17181c; --surface:#ffffff; --ink:#222730; --muted:#5f6672;
+  --line:#cdd0d8; --accent:#b3121f; --accent-soft:#f8e7e9; --accent-ink:#7d0b16;
   --warn:#b4540f; --done:#2e7d5b; --sel:#f5b942;
+  --steel:#5a5f68; --steel-dark:linear-gradient(180deg,#3d4046,#25272c);
   --jp-serif:"Hiragino Mincho ProN","Yu Mincho","YuMincho","Noto Serif JP",serif;
   --ui:system-ui,-apple-system,"Segoe UI","Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;
   --ipa:"Charis SIL","Doulos SIL","Gentium Plus","DejaVu Sans","Segoe UI","Hiragino Sans",sans-serif;
@@ -16,14 +17,48 @@
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--ui);font-size:14px;line-height:1.55}
-header{background:var(--surface);border-bottom:1px solid var(--line);padding:10px 20px;position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
-#brand{display:flex;align-items:center;gap:15px;flex:1;min-width:300px}
-#brand .logo{font-family:var(--jp-serif);font-weight:800;font-size:66px;line-height:.85;letter-spacing:.02em;
-  background:linear-gradient(135deg,#2a5499 0%,#21457f 55%,#152e57 100%);
-  -webkit-background-clip:text;background-clip:text;color:transparent;
-  padding-right:20px;border-right:3px solid #cdd7e6}
-#brand .bname{font-family:var(--jp-serif);font-size:15px;font-weight:600;color:var(--accent-ink);letter-spacing:.01em;line-height:1.25}
-#brand .btag{font-size:11.5px;color:var(--muted);margin-top:3px;line-height:1.3}
+header{background:linear-gradient(180deg,#44474e 0%,#26282d 55%,#0f1013 100%);border-bottom:2px solid var(--accent);box-shadow:0 2px 10px rgba(0,0,0,.45);padding:7px 20px;position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+header .lbl{color:#9aa0ab}
+header button{background:var(--steel-dark);border:1px solid var(--steel);color:#e6e8ec}
+header button:hover{border-color:#e2404d;color:#fff}
+header button.primary{background:linear-gradient(180deg,#d21b2a,#8e0d17);border-color:#e2404d}
+header button.primary:hover{background:linear-gradient(180deg,#e32433,#a01019)}
+/* ヘッダーは常時コンパクト。正式名称・引用はⓘの絶対配置ドロップダウンで表示（開閉してもレイアウトが動かない） */
+#brand{display:flex;align-items:center;gap:9px;flex:0 1 auto;min-width:0;position:relative}
+#brand .logo{display:flex;align-items:center;padding-right:12px;border-right:2px solid var(--steel)}
+path[data-word]{cursor:pointer}
+path[data-word]:hover{fill:url(#logoChromeHot)}
+/* ロゴ文字ホバーの吹き出し（Browser! Lightweight! Toolkit!） */
+#logoTip{position:fixed;z-index:120;pointer-events:none;display:none;transform:translateX(-50%) skewX(-6deg);
+  background:linear-gradient(180deg,#3a3d44,#101114);border:1px solid #5a5f68;border-bottom:2px solid var(--accent);
+  border-radius:8px;padding:5px 14px 6px;box-shadow:0 4px 14px rgba(0,0,0,.5),0 0 12px rgba(210,27,42,.4);
+  font-family:Impact,"Arial Black",sans-serif;font-style:italic;font-size:20px;letter-spacing:.05em;white-space:nowrap;
+  animation:logoTipPop .14s ease-out}
+#logoTip b{font-weight:400;background:linear-gradient(180deg,#ffffff 0%,#cdd6e4 30%,#7e8aa0 47%,#171a22 50%,#dfe6f2 54%,#f6f8fc 75%,#5c6575 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+@keyframes logoTipPop{from{opacity:0;margin-top:-5px}to{opacity:1;margin-top:0}}
+#brand .logo svg{height:32px;width:auto;filter:drop-shadow(0 2px 0 rgba(0,0,0,.85)) drop-shadow(0 0 9px rgba(210,27,42,.6))}
+#brandToggle{flex:none;width:22px;height:22px;padding:0;border:1px solid var(--steel);border-radius:50%;background:#2a2c31;color:#aeb4bf;font-size:12px;line-height:1;cursor:pointer}
+#brandToggle:hover{border-color:#e2404d;color:#fff;background:#3a3d44}
+#brandInfo{display:none;position:absolute;top:calc(100% + 14px);left:0;z-index:45;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.18);padding:14px 16px;width:min(700px,calc(100vw - 40px))}
+header.brandOpen #brandInfo{display:block}
+#brand .bname,#brandHero .bname{font-family:var(--jp-serif);font-size:15px;font-weight:600;color:var(--accent-ink);letter-spacing:.01em;line-height:1.25}
+#brand .btag,#brandHero .btag{font-size:11.5px;color:var(--muted);margin-top:3px;line-height:1.3}
+/* 初期画面のブランドカード（音声を読み込むと隠れる）: ダイヤモンドプレート仕様 */
+#cardBrand{border:1px solid #3a3d44;background-color:#26282d;
+  background-image:linear-gradient(180deg,rgba(255,255,255,.07),rgba(0,0,0,.30)),url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56'%3E%3Crect width='56' height='56' fill='%2326282d'/%3E%3Cg transform='translate(14 14) rotate(45)'%3E%3Crect x='-10' y='-3.5' width='20' height='7' rx='3.5' fill='%23111216' transform='translate(1.3 1.7)'/%3E%3Crect x='-10' y='-3.5' width='20' height='7' rx='3.5' fill='%23434750'/%3E%3Crect x='-8.5' y='-3' width='17' height='2.6' rx='1.3' fill='%235f6570'/%3E%3C/g%3E%3Cg transform='translate(42 42) rotate(-45)'%3E%3Crect x='-10' y='-3.5' width='20' height='7' rx='3.5' fill='%23111216' transform='translate(1.3 1.7)'/%3E%3Crect x='-10' y='-3.5' width='20' height='7' rx='3.5' fill='%23434750'/%3E%3Crect x='-8.5' y='-3' width='17' height='2.6' rx='1.3' fill='%235f6570'/%3E%3C/g%3E%3C/svg%3E");
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.09),inset 0 -2px 8px rgba(0,0,0,.5),0 4px 14px rgba(0,0,0,.45)}
+#brandHero{display:flex;align-items:center;gap:24px;flex-wrap:wrap}
+#brandHero .bh-logo{background:linear-gradient(180deg,#1b1c20,#0b0c0f);border:1px solid #4a4e55;border-bottom:2px solid var(--accent);border-radius:10px;padding:18px 28px;display:flex;align-items:center;box-shadow:0 3px 10px rgba(0,0,0,.55)}
+#brandHero .bh-logo svg{height:64px;width:auto;filter:drop-shadow(0 2px 0 rgba(0,0,0,.85)) drop-shadow(0 0 12px rgba(210,27,42,.6))}
+#brandHero .bh-info{flex:1 1 340px;min-width:0;background:rgba(17,18,22,.74);border:1px solid #4a4e55;border-radius:10px;padding:12px 16px;box-shadow:0 3px 10px rgba(0,0,0,.35)}
+#brandHero .bname{font-size:17px;color:#eef1f6}
+#brandHero .btag{color:#b8bec8}
+#brandHero .bcredit{color:#a7adb8}
+#brandHero .bcredit a{color:#ff8089}
+#brandHero .bcite{background:rgba(179,18,31,.16);color:#f0dadc;border-left:3px solid var(--accent)}
+#brandHero .bcite a{color:#ff8089}
+#brandHero .bcite .lab{color:#ff6b74}
 .bcredit{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.3}
 .bcredit a{color:var(--accent);text-decoration:none;font-weight:600}
 .bcredit a:hover{text-decoration:underline}
@@ -39,9 +74,10 @@ header{background:var(--surface);border-bottom:1px solid var(--line);padding:10p
 .detbtn:hover{border-color:var(--accent);background:var(--accent-soft)}
 details[open] > .detbtn{background:var(--accent);border-color:var(--accent);color:#fff}
 details[open] > .detbtn::after{transform:rotate(90deg);color:#fff}
-#tabbar{display:flex;gap:4px;width:100%;border-top:1px solid var(--line);margin-top:8px;padding-top:7px}
-#tabbar .tab{font-size:14px;font-weight:600;padding:6px 18px;border:1px solid var(--line);border-bottom:none;border-radius:8px 8px 0 0;background:var(--bg);color:var(--muted);cursor:pointer;margin-bottom:-8px}
-#tabbar .tab.cur{background:var(--accent);border-color:var(--accent);color:#fff}
+#tabbar{display:flex;gap:4px;align-items:center;margin-left:auto}
+#tabbar .tab{font-size:13px;font-weight:600;padding:5px 16px;border:1px solid var(--steel);border-radius:8px;background:var(--steel-dark);color:#b8bec8;cursor:pointer}
+#tabbar .tab:hover{color:#fff;border-color:#e2404d}
+#tabbar .tab.cur{background:linear-gradient(180deg,#d21b2a,#8e0d17);border-color:#e2404d;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.4)}
 /* 分析・辞書タブ */
 #anCols{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
 #anIndexCol{flex:0 0 360px;min-width:280px}
@@ -140,18 +176,18 @@ code{background:var(--accent-soft);padding:1px 5px;border-radius:4px;font-size:1
 .wavebar .sep{width:1px;height:18px;background:var(--line)}
 /* 「全体表示」：波形直下・話者行の中央に孤立 */
 .btn-fit{font-size:12px;padding:4px 14px;border-radius:14px;background:var(--accent-soft);border:1px solid var(--accent);color:var(--accent-ink);font-weight:600}
-.btn-fit:hover{background:#d9e3f2}
+.btn-fit:hover{background:#f0d3d6}
 /* 「自動区切りをやり直す」：目立つ大ボタン */
 .btn-big{font-size:13.5px!important;font-weight:700;padding:7px 16px!important;background:var(--accent);color:#fff;border:1px solid var(--accent-ink);border-radius:8px}
-.btn-big:hover{background:#1c3c6e}
+.btn-big:hover{background:#8e0d17}
 /* 拡大・縮小：アイコンだけの正方形ボタン */
 .btn-icon{width:30px;height:30px;padding:0!important;font-size:17px;font-weight:700;line-height:1;border-radius:7px}
 /* 再生・移動・削除：同系色（ティール）でひとまとめ */
 .playgrp{display:inline-flex;gap:4px;align-items:center;flex-wrap:wrap}
-.btn-play{background:#0f7d8c;color:#fff;border:1px solid #0b606c;border-radius:7px;font-weight:600}
-.btn-play:hover{background:#0c6c79}
-.btn-play.btn-del{background:#1a8a99;border-style:dashed}
-.btn-play.btn-del:hover{background:#15737f}
+.btn-play{background:linear-gradient(180deg,#4a4e56,#2b2d33);color:#fff;border:1px solid #5a5f68;border-radius:7px;font-weight:600}
+.btn-play:hover{background:linear-gradient(180deg,#565b64,#33363c);border-color:#e2404d}
+.btn-play.btn-del{background:linear-gradient(180deg,#7e1520,#560a12);border:1px dashed #b3404a}
+.btn-play.btn-del:hover{background:linear-gradient(180deg,#931a26,#6a0d16)}
 #waveCol .card{padding:10px 14px}
 #segInfo{font-size:12px;color:var(--muted);font-family:var(--mono)}
 #missNote{display:flex;align-items:flex-start;gap:10px;background:#fdecea;border:1px solid #d92626;color:#8f1d1d;border-radius:7px;padding:7px 11px;font-size:12.5px;line-height:1.5;margin:0 0 7px}
@@ -271,8 +307,8 @@ tr.glossrow td{background:#f6faf8;padding:6px 8px}
 .fb-fallback a{color:var(--accent);font-weight:600;text-decoration:none}
 .fb-fallback a:hover{text-decoration:underline}
 #tourBtn{margin-left:auto;background:var(--sel);color:#4a3500;border:1px solid #e0a52e;border-radius:16px;padding:5px 13px;font-size:12px;font-weight:700;cursor:pointer;align-self:center}
-#langToggle{background:var(--surface);color:var(--accent);border:1px solid var(--accent);border-radius:16px;padding:5px 13px;font-size:12px;font-weight:700;cursor:pointer;align-self:center}
-#langToggle:hover{background:var(--accent-soft)}
+#langToggle{background:transparent;color:#e6e8ec;border:1px solid var(--steel);border-radius:16px;padding:5px 13px;font-size:12px;font-weight:700;cursor:pointer;align-self:center}
+#langToggle:hover{background:rgba(255,255,255,.08);border-color:#e2404d;color:#fff}
 #tourBtn:hover{background:#e9a92f}
 .tour-spot{position:fixed;border-radius:8px;box-shadow:0 0 0 9999px rgba(15,23,42,.62);z-index:10000;pointer-events:none;transition:top .25s,left .25s,width .25s,height .25s;outline:2px solid var(--accent);outline-offset:2px}
 .tour-pop{position:fixed;z-index:10001;background:var(--surface);border-radius:12px;width:480px;max-width:calc(100vw - 28px);padding:24px 28px 20px;box-shadow:0 14px 50px rgba(0,0,0,.36)}
@@ -301,7 +337,7 @@ tr.glossrow td{background:#f6faf8;padding:6px 8px}
 .kwic-tbl{border-collapse:collapse;font-size:13px;white-space:nowrap}
 .kwic-tbl td{padding:3px 7px;border-bottom:1px solid var(--line);vertical-align:baseline}
 .kwic-row{cursor:pointer}
-.kwic-row:hover td{background:#eef4ff}
+.kwic-row:hover td{background:var(--accent-soft)}
 .kwic-id{font-family:var(--mono);font-size:11px;color:var(--muted)}
 .kwic-l{text-align:right;font-family:var(--ipa)}
 .kwic-k{text-align:center;font-family:var(--ipa)}
@@ -314,8 +350,27 @@ tr.glossrow td{background:#f6faf8;padding:6px 8px}
 <body>
 <header>
   <div id="brand">
-    <span class="logo">BLT</span>
-    <div>
+    <span class="logo" role="img" aria-label="BLT"><svg viewBox="-8 0 288 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <defs><linearGradient id="logoChrome" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#ffffff"/><stop offset=".28" stop-color="#cdd6e4"/>
+        <stop offset=".47" stop-color="#7e8aa0"/><stop offset=".50" stop-color="#171a22"/>
+        <stop offset=".54" stop-color="#dfe6f2"/><stop offset=".75" stop-color="#f6f8fc"/>
+        <stop offset="1" stop-color="#5c6575"/>
+      </linearGradient>
+      <linearGradient id="logoChromeHot" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#ffffff"/><stop offset=".28" stop-color="#ffc9cd"/>
+        <stop offset=".47" stop-color="#e04a55"/><stop offset=".50" stop-color="#3a0308"/>
+        <stop offset=".54" stop-color="#ffe1e3"/><stop offset=".75" stop-color="#ff8f97"/>
+        <stop offset="1" stop-color="#a01019"/>
+      </linearGradient></defs>
+      <g fill="url(#logoChrome)" stroke="#0c0d11" stroke-width="1.6" stroke-linejoin="miter" transform="skewX(-4)">
+        <path data-word="Browser!" fill-rule="evenodd" d="M14,8 L10,2 L54,8 L76,24 L64,48 L78,72 L54,92 L10,98 L14,92 Z M32,22 H52 L60,33 L48,45 H32 Z M32,55 H50 L58,70 L48,78 H32 Z"/>
+        <path data-word="Lightweight!" d="M100,6 L130,6 L118,38 L144,32 L116,74 L156,74 L178,84 L152,94 L100,94 L112,50 L90,56 Z"/>
+        <path data-word="Toolkit!" d="M188,8 H268 L252,28 H240 V76 L226,92 L212,76 V28 H198 Z"/>
+      </g>
+    </svg></span>
+    <button type="button" id="brandToggle" title="BLTについて（正式名称・引用情報）" data-i18n-skip>ⓘ</button>
+    <div id="brandInfo">
       <div class="bname">Browser-based Lightweight Toolkit for Editing Field Data</div>
       <div class="btag">A simple, intuitive toolkit for transcription, annotation, glossing, and conversion.</div>
       <div class="bcredit"><a href="https://michinorishimoji.github.io/mshimoji.com/" target="_blank" rel="noopener">下地理則の研究室</a><span class="sep">|</span>© 2026 Michinori Shimoji</div>
@@ -341,6 +396,23 @@ tr.glossrow td{background:#f6faf8;padding:6px 8px}
 <main>
 
 <div id="tabAnno">
+<div class="card" id="cardBrand">
+  <div id="brandHero">
+    <div class="bh-logo"><svg viewBox="-8 0 288 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <g fill="url(#logoChrome)" stroke="#0c0d11" stroke-width="1.6" stroke-linejoin="miter" transform="skewX(-4)">
+        <path data-word="Browser!" fill-rule="evenodd" d="M14,8 L10,2 L54,8 L76,24 L64,48 L78,72 L54,92 L10,98 L14,92 Z M32,22 H52 L60,33 L48,45 H32 Z M32,55 H50 L58,70 L48,78 H32 Z"/>
+        <path data-word="Lightweight!" d="M100,6 L130,6 L118,38 L144,32 L116,74 L156,74 L178,84 L152,94 L100,94 L112,50 L90,56 Z"/>
+        <path data-word="Toolkit!" d="M188,8 H268 L252,28 H240 V76 L226,92 L212,76 V28 H198 Z"/>
+      </g>
+    </svg></div>
+    <div class="bh-info">
+      <div class="bname">Browser-based Lightweight Toolkit for Editing Field Data</div>
+      <div class="btag">A simple, intuitive toolkit for transcription, annotation, glossing, and conversion.</div>
+      <div class="bcredit"><a href="https://michinorishimoji.github.io/mshimoji.com/" target="_blank" rel="noopener">下地理則の研究室</a><span class="sep">|</span>© 2026 Michinori Shimoji</div>
+      <div class="bcite"><span class="lab">Cite</span>Shimoji, M. (2026). <i>BLT: Browser-based Lightweight Toolkit for Editing Field Data</i> [Computer software]. Zenodo. <a href="https://doi.org/10.5281/zenodo.20707256" target="_blank" rel="noopener">https://doi.org/10.5281/zenodo.20707256</a></div>
+    </div>
+  </div>
+</div>
 <div class="card" id="cardFile">
   <h2><span class="steplabel">1</span>作業を始める<button type="button" class="helpbtn" data-help="helpFile" data-title="ファイルの読み込みについて">?</button></h2>
   <div class="helpsrc" id="helpFile">
@@ -609,6 +681,9 @@ tr.glossrow td{background:#f6faf8;padding:6px 8px}
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
+// 直近のポインタ操作時刻（クリックでセルに移った直後はウィンドウを自動スクロールさせない）
+let lastPointerT=0;
+document.addEventListener('pointerdown',()=>{lastPointerT=performance.now()},true);
 
 /* ---------- 状態 ---------- */
 let wavFile=null, wavInfo=null;     // PCM情報（切り出し用）
@@ -620,7 +695,7 @@ const FR=200;                        // エンベロープ解像度（フレー�
 
 /* ---------- 話者（オーバーラップ対応：話者ごとにトラック） ---------- */
 let speakers=['A'], activeSpk='A';   // 話者リストと、新規レコードの話者
-const SPK_COLORS=['#234a86','#b4540f','#2e9e8a','#8a4fb0','#a8852a','#318a5a','#b02e6a'];
+const SPK_COLORS=['#3d4550','#b4540f','#2e9e8a','#8a4fb0','#a8852a','#318a5a','#b02e6a'];
 function spkColor(id){const i=Math.max(0,speakers.indexOf(id));return SPK_COLORS[i%SPK_COLORS.length]}
 function ensureSpk(id){if(id&&!speakers.includes(id))speakers.push(id)}
 // 同じ話者の区間とだけ重なりを判定（別話者との重なりは許す）
@@ -923,6 +998,7 @@ async function loadFile(f){
     $('wavName').textContent=f.name+'　'+wavInfo.rate+' Hz / '+wavInfo.bits+' bit / '+wavInfo.ch+'ch / '+env.dur.toFixed(1)+' 秒';
     $('wavName').classList.add('ok');
     ['cardFile','cardSeg','cardWave','cardAnnoCtl','cardTable','cardExport'].forEach(id=>$(id).classList.remove('hidden'));
+    $('cardBrand').classList.add('hidden');   // 作業が始まったら初期画面のブランドカードは隠す
     setWaveCompact(false);   // 検出するまではフル表示
     document.querySelectorAll('#saveBar button').forEach(b=>b.disabled=false);
     view={t0:0,t1:Math.min(15,env.dur)};
@@ -1637,6 +1713,32 @@ function syncStickyTop(){
 }
 syncStickyTop();
 window.addEventListener('resize',()=>{syncStickyTop();if(env){draw();drawOvw()}});
+// ロゴ文字ホバー: B/L/T の由来をメタル調の吹き出しで出す遊び
+(()=>{
+  const tip=document.createElement('div');tip.id='logoTip';tip.appendChild(document.createElement('b'));
+  document.body.appendChild(tip);
+  document.addEventListener('pointerover',e=>{
+    const path=e.target.closest&&e.target.closest('path[data-word]');
+    if(!path)return;
+    const r=path.getBoundingClientRect();
+    tip.firstChild.textContent=path.dataset.word;
+    tip.style.display='none';   // 再ホバーでポップアニメを毎回再生
+    void tip.offsetWidth;
+    tip.style.top=(r.bottom+10)+'px';
+    tip.style.display='block';
+    const hw=tip.offsetWidth/2;   // 画面端で見切れないようにクランプ
+    tip.style.left=Math.max(8+hw,Math.min(window.innerWidth-8-hw,r.left+r.width/2))+'px';
+  });
+  document.addEventListener('pointerout',e=>{
+    if(e.target.closest&&e.target.closest('path[data-word]'))tip.style.display='none';
+  });
+})();
+// ヘッダーⓘ：正式名称・引用情報のドロップダウン（絶対配置なので開閉してもレイアウトは動かない）
+$('brandToggle').addEventListener('click',e=>{e.stopPropagation();document.querySelector('header').classList.toggle('brandOpen')});
+document.addEventListener('click',e=>{
+  const h=document.querySelector('header');
+  if(h.classList.contains('brandOpen')&&!e.target.closest('#brandInfo'))h.classList.remove('brandOpen');
+});
 // 波形カラムの高さ・幅が変わったら（コンパイル切替・検出後のレイアウト変化など）再計算・再描画
 if(window.ResizeObserver){let lastW=0;new ResizeObserver(es=>{syncStickyTop();const w=Math.round(es[0].contentRect.width);if(w!==lastW){lastW=w;if(env){draw();drawOvw()}}}).observe($('waveCol'));}
 
@@ -1663,7 +1765,7 @@ $('pipMin').addEventListener('click',e=>{
 });
 
 /* ---------- 選択区間の操作 ---------- */
-function afterSelChange(){
+function afterSelChange(scroll){
   // 選択レコードが別ページにあれば自動でページを切り替える
   if(sel>=0){
     const p=Math.floor(sel/PAGE);
@@ -1677,7 +1779,7 @@ function afterSelChange(){
       if(rr.top<cr.top)cb.scrollTop+=rr.top-cr.top-4; else if(rr.bottom>cr.bottom)cb.scrollTop+=rr.bottom-cr.bottom+4;}
   });
   draw();updateInfo();
-  if(sel>=0)rowIntoView(sel);   // 選択レコードを上部固定の波形の下に出す（隠れ防止）
+  if(sel>=0&&scroll!==false)rowIntoView(sel);   // 選択レコードを上部固定の波形の下に出す（隠れ防止）
 }
 // 表から選択・再生したとき、波形の窓をその区間中心の20秒にする
 function focusSeg(i){
@@ -1924,10 +2026,10 @@ $('morphSrc').addEventListener('change',()=>{
 });
 refreshTierUI();
 
-// テクストを空白で単語に、- = + で形態素に分割（区切り記号は後続形態素の頭に付く）
+// テクストを空白で単語に、- = + で形態素に分割（境界記号は形態素に含めない。区切りの種類は text から morphDelims で復元する）
 function morphSplit(text){
   return String(text||'').trim().split(/\s+/).filter(Boolean)
-    .map(wd=>wd.split(/(?=[-=+])/).filter(Boolean));
+    .map(wd=>wd.split(/[-=+]/).filter(Boolean));
 }
 // 明示的な形態素（EAF取り込みなど）があればそれを使い、なければテキストから機械分割
 function hasExplicitMorphs(s){return Array.isArray(s.morphs)&&s.morphs.length>0}
@@ -1964,21 +2066,21 @@ function trimMorphData(s){
   if(tv)Object.keys(tv).forEach(k=>{if(Array.isArray(tv[k])&&tv[k].length>n)tv[k].length=n;});
 }
 function morphLineOf(s){
-  if(hasExplicitMorphs(s))return s.morphs.join('-');
-  return morphSplit(morphSrcText(s)).map(w=>w.join('')).join(' ');
+  const ms=flatMorphs(s); if(!ms.length)return '';
+  const before=morphDelims(s);   // 各形態素の直前の区切り（空白・-=+ など）を text から復元
+  return ms.map((m,i)=>(i?(before[i]||'-'):'')+m).join('');
 }
 // morph系の層を1行に合成（例: go-EP-PST）。明示形態素なら "-" 連結、機械分割なら区切り記号を踏襲
 function ilgLineOf(s,f){
-  if(hasExplicitMorphs(s)){
-    const arr=(s.tv||{})[f]||[];
-    return s.morphs.map((m,k)=>arr[k]||'').join('-');
-  }
-  let k=0;
-  return morphSplit(morphSrcText(s)).map(w=>w.map((m,j)=>{
-    const sep=/^[-=+]/.test(m)?m[0]:'-';
-    const v=(((s.tv||{})[f])||[])[k++]||'';
-    return (j?sep:'')+v;
-  }).join('')).join(' ');
+  const ms=flatMorphs(s); if(!ms.length)return '';
+  const arr=(s.tv||{})[f]||[];
+  const before=morphDelims(s);
+  return ms.map((m,i)=>{
+    if(i===0)return arr[0]||'';
+    const d=before[i]||'';
+    const sep=/\s/.test(d)?' ':((d.match(/[-=+]/)||['-'])[0]);   // 語境界は空白、語内は実際の区切り記号
+    return sep+(arr[i]||'');
+  }).join('');
 }
 function tierRowsOn(){return glossOn||segTiers().length>0}
 
@@ -2173,8 +2275,9 @@ function rowIntoView(i){
   // 上部固定の波形パネルの下端を求め、レコード行がその下に来るようにスクロール（隠れ防止）
   const wc=$('waveCol'); const stickyBottom=wc?Math.max(0,wc.getBoundingClientRect().bottom):0;
   const r=tr.getBoundingClientRect(), margin=14;
+  const bottom=window.innerHeight-margin-palH();   // IPAパレット表示中はその上端までを可視域とする
   if(r.top<stickyBottom+margin) window.scrollBy(0, r.top-stickyBottom-margin);
-  else if(r.bottom>window.innerHeight-margin) window.scrollBy(0, r.bottom-(window.innerHeight-margin));
+  else if(r.bottom>bottom) window.scrollBy(0, r.bottom-bottom);
 }
 function updateRowTimes(i){
   const tr=$('tb').querySelector('tr[data-i="'+i+'"]:not(.glossrow)');
@@ -2185,20 +2288,21 @@ function updateRowTimes(i){
 $('tb').addEventListener('click',e=>{
   const tr=e.target.closest('tr');if(!tr)return;
   const i=+tr.dataset.i;if(isNaN(i))return;
-  if(e.target.classList.contains('play')){sel=i;afterSelChange();focusSeg(i);playSeg(i);return}
+  if(e.target.classList.contains('play')){sel=i;afterSelChange(false);focusSeg(i);playSeg(i);return}
   if(e.target.classList.contains('del')){
     const s=segs[i];
     if((s.text||s.note)&&!confirm('注釈が入っています。削除しますか？'))return;
     segs.splice(i,1);sel=-1;afterSegChange();return;
   }
-  if(sel!==i){sel=i;afterSelChange();focusSeg(i)}
+  if(sel!==i){sel=i;afterSelChange(false);focusSeg(i)}
 });
 // セル編集でフォーカスが別の行に移ったときも、選択と波形の窓を追従させる
+// （クリックで移った場合はセルはすでに見えているのでスクロールしない＝カーソル飛び防止。Enter移動などキー起因のときだけ追従スクロール）
 $('tb').addEventListener('focusin',e=>{
   const tr=e.target.closest('tr');if(!tr)return;
   const i=+tr.dataset.i;
   if(isNaN(i)||i===sel)return;
-  sel=i;afterSelChange();focusSeg(i);
+  sel=i;afterSelChange(performance.now()-lastPointerT>=400);focusSeg(i);
 });
 $('tb').addEventListener('focusout',e=>{
   // グロス・品詞セル
@@ -2213,7 +2317,9 @@ $('tb').addEventListener('focusout',e=>{
   if(tp){
     const gi2=+tp.closest('tr').dataset.i, gs2=segs[gi2];
     if(gs2){
-      gs2.tv=gs2.tv||{};gs2.tv[tp.dataset.t]=tp.textContent.replace(/\u00a0/g,' ').trim();
+      const nv2=tp.textContent.replace(/\u00a0/g,' ').trim();
+      if(((gs2.tv&&gs2.tv[tp.dataset.t])||'')===nv2)return;   // 変更なしなら何もしない（行の差し替えでクリック先のセルが消え、カーソルが飛ぶのを防ぐ）
+      gs2.tv=gs2.tv||{};gs2.tv[tp.dataset.t]=nv2;
       // morph\u306e\u5206\u5272\u5143\u304c\u5909\u308f\u3063\u305f\u3089\u5f62\u614b\u7d20\u5206\u5272\u3092\u3084\u308a\u76f4\u3059
       if(glossOn&&tp.dataset.t===morphSrc){
         trimMorphData(gs2);   // 分割元の層を削った分、紐づく形態素・gloss等も削除
@@ -2247,6 +2353,7 @@ $('tb').addEventListener('focusout',e=>{
     }
     td.textContent=s.spk;
   }else{
+    if((s[k]||'')===v)return;   // 変更なしなら再分割・再描画しない（クリック先のセルが差し替えられてカーソルが飛ぶのを防ぐ）
     s[k]=v;
     // テクストが変わったら、行き場のない形態素・glossなどを削除してから形態素分割をやり直してグロス行を更新
     if(k==='text'){
@@ -2318,7 +2425,7 @@ let palHideTimer=null;
   const apply=px=>{
     const w=Math.max(320,Math.min(window.innerWidth,px));
     card.style.setProperty('--palw',w+'px');
-    if(card.classList.contains('show'))document.body.style.paddingBottom=(card.offsetHeight+14)+'px';
+    reservePalSpace();
   };
   handle.addEventListener('pointerdown',e=>{drag=true;handle.setPointerCapture(e.pointerId);e.preventDefault()});
   window.addEventListener('pointermove',e=>{if(drag)apply(window.innerWidth-e.clientX)});
@@ -2328,20 +2435,31 @@ let palHideTimer=null;
     if(w>=window.innerWidth-4)localStorage.removeItem('palw');else localStorage.setItem('palw',Math.round(w));
   });
 })();
+// パレットの高さぶんの余白を常時確保しておく（開閉のたびに文書の高さが変わるとスクロール位置が飛ぶため）
+function reservePalSpace(){document.body.style.paddingBottom=($('paletteCard').offsetHeight+14)+'px'}
+function palH(){const pc=$('paletteCard');return pc&&pc.classList.contains('show')?pc.offsetHeight:0}
+reservePalSpace();
+window.addEventListener('resize',reservePalSpace);
 function showPalette(){
   clearTimeout(palHideTimer);
   $('paletteCard').classList.add('show');
-  document.body.style.paddingBottom=($('paletteCard').offsetHeight+14)+'px';
 }
 function hidePalette(){
   $('paletteCard').classList.remove('show');
-  document.body.style.paddingBottom='';
 }
 document.addEventListener('focusin',e=>{
   const cell=e.target.closest&&e.target.closest('#tb [contenteditable]');
   if(cell&&cell.matches(IPA_CELLS)){
     showPalette();
-    setTimeout(()=>{try{cell.scrollIntoView({block:'nearest'})}catch(_){}} ,60);
+    // パレットや上部固定の波形に隠れるときだけ、必要最小限だけスクロールする
+    setTimeout(()=>{try{
+      const r=cell.getBoundingClientRect();
+      const wc=$('waveCol');
+      const top=(wc?Math.max(0,wc.getBoundingClientRect().bottom):0)+8;
+      const bottom=window.innerHeight-palH()-10;
+      if(r.bottom>bottom)window.scrollBy(0,r.bottom-bottom);
+      else if(r.top<top)window.scrollBy(0,r.top-top);
+    }catch(_){}} ,60);
   }
 });
 document.addEventListener('focusout',()=>{

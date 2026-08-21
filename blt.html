@@ -2590,6 +2590,9 @@ function tierRowsOn(){return glossOn||segTiers().length>0}
 const hasBdr=()=>tiersDef.some(t=>t.name==='bdr');
 const hasWbdr=()=>tiersDef.some(t=>t.name==='wbdr');
 const isEosMorph=m=>EOS_RE.test(String(m||''));
+// 表示・検索用の形態素形：語頭の区切り記号（- = +）と語末の文末記号（. 。 ! ? …）を除いた形。
+// 内部のEOS判定（bdr自動コーディング・文数）は生の形（isEosMorph）を使い続ける
+const dispMorph=m=>{const c=String(m==null?'':m).replace(SEP_LEAD_G,'').replace(EOS_TRIM,'');return c||String(m==null?'':m);};
 // 各形態素の直前にあった区切り文字列（テキストに対して flatMorphs を整列して復元）
 function morphDelims(s){
   const ms=flatMorphs(s).map(m=>String(m).replace(SEP_LEAD_G,''));   // 機械分割の頭の区切りは外す
@@ -2717,7 +2720,7 @@ function glossRowHtml(s,i){
     let k=0;
     const cols=words.map(ws=>'<div class="ilg-word">'+ws.map(m=>{
       const mi=k++;
-      return '<div class="ilg-col"><div class="ilg-m">'+escHtml(m)+'</div>'
+      return '<div class="ilg-col"><div class="ilg-m">'+escHtml(dispMorph(m))+'</div>'
         +mts.map(t=>{const ro=(t.name==='bdr'||t.name==='wbdr');
           return '<div class="ilg-g'+(ro?' ro':'')+'"'+(ro?'':' contenteditable="true"')+' data-f="'+escHtml(t.name)+'" data-mi="'+mi+'" title="'+escHtml(t.name)+(ro?'（自動コーディング）':'')+'">'+escHtml(((tv[t.name])||[])[mi]||'')+'</div>';}).join('')
         +'</div>';
@@ -3698,7 +3701,7 @@ function srchSegVal(s,layer){
   if(layer==='spk')return s.spk||''; if(layer==='id')return s.id||'';
   return String((s.tv||{})[layer]||'');
 }
-function srchMorphVals(s,layer){const ms=flatMorphs(s); if(layer==='morph')return ms.slice(); const a=(s.tv||{})[layer]||[]; return ms.map((_,i)=>a[i]||'');}
+function srchMorphVals(s,layer){const ms=flatMorphs(s); if(layer==='morph')return ms.map(dispMorph); const a=(s.tv||{})[layer]||[]; return ms.map((_,i)=>a[i]||'');}   // morph層は表示形（区切り記号・文末記号なし）でマッチ
 function srchMatch(val,op,q){
   val=String(val==null?'':val);
   if(op==='nonempty')return val.trim()!=='';
@@ -3784,7 +3787,7 @@ function renderSearchResults(unit,res,msg){
   const rows=res.map(r=>{
     const s=segs[r.si];
     if(unit==='morph'){
-      const ms=flatMorphs(s).map(m=>String(m||'').replace(SEP_LEAD,''));
+      const ms=flatMorphs(s).map(dispMorph);
       const left=ms.slice(0,r.mi).join(' '), key=ms[r.mi]||'', right=ms.slice(r.mi+1).join(' ');
       const sub=morphTiers().map(t=>{const v=((s.tv||{})[t.name]||[])[r.mi]||'';return v?(t.name+'='+v):'';}).filter(Boolean).join(' / ');
       return kwicRow(r.si,s.id,srchNeighbor(r.si,-1,'__text'),left,key,right,srchNeighbor(r.si,1,'__text'),sub,r.mi);
@@ -3792,7 +3795,7 @@ function renderSearchResults(unit,res,msg){
     // record単位：ハイライト可能な最初の条件を主役に
     const c=conds.find(c=>['contains','exact','regex'].includes(c.op)&&c.q!=='');
     if(c&&c.level==='morph'){
-      const ms=flatMorphs(s).map(m=>String(m||'').replace(SEP_LEAD,'')), vals=srchMorphVals(s,c.layer);
+      const ms=flatMorphs(s).map(dispMorph), vals=srchMorphVals(s,c.layer);
       let idx=vals.findIndex(v=>srchMatch(v,c.op,c.q));
       const left=idx>=0?ms.slice(0,idx).join(' '):ms.join(' '), key=idx>=0?ms[idx]:'', right=idx>=0?ms.slice(idx+1).join(' '):'';
       const sub=idx>=0?(c.layer+'='+(vals[idx]||'')):'';

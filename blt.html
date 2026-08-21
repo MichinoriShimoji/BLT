@@ -240,6 +240,11 @@ code{background:var(--accent-soft);padding:1px 5px;border-radius:4px;font-size:1
 #paletteCard.show{transform:none}
 /* IPAパレットの見出しバー（最小化トグル）。最小化時は本体を隠して薄いバーだけ残す */
 #palHead{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+/* よく使うIPAの帯：見出しバー内に常駐（最小化しても引っ込まない） */
+#palFav{display:flex;align-items:center;gap:2px;flex-wrap:wrap;min-width:0}
+#palFav button{font-family:var(--ipa);font-size:16px;line-height:1.2;padding:0 6px;min-width:26px;border-radius:4px;border:1px solid var(--line);background:var(--surface)}
+#palFav button:hover{background:var(--accent-soft);border-color:var(--accent)}
+#palFav button.comb{font-size:19px;padding:0 5px 2px}
 #palToggle{font-size:12px;padding:2px 12px;cursor:pointer;border:1px solid var(--accent);color:var(--accent);background:var(--surface);border-radius:14px;font-weight:600}
 #palToggle:hover{background:var(--accent);color:#fff}
 #paletteCard.min{padding-top:6px;padding-bottom:6px}
@@ -648,6 +653,7 @@ html[data-theme="dark"] code{color:var(--accent-ink)}
   <div id="palResize" title="ドラッグでIPAパネルの幅を調節"></div>
   <div id="palHead">
     <span class="note" id="palHeadLabel" style="font-size:11.5px;font-weight:600">IPA入力パレット</span>
+    <span id="palFav" title="よく使う記号（使うほど自動で並びます）。最小化中もここから挿入できます"></span>
     <span style="flex:1"></span>
     <button type="button" id="palToggle" title="IPAパレットを下に格納">↓ 最小化</button>
   </div>
@@ -2951,6 +2957,7 @@ function showPalette(){
   card.classList.add('show');
   card.classList.toggle('min',palMin);
   setPalToggleLabel();
+  renderPalFav();   // よく使う帯を最新の頻度順に（入力中の並び替えを避け、表示時にだけ更新）
   reservePalSpace();   // 最小化状態で高さが変わるので確保し直す
   const fb=$('fbOpen'); if(fb)fb.style.display='none';   // フィードバックFABが「↑ 開く」等に被らないよう、パレット表示中は隠す
 }
@@ -2991,13 +2998,37 @@ document.addEventListener('focusout',()=>{
     if(!(still&&still.matches&&still.matches(IPA_CELLS)))hidePalette();
   },150);
 });
+// IPA記号を現在の編集位置に挿入（パレット本体・よく使う帯の共通処理）
+function insertIpaChar(ch){
+  const s=document.getSelection(), node=s.anchorNode;
+  const el=node&&(node.nodeType===1?node:node.parentElement);
+  if(!el||!el.closest('[contenteditable]')){alert('先に挿入先のセル（text欄など）をクリックしてください');return false}
+  document.execCommand('insertText',false,ch);
+  return true;
+}
+/* ---- よく使うIPAの帯：使用回数を記憶し、見出しバーに常駐表示（最小化でも残る） ---- */
+let palFreq={}; try{palFreq=JSON.parse(localStorage.getItem('pal_freq')||'{}')||{};}catch(e){palFreq={};}
+function bumpPalFreq(ch){
+  palFreq[ch]=(palFreq[ch]||0)+1;
+  try{localStorage.setItem('pal_freq',JSON.stringify(palFreq));}catch(e){}
+}
+const PAL_FAV_N=14;   // 帯に出す最大数
+function renderPalFav(){
+  const wrap=$('palFav'); if(!wrap)return;
+  const top=Object.entries(palFreq).filter(([,n])=>n>0).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0])).slice(0,PAL_FAV_N);
+  wrap.innerHTML=top.map(([ch])=>'<button type="button"'+(isComb(ch)?' class="comb"':'')+' data-ch="'+escHtml(ch)+'" title="'+escHtml(ch)+' を挿入">'+(isComb(ch)?'◌'+ch:ch)+'</button>').join('');
+}
+$('palFav').addEventListener('mousedown',e=>{if(e.target.hasAttribute('data-ch'))e.preventDefault()});   // フォーカス保持
+$('palFav').addEventListener('click',e=>{
+  if(!e.target.hasAttribute('data-ch'))return;
+  const ch=e.target.getAttribute('data-ch');
+  if(insertIpaChar(ch))bumpPalFreq(ch);   // 帯からの挿入も回数に加算（並びの更新は次回表示時）
+});
 $('palette').addEventListener('mousedown',e=>{if(e.target.hasAttribute('data-ch'))e.preventDefault()});
 $('palette').addEventListener('click',e=>{
   if(!e.target.hasAttribute('data-ch'))return;
-  const s=document.getSelection(), node=s.anchorNode;
-  const el=node&&(node.nodeType===1?node:node.parentElement);
-  if(!el||!el.closest('[contenteditable]')){alert('先に挿入先のセル（text欄など）をクリックしてください');return}
-  document.execCommand('insertText',false,e.target.getAttribute('data-ch'));
+  const ch=e.target.getAttribute('data-ch');
+  if(insertIpaChar(ch))bumpPalFreq(ch);
 });
 // 編集中のセルが属する区間の番号（無ければ選択中の区間）
 function rowSegIndex(el){

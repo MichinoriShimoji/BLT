@@ -29,17 +29,6 @@ header button.primary:hover{background:linear-gradient(180deg,#e32433,#a01019)}
 /* ヘッダーは常時コンパクト。正式名称・引用はⓘの絶対配置ドロップダウンで表示（開閉してもレイアウトが動かない） */
 #brand{display:flex;align-items:center;gap:9px;flex:0 1 auto;min-width:0;position:relative}
 #brand .logo{display:flex;align-items:center;padding-right:12px;border-right:2px solid var(--steel)}
-path[data-word]{cursor:pointer}
-path[data-word]:hover{fill:url(#logoChromeHot)}
-/* ロゴ文字ホバーの吹き出し（Browser! Lightweight! Toolkit!） */
-#logoTip{position:fixed;z-index:120;pointer-events:none;display:none;transform:translateX(-50%) skewX(-6deg);
-  background:linear-gradient(180deg,#3a3d44,#101114);border:1px solid #5a5f68;border-bottom:2px solid var(--accent);
-  border-radius:8px;padding:5px 14px 6px;box-shadow:0 4px 14px rgba(0,0,0,.5),0 0 12px rgba(210,27,42,.4);
-  font-family:Impact,"Arial Black",sans-serif;font-style:italic;font-size:20px;letter-spacing:.05em;white-space:nowrap;
-  animation:logoTipPop .14s ease-out}
-#logoTip b{font-weight:400;background:linear-gradient(180deg,#ffffff 0%,#cdd6e4 30%,#7e8aa0 47%,#171a22 50%,#dfe6f2 54%,#f6f8fc 75%,#5c6575 100%);
-  -webkit-background-clip:text;background-clip:text;color:transparent}
-@keyframes logoTipPop{from{opacity:0;margin-top:-5px}to{opacity:1;margin-top:0}}
 #brand .logo svg{height:32px;width:auto;filter:drop-shadow(0 2px 0 rgba(0,0,0,.85)) drop-shadow(0 0 9px rgba(210,27,42,.6))}
 #brandToggle{flex:none;width:22px;height:22px;padding:0;border:1px solid var(--steel);border-radius:50%;background:#2a2c31;color:#aeb4bf;font-size:12px;line-height:1;cursor:pointer}
 #brandToggle:hover{border-color:#e2404d;color:#fff;background:#3a3d44}
@@ -2086,26 +2075,6 @@ function syncStickyTop(){
 }
 syncStickyTop();
 window.addEventListener('resize',()=>{syncStickyTop();if(env){draw();drawOvw()}});
-// ロゴ文字ホバー: B/L/T の由来をメタル調の吹き出しで出す遊び
-(()=>{
-  const tip=document.createElement('div');tip.id='logoTip';tip.appendChild(document.createElement('b'));
-  document.body.appendChild(tip);
-  document.addEventListener('pointerover',e=>{
-    const path=e.target.closest&&e.target.closest('path[data-word]');
-    if(!path)return;
-    const r=path.getBoundingClientRect();
-    tip.firstChild.textContent=path.dataset.word;
-    tip.style.display='none';   // 再ホバーでポップアニメを毎回再生
-    void tip.offsetWidth;
-    tip.style.top=(r.bottom+10)+'px';
-    tip.style.display='block';
-    const hw=tip.offsetWidth/2;   // 画面端で見切れないようにクランプ
-    tip.style.left=Math.max(8+hw,Math.min(window.innerWidth-8-hw,r.left+r.width/2))+'px';
-  });
-  document.addEventListener('pointerout',e=>{
-    if(e.target.closest&&e.target.closest('path[data-word]'))tip.style.display='none';
-  });
-})();
 // ヘッダーⓘ：正式名称・引用情報のドロップダウン（絶対配置なので開閉してもレイアウトは動かない）
 $('brandToggle').addEventListener('click',e=>{e.stopPropagation();document.querySelector('header').classList.toggle('brandOpen')});
 document.addEventListener('click',e=>{
@@ -2345,10 +2314,11 @@ function applyMorphSeps(str){
 }
 // 文境界(bdr)の文末記号（ユーザー設定可。この記号で終わる形態素を EOS と判定）
 let bdrSeps=['.','。','!','?','！','？'];
-let EOS_RE;
+let EOS_RE,EOS_TRIM;
 function rebuildBdrRe(){
   const cls=(bdrSeps.map(c=>c.replace(/[\\\]\^\-]/g,'\\$&')).join(''))||'\\.';
   EOS_RE=new RegExp('['+cls+']$');
+  EOS_TRIM=new RegExp('['+cls+']+$');   // 辞書見出し用：語末の文末記号を除去（ca. → ca）
 }
 rebuildBdrRe();
 function applyBdrSeps(str){
@@ -3545,7 +3515,8 @@ function morphInfo(s){
     let d='';
     const pre=String(m).match(SEP_HEAD_CAP);
     if(pre)d=pre[1]; else {const b=before[i]||''; const mm=b.match(SEP_TRAIL); d=mm?mm[1]:''}
-    return {form:m, head:String(m).replace(SEP_LEAD_G,''), type:d==='='?'clitic':d==='-'?'affix':'root',
+    // head＝辞書見出し：語頭の分割記号（- = +）と語末の文末記号（. 。 ! ? など）を除いた形（例: "=ca." → "ca"）
+    return {form:m, head:String(m).replace(SEP_LEAD_G,'').replace(EOS_TRIM,''), type:d==='='?'clitic':d==='-'?'affix':'root',
       gloss:gl[i]||'', pos:po[i]||'', i};
   });
 }

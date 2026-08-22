@@ -508,6 +508,9 @@ html[data-theme="dark"] code{color:var(--accent-ink)}
     <button type="button" id="hdrTsv" disabled>TSV</button>
     <button type="button" id="hdrJson" disabled>JSON</button>
     <button type="button" id="hdrZip" disabled>WAV ZIP</button>
+    <button type="button" id="hdrGb4e" disabled title="LaTeX gb4e 形式のインターリニアグロス（\usepackage{gb4e} が必要）">LaTeX</button>
+    <button type="button" id="hdrWord" disabled title="MS Word（.docx）。タブ整列のインターリニアグロス＋略語リスト">Word</button>
+    <label class="lbl" style="display:inline-flex;align-items:center;gap:4px;cursor:pointer" title="gloss の大文字略語を小型大文字にします（Word・gb4e）"><input type="checkbox" id="hdrSmallCaps" checked> 小型大文字</label>
     <button type="button" id="hdrProj" class="primary" disabled>プロジェクト途中保存</button>
   </div>
   <div id="tabbar">
@@ -608,7 +611,7 @@ html[data-theme="dark"] code{color:var(--accent-ink)}
 <div id="workArea">
 <div id="waveCol">
 <div class="card hidden" id="cardWave">
-  <h2><span class="steplabel">3</span>波形（区切りの確認・修正）<button type="button" class="helpbtn" data-help="helpWave" data-title="波形の操作方法">?</button><span class="waveminhint">▶ クリックで波形をひらく</span><span class="pipbtns"><button type="button" id="btnWaveSize" title="波形を大きく／小さく">⤢ 大きく</button><button type="button" id="pipMin" title="最小化／復元">－</button></span></h2>
+  <h2><span class="steplabel">3</span>波形（区切りの確認・修正）<button type="button" class="helpbtn" data-help="helpWave" data-title="波形の操作方法">?</button><span class="waveminhint">▶ クリックで波形をひらく</span><span class="pipbtns"><button type="button" id="btnWaveSize" title="波形を折りたたむ（見出しだけ残す）">－ 折りたたむ</button></span></h2>
   <div class="helpsrc" id="helpWave">
     <div class="note"><b>話者（オーバーラップ対応）：</b>「＋話者」で話者を追加し、チップで選んだ話者が「アクティブ話者」になります。新しく作る区間はアクティブ話者のものになり、<b>別話者どうしの区間は時刻が重なってもOK</b>です（同じ話者内の重なりは不可）。波形下部に話者ごとのレーンが並び、各レコードは自分の話者のレーンに表示されます。レーンのブロックをクリックするとその話者・レコードが選べます。spk列でも話者を変更できます。<br><br><b>複数チャンネル（マイク別録音）：</b>パネル1の「🎙 複数チャンネル」から話者ごとのWAVを読み込むと、話者ごとに専用の波形が縦に並びます（すべて同時スタートの前提）。各波形バンド内をドラッグして区間を作る・端を動かすと、その話者の区間になります。「自動検出を実行」は各話者を自分のチャンネルで検出するため、他の話者の声（クロストーク）が混ざりません。再生・切り出しもその話者のチャンネルから行います。EAFは話者ごとに <code>text@話者</code> などのレイヤー（PARTICIPANT付き）に分けて書き出すので、ELANで重複発話が正しく開けます。<br><br><b>赤い帯</b>＝どの区間にも入っていない有音（取りこぼし候補）。◀ ▶で候補へジャンプすると仮選択になるので、「確認再生」で聞いて<b>「✓ 区間に追加」でレコード化</b>（Enterでも可）、対象外なら<b>「無視」で件数から除外</b>できます（無視はプロジェクト保存に記録されます）。<br><br><b>区間をクリック＝その区間を再生</b>。<b>区間をダブルクリック＝編集</b>（その行の text 欄にカーソルが入ります）。<br>何もない所をクリック＝再生カーソルを置く（<b>Space＝カーソルから再生／一時停止</b>）<br>何もない所をドラッグ＝範囲を選択 → <b>Enterで区間として確定</b>（Escで取消。確定前も端の調整や▶試聴ができます）<br>区間の端をドラッグ＝境界の移動（選択中はオレンジのつまみ）<br><b>Alt＋ダブルクリック＝区間を分割</b><br>横スクロール（またはShift＋ホイール）＝横移動、縦ホイール＝ズーム<br><br>下のボタン：<b>◀ 前の区間／次の区間 ▶</b>で区間を順に再生、<b>選択を再生／カーソルから／停止</b>で再生操作、<b>🗑 選択を削除</b>は区間の指定と注釈を削除するだけで音声データは変更されません。</div>
   </div>
@@ -974,7 +977,7 @@ function onWavLoaded(){
     $('flowMsg').innerHTML='✓ 音声を読み込みました。下の <b>パネル2「自動検出を実行」</b>で発話区間に分割します。';
     try{$('cardSeg').scrollIntoView({block:'center',behavior:'smooth'});}catch(_){}   // 読み込んだらそのまま区間づくりへ
   }
-  showPalette();   // IPAパレットは常設：作業開始とともに表示し、以降は自動で引っ込まない
+  // IPAパレットは自動では出さない（「特殊記号の入力補助」カードから明示的に開く）
 }
 $('btnStartNew').addEventListener('click',()=>setStartMode('new'));
 $('btnStartResume').addEventListener('click',()=>setStartMode('resume'));
@@ -1217,9 +1220,8 @@ async function loadFile(f){
     $('player').src=URL.createObjectURL(f);
     $('wavName').textContent=f.name+'　'+wavInfo.rate+' Hz / '+wavInfo.bits+' bit / '+wavInfo.ch+'ch / '+env.dur.toFixed(1)+' 秒';
     $('wavName').classList.add('ok');
-    ['cardFile','cardSeg','cardWave','cardAnnoCtl','cardTable','cardSymHelp','cardExport'].forEach(id=>$(id).classList.remove('hidden'));
+    ['cardFile','cardSeg','cardWave','cardAnnoCtl','cardTable','cardSymHelp'].forEach(id=>$(id).classList.remove('hidden'));   // cardExport はヘッダーの保存ボタン群に集約したので出さない
     $('cardBrand').classList.add('hidden');   // 作業が始まったら初期画面のブランドカードは隠す
-    setWaveCompact(false);   // 検出するまではフル表示
     document.querySelectorAll('#saveBar button').forEach(b=>b.disabled=false);
     view={t0:0,t1:Math.min(15,env.dur)};
     speakers=['A'];activeSpk='A';renderSpkBar();
@@ -1263,8 +1265,7 @@ async function loadFiles(fileList){
     applyWaveHeight();
     $('wavName').textContent=files.length+'チャンネル：'+tracks.map(t=>t.spk+'='+t.name).join(' / ')+'　'+env.dur.toFixed(1)+' 秒';
     $('wavName').classList.add('ok');
-    ['cardFile','cardSeg','cardWave','cardAnnoCtl','cardTable','cardSymHelp','cardExport'].forEach(id=>$(id).classList.remove('hidden'));
-    setWaveCompact(false);
+    ['cardFile','cardSeg','cardWave','cardAnnoCtl','cardTable','cardSymHelp'].forEach(id=>$(id).classList.remove('hidden'));   // cardExport はヘッダーの保存ボタン群に集約したので出さない
     document.querySelectorAll('#saveBar button').forEach(b=>b.disabled=false);
     view={t0:0,t1:Math.min(15,env.dur)};
     renderSpkBar();
@@ -1471,16 +1472,8 @@ $('btnDetectView').addEventListener('click',()=>{
   if(!env)return;
   applyDetect(Math.max(0,view.t0),Math.min(env.dur,view.t1));
 });
-// パネル3のコンパクト表示（自動取り込み後に縮小。トグルで拡大も可）
-function setWaveCompact(on){
-  $('waveCol').classList.toggle('compact3',on);
-  $('btnWaveSize').textContent=on?'⤢ 大きく':'⤡ 小さく';
-  applyWaveHeight();
-  if(env){draw();drawOvw()}
-}
-$('btnWaveSize').addEventListener('click',()=>setWaveCompact(!$('waveCol').classList.contains('compact3')));
 // パネル1・2（セットアップ）の表示／非表示。作業を始めたら隠してクリーンに、やり直しボタンで再表示
-function hideSetup(){$('cardFile').classList.add('hidden');$('cardSeg').classList.add('hidden');setWaveCompact(true)}
+function hideSetup(){$('cardFile').classList.add('hidden');$('cardSeg').classList.add('hidden')}   // 波形は畳まない（折りたたみは手動のみ）
 function showSetup(){
   $('cardFile').classList.remove('hidden');$('cardSeg').classList.remove('hidden');
   $('cardSeg').scrollIntoView({block:'center',behavior:'smooth'});
@@ -1489,8 +1482,6 @@ $('btnRedetect').addEventListener('click',showSetup);
 // 特殊記号入力補助：パレットを開いて、⚙ショートカット設定 or 通常挿入モードへ
 function openPaletteMax(){
   showPalette();
-  if(palMin){palMin=false;try{localStorage.setItem('pal_min','0');}catch(e){}$('paletteCard').classList.remove('min');setPalToggleLabel();}
-  reservePalSpace();
   const pc=$('paletteCard');pc.classList.remove('attn');void pc.offsetWidth;pc.classList.add('attn');   // 目線誘導に一瞬ハイライト
 }
 $('btnSymKeys').addEventListener('click',()=>{if(palEditing)setPalEditing(false);openPaletteMax();if(!palKeyMode)setPalKeyMode(true);});
@@ -2223,31 +2214,22 @@ document.addEventListener('click',e=>{
   if(e.target.id==='helpModal'||e.target.id==='helpClose')$('helpModal').classList.remove('show');
 });
 
-/* ---------- 波形ワイプ（PiP）の移動・最小化 ＋ 集中モード ---------- */
+/* ---------- 波形（パネル3）の折りたたみ：明示的な操作のみ（自動では畳まない） ---------- */
 function setWaveMin(on){
   const col=$('waveCol');
   col.classList.toggle('min', on);
-  const b=$('pipMin'); b.textContent=on?'＋':'－'; b.title=on?'波形をひらく':'波形を最小化';
+  const b=$('btnWaveSize'); if(b){b.textContent=on?'＋ 波形をひらく':'－ 折りたたむ'; b.title=on?'波形をひらく':'波形を折りたたむ（見出しだけ残す）';}
   syncStickyTop();
   if(!on&&env){draw();drawOvw();}
 }
-let waveAutoMin=true;   // 編集を始めたら波形を自動で最小化するか（手動でひらいたら止める）
-$('pipMin').addEventListener('click',e=>{
+$('btnWaveSize').addEventListener('click',e=>{
   e.stopPropagation();
-  const willMin=!$('waveCol').classList.contains('min');
-  waveAutoMin=willMin;          // 手動でひらいたら自動最小化を止め、手動でたたんだら再開
-  setWaveMin(willMin);
-});
-// 集中モード：パネル4の表でセルを編集し始めたら波形（パネル3）を最小化して表を広く使う
-$('cardTable').addEventListener('focusin',e=>{
-  if(!env||!waveAutoMin)return;
-  const t=e.target;
-  if(t&&(t.isContentEditable||t.closest('#tb'))) setWaveMin(true);
+  setWaveMin(!$('waveCol').classList.contains('min'));
 });
 // 最小化中に見出しバーをクリックしたら波形を復元（？やボタンは各自の動作）
 $('cardWave').querySelector('h2').addEventListener('click',e=>{
   if(e.target.closest('.pipbtns, .helpbtn'))return;
-  if($('waveCol').classList.contains('min')){ waveAutoMin=false; setWaveMin(false); }
+  if($('waveCol').classList.contains('min')) setWaveMin(false);
 });
 
 /* ---------- 選択区間の操作 ---------- */
@@ -3143,7 +3125,7 @@ function setPalKeyMode(on){
   if(on){
     if(lbl.__norm==null)lbl.__norm=lbl.textContent;
     lbl.textContent='ショートカットの設定中';lbl.style.color='var(--accent)';
-    if(palMin){palMin=false;try{localStorage.setItem('pal_min','0');}catch(e){}$('paletteCard').classList.remove('min');setPalToggleLabel();}
+    showPalette();
   }
   else{if(lbl.__norm!=null){lbl.textContent=lbl.__norm;lbl.__norm=null;}lbl.style.color='';}
   renderPalette(); renderPalFav(); renderKeyPanel(); reservePalSpace();
@@ -3275,7 +3257,6 @@ function palH(){const pc=$('paletteCard');return pc&&pc.classList.contains('show
 reservePalSpace();
 window.addEventListener('resize',reservePalSpace);
 // IPAパレットの最小化（下に格納）状態。↑↓ボタンで切替、設定は保持
-let palMin=false; try{palMin=localStorage.getItem('pal_min')==='1';}catch(e){}
 /* プロジェクト（.json）に保存されたパレット構成を復元する。
    再開時は「もう記号は決まっている」状態なので、パレットは畳んで置いておく（↑開くでいつでも出せる） */
 function applyProjPalette(pal){
@@ -3286,34 +3267,31 @@ function applyProjPalette(pal){
     if(pal.keys&&typeof pal.keys==='object'){palKeysMap=pal.keys;savePalKeys();}
     renderPalette();
   }
-  palMin=true; try{localStorage.setItem('pal_min','1');}catch(e){}   // 畳んだ状態で待機
-  showPalette();   // 見出しバー（↑開く・よく使う帯）は出しておく
-  if(typeof updatePalSetupCount==='function')updatePalSetupCount();
+  // パレット自体は出さない（構成だけ復元。「特殊記号の入力補助」カードから開ける）
 }
 function setPalToggleLabel(){
   const b=$('palToggle');if(!b)return;
-  b.textContent=palMin?'↑ 開く':'↓ 最小化';
-  b.title=palMin?'IPAパレットを開く（最大化）':'IPAパレットを下に格納（最小化）';
+  b.textContent='✕ 閉じる';
+  b.title='IPAパレットをしまう（「特殊記号の入力補助」からいつでも開けます）';
 }
-function applyPalPadding(){reservePalSpace()}
-// パレットは常設：一度表示したらフォーカス移動では引っ込まない（↓最小化だけが手動でたためる）
+// パレットは普段は隠しておき、明示的に開いたときだけ表示する
 function showPalette(){
   const card=$('paletteCard');
   card.classList.add('show');
-  card.classList.toggle('min',palMin);
+  card.classList.remove('min');
   setPalToggleLabel();
   renderPalFav();   // よく使う帯を最新の頻度順に
-  reservePalSpace();   // 最小化状態で高さが変わるので確保し直す（FAB位置も追従）
+  reservePalSpace();
+  drawPalWave();
+}
+function hidePalette(){
+  if(typeof palKeyMode!=='undefined'&&palKeyMode)setPalKeyMode(false);   // 設定モードのまま隠さない
+  if(typeof palEditing!=='undefined'&&palEditing)setPalEditing(false);
+  $('paletteCard').classList.remove('show');
+  reservePalSpace();
 }
 $('palToggle').addEventListener('mousedown',e=>e.preventDefault());   // フォーカス（入力位置）を奪わない
-$('palToggle').addEventListener('click',()=>{
-  palMin=!palMin;
-  try{localStorage.setItem('pal_min',palMin?'1':'0');}catch(e){}
-  $('paletteCard').classList.toggle('min',palMin);
-  setPalToggleLabel();
-  applyPalPadding();
-  if(!palMin)drawPalWave();   // 開いたらスクラバーを描き直す
-});
+$('palToggle').addEventListener('click',hidePalette);
 // セル編集開始時：パレットは常設なので開閉せず、区間スクラバーの更新と「隠れないための最小スクロール」だけ行う
 document.addEventListener('focusin',e=>{
   const cell=e.target.closest&&e.target.closest('#tb [contenteditable]');
@@ -3488,7 +3466,7 @@ function setPalEditing(on){
   const lbl=$('palHeadLabel');
   if(on){if(lbl.__norm==null)lbl.__norm=lbl.textContent;lbl.textContent='使う記号をクリックで選択（選んだものだけ表示。何も選ばなければ全表示）';lbl.style.color='var(--accent)';}
   else{if(lbl.__norm!=null)lbl.textContent=lbl.__norm;lbl.style.color='';}
-  if(on&&palMin){palMin=false;try{localStorage.setItem('pal_min','0');}catch(e){}$('paletteCard').classList.remove('min');setPalToggleLabel();}   // 選択は全体が見える状態で
+  if(on)showPalette();   // 選択は全体が見える状態で
   renderPalette();   // 選択モード＝全記号＋ハイライト／通常＝選択のみ
   renderPalFav();
   reservePalSpace();
@@ -3980,9 +3958,12 @@ $('dlProj').addEventListener('click',()=>{
   dl(baseName()+'_project.json',JSON.stringify(Object.assign({wavName:wavFile?wavFile.name:'',glossOn,morphSrc,morphSeps,bdrSeps,tiersDef,speakers,segs,ignoredMiss,lexicon,palette},multi),null,1),'application/json');
   markSaved();   // プロジェクト保存＝この状態を「保存済み」基準に
 });
-// ヘッダーの保存バー（書き出しカードと同じ処理を呼ぶ）
-[['hdrEaf','dlEaf'],['hdrTsv','dlTsv'],['hdrJson','dlJson'],['hdrZip','dlZip'],['hdrProj','dlProj']]
+// ヘッダーの保存バー（隠した書き出しカードと同じ処理を呼ぶ）
+[['hdrEaf','dlEaf'],['hdrTsv','dlTsv'],['hdrJson','dlJson'],['hdrZip','dlZip'],['hdrGb4e','dlGb4e'],['hdrWord','dlWord'],['hdrProj','dlProj']]
   .forEach(([a,b])=>$(a).addEventListener('click',()=>$(b).click()));
+// ヘッダーの小型大文字トグル＝隠しカード内 igtSmallCaps の代理（書き出し処理は igtSmallCaps を参照）
+$('hdrSmallCaps').checked=$('igtSmallCaps').checked;
+$('hdrSmallCaps').addEventListener('change',()=>{$('igtSmallCaps').checked=$('hdrSmallCaps').checked;});
 $('dlZip').addEventListener('click',async()=>{
   if(!wavInfo||!segs.length)return;
   const btn=$('dlZip');btn.disabled=true;btn.textContent='切り出し中…';
@@ -4472,7 +4453,7 @@ $('dlDict').addEventListener('click',async()=>{
 '層の「親」＝粒度を選ぶ':{t:'Pick the layer’s “parent” = granularity',b:'When adding, choose a <b>parent</b> — this sets the input granularity.<br>· <b>Segment</b> = one per segment (a layer like <i>trans</i>)<br>· <b>Morpheme</b> = per morpheme (a layer like <i>gloss · pos</i>)<br>pos was given the “morpheme” parent, so you fill it in per morpheme.'},
 '追加した層はチップで管理':{t:'Manage added layers with chips',b:'Added layers line up as <b>chips</b> here (the parent is shown too, e.g. “← morpheme”).<br>Remove any with <b>✕</b> whenever you no longer need it.'},
 'udl層：基底形の境界で morph 分割':{t:'udl layer: split morphs by underlying-form boundaries',b:'Add a <b>udl layer (underlying form)</b> and morphemes are split by <b>the boundaries in udl</b> rather than the <b>surface text</b>. Leave the surface text unsegmented and just write the boundaries in udl.<br>In the table below, <b>surface text <span style="background:var(--sel);color:#5a4200;border-radius:3px;padding:0 4px">midummasii</span></b> and <b>udl <span style="background:var(--sel);color:#5a4200;border-radius:3px;padding:0 4px">midum-as-i-i</span></b> are highlighted. Even when surface and underlying differ, morphs split exactly as written in udl.'},
-'⑤ 書き出し・保存':{t:'⑤ Export / save',b:'When you are done, export as <b>EAF / TSV / JSON / WAV ZIP</b>. <b>Save project</b> (.json) lets you resume later by loading the same WAV.'},
+'書き出し・保存（ヘッダー）':{t:'Export & save (header bar)',b:'Exporting lives in the <b>save bar at the top</b>: <b>EAF / TSV / JSON / WAV ZIP / LaTeX (gb4e) / Word (.docx)</b>. Your <b>palette setup (chosen symbols and shortcuts) is saved too</b> and restored on resume.<br><b>Save project</b> (.json) lets you continue after reloading the same WAV.'},
 '🔎 検索タブ：層で探す':{t:'🔎 Search tab: search by layer',b:'Now the <b>Search tab</b>. Add conditions on each <b>layer (text, gloss, morph, …)</b> to find segments or morphemes.<br>Choose from <b>“contains / matches / regex / is not empty.”</b><br><b>Here we searched “text contains dondon.”</b>'},
 '検索結果から注釈へジャンプ':{t:'Jump from a result to its annotation',b:'Results are listed as <b>KWIC (with surrounding context)</b>. Click a row’s link to <b>jump to that segment (back in the Annotate tab)</b>.<br>· Combine multiple conditions with <b>AND / OR</b>, and choose the <b>result unit (segment / morpheme)</b>.'},
 '📊 分析・辞書タブ：集計':{t:'📊 Analyze / Lexicon tab: statistics',b:'Now the <b>Analyze / Lexicon tab</b>. The <b>statistics</b> show counts of segments, words, morphemes, distinct morphemes and more at a glance.'},
@@ -4503,7 +4484,7 @@ $('dlDict').addEventListener('click',async()=>{
     {sel:'#newTierParent', title:'層の「親」＝粒度を選ぶ', body:'追加時に<b>親</b>を選びます—これが入力の粒度を決めます。<br>・<b>区間</b>＝1区間に1つ（<i>trans</i> のような層）<br>・<b>形態素</b>＝形態素ごと（<i>gloss・pos</i> のような層）<br>pos は「形態素」を親にしたので、形態素ごとに記入できます。', place:'bottom', needsAudio:true, hideWave:true, action:'demoAddLayer'},
     {sel:'#tierChips', title:'追加した層はチップで管理', body:'追加した層はこの<b>チップ</b>に並びます（「← 形態素」など親も表示）。<br>不要になったら <b>✕</b> でいつでも削除できます。', place:'bottom', needsAudio:true, hideWave:true, action:'demoAddLayer'},
     {sel:'#cardTable', title:'udl層：基底形の境界で morph 分割', body:'<b>udl層（基底形）</b>を加えると、morph は <b>表層の text</b> ではなく <b>udl の形態素境界</b>に従って分割されます。表層 text は区切らずそのまま、udl に境界を書くだけ。<br>下の表でも、<b>表層 text の <span style="background:var(--sel);color:#5a4200;border-radius:3px;padding:0 4px">midummasii</span></b> と、<b>udl の <span style="background:var(--sel);color:#5a4200;border-radius:3px;padding:0 4px">midum-as-i-i</span></b> をハイライトしています。表層と基底がずれていても、udl に書いた境界どおりに morph 分割されます。', place:'bottom', needsAudio:true, action:'demoUdl', hideWave:true, marks:[{sel:'#tb tr[data-i="0"] [data-k="text"]', find:'midummasii', tag:'表層 text', tagEn:'surface text'},{sel:'#tb tr.glossrow[data-i="0"] [data-t="udl"]', find:'midum-as-i-i', tag:'udl（基底形）', tagEn:'udl (underlying)'}]},
-    {sel:'#cardExport', title:'⑤ 書き出し・保存', body:'仕上がったら <b>EAF / TSV / JSON / WAV ZIP</b> で書き出し。<b>パレットの構成（選んだ記号・作った記号）も一緒に保存</b>され、再開時は復元されたうえで<b>パレットは畳んだ状態</b>で待機します（「↑ 開く」でいつでも出せます）。<br><b>プロジェクト途中保存</b>（.json）で、同じWAVを読み込めば続きから再開できます。', place:'top', needsAudio:true},
+    {sel:'#saveBar', title:'書き出し・保存（ヘッダー）', body:'書き出しはいつでも<b>画面上部の保存バー</b>から：<b>EAF / TSV / JSON / WAV ZIP / LaTeX（gb4e）/ Word（.docx）</b>。<b>パレットの構成（選んだ記号・ショートカット）も一緒に保存</b>され、再開時に復元されます。<br><b>プロジェクト途中保存</b>（.json）で、同じWAVを読み込めば続きから再開できます。', place:'bottom', needsAudio:true},
     {sel:'#srchConds', title:'🔎 検索タブ：層で探す', body:'ここからは<b>検索タブ</b>です。各<b>層（text・gloss・morph など）</b>に条件を付けて、区間や形態素を探せます。<br>「<b>を含む／に一致／正規表現／空でない</b>」から選べます。<br><b>いま『text に dondon を含む』で検索しました。</b>', place:'bottom', needsAudio:true, tab:'search', fill:'demoSearch'},
     {sel:'#srchResults', title:'検索結果から注釈へジャンプ', body:'結果は<b>KWIC（前後文脈付き）</b>で並びます。行のリンクを押すと<b>その区間へ（注釈タブに戻って）ジャンプ</b>します。<br>・複数条件を <b>AND／OR</b> で組み合わせ、<b>結果の単位（区間／形態素）</b>も選べます。', place:'top', needsAudio:true, tab:'search'},
     {sel:'#anStats', title:'📊 分析・辞書タブ：集計', body:'ここからは<b>分析・辞書タブ</b>。まず<b>集計</b>で、区間数・語数・形態素数・異なる形態素数などが一目でわかります。', place:'bottom', needsAudio:true, tab:'analysis'},
@@ -4564,7 +4545,6 @@ $('dlDict').addEventListener('click',async()=>{
   function demoCompose(){
     try{
       if(typeof showPalette==='function')showPalette();
-      if(typeof palMin!=='undefined'&&palMin&&typeof $!=='undefined'){ palMin=false; document.getElementById('paletteCard').classList.remove('min'); if(typeof setPalToggleLabel==='function')setPalToggleLabel(); if(typeof reservePalSpace==='function')reservePalSpace(); }
       var pcEl=document.getElementById('paletteCard'); if(pcEl){ pcEl.style.transition='none'; pcEl.style.transform='none'; }
       var b=document.querySelector('#paletteCard button[data-ch="\u030c"]');
       if(b){ b.style.outline='3px solid var(--sel,#f5b942)'; b.style.outlineOffset='2px'; b.style.borderRadius='4px';
@@ -4953,7 +4933,8 @@ $('dlDict').addEventListener('click',async()=>{
     "◀ 前の区間":"◀ Prev","▶ 選択を再生":"▶ Play selection","▶ カーソルから":"▶ From cursor","■ 停止":"■ Stop",
     "▶ この区間を再生":"▶ Play this segment","入力中も":"While typing,","で再生／停止できます":"plays / pauses",
     "この区間の波形：クリック＝そこから再生／ドラッグ＝範囲を再生（入力位置はそのまま）":"This segment’s waveform — click: play from there / drag: play a range (caret stays put)",
-    "IPA入力パレット":"IPA palette","↓ 最小化":"↓ Minimize","↑ 開く":"↑ Open",
+    "IPA入力パレット":"IPA palette","✕ 閉じる":"✕ Close","小型大文字":"small caps",
+    "－ 折りたたむ":"− Fold","＋ 波形をひらく":"+ Show waveform","↓ 最小化":"↓ Minimize","↑ 開く":"↑ Open",
     "✎ 記号を選ぶ":"✎ Choose symbols","リセット":"Reset",
     "使う記号をクリックで選択（選んだものだけ表示。何も選ばなければ全表示）":"Click the symbols you use (only those stay; none selected = all shown)",
     "選択をリセットして、すべての記号を表示します。よろしいですか？":"Reset the selection and show all symbols?",

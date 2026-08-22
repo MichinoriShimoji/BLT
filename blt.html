@@ -278,6 +278,30 @@ code{background:var(--accent-soft);padding:1px 5px;border-radius:4px;font-size:1
 #palKeys:hover{border-color:var(--warn);color:var(--warn)}
 #paletteCard.keymode #palKeys{border-color:var(--accent);color:#fff;background:var(--accent)}
 #paletteCard.keymode .pgroup button{outline:1px dashed var(--accent);outline-offset:1px}
+#paletteCard.keymode .pgroup button:hover{outline:2px solid var(--accent)}
+/* ショートカット設定パネル：記号→キー→登録の順を画面で示す */
+#palKeyPanel{border:1px solid var(--accent);background:var(--accent-soft);border-radius:8px;padding:9px 12px;margin:0 0 8px}
+#palKeyPanel .steps{font-size:11.5px;color:var(--accent-ink);margin-bottom:8px}
+#palKeyPanel .steps span{display:inline-block;margin-right:4px}
+#palKeyPanel .steps .cur{font-weight:700;text-decoration:underline}
+#palKeyPanel .fx{display:flex;align-items:center;gap:7px;flex-wrap:wrap;min-height:38px}
+#palKeyPanel .fx .sym{font-family:var(--ipa);font-size:24px;line-height:1.1;min-width:46px;text-align:center;background:var(--surface);border:2px solid var(--accent);border-radius:7px;padding:1px 10px}
+#palKeyPanel .fx .sym.empty{color:var(--muted);border-style:dashed;font-size:16px}
+#palKeyPanel .fx .eq{font-size:20px;font-weight:800;color:var(--accent-ink)}
+#palKeyPanel .fx .key{font-family:var(--mono);font-size:14px;font-weight:700;background:var(--surface);border:1px solid var(--line);border-bottom:2px solid var(--muted);border-radius:5px;padding:3px 10px}
+#palKeyPanel .fx .plus{color:var(--muted);font-weight:700}
+#palKeyPanel .fx .wait{font-size:12.5px;font-weight:700;color:var(--accent);animation:fxblink 1s steps(2,end) infinite}
+#palKeyPanel .fx .ok{font-size:12.5px;font-weight:700;color:var(--done)}
+#palKeyPanel .fx .hint{font-size:11.5px;color:var(--muted)}
+@keyframes fxblink{50%{opacity:.3}}
+#palKeyList{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+#palKeyList .kitem{display:inline-flex;align-items:center;gap:5px;font-size:12px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:1px 4px 1px 9px}
+#palKeyList .kitem .s{font-family:var(--ipa);font-size:15px}
+#palKeyList .kitem .k{font-family:var(--mono);font-size:11px;color:var(--muted)}
+#palKeyList .kitem button{border:none;background:none;color:var(--muted);cursor:pointer;font-size:11px;padding:0 3px}
+#palKeyList .kitem button:hover{color:var(--warn)}
+#palKeyPanel .prow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:9px}
+#palKeyDone{font-size:12px;padding:3px 14px;border-radius:14px;background:var(--accent);border:1px solid var(--accent);color:#fff;font-weight:700;cursor:pointer}
 /* 記号ボタンに割り当て済みキーを小さく表示 */
 .pgroup button .kb{display:block;font-family:var(--ui);font-size:8.5px;line-height:1;color:var(--accent);margin-top:1px;letter-spacing:.02em}
 #paletteCard.editing .pgroup button .kb{color:var(--muted)}
@@ -725,6 +749,7 @@ html[data-theme="dark"] code{color:var(--accent-ink)}
     </div>
     <canvas id="palWave" title="この区間の波形：クリック＝そこから再生／ドラッグ＝その範囲を再生" style="display:block;width:100%;height:46px;border:1px solid var(--line);border-radius:6px;background:#fff;cursor:text;touch-action:none;margin:0 0 3px"></canvas>
     <div class="note" id="palScrubHint" style="font-size:11px;margin:0 0 6px">この区間の波形：クリック＝そこから再生／ドラッグ＝範囲を再生（入力位置はそのまま）</div>
+    <div id="palKeyPanel" hidden></div>
     <div id="palette"></div>
   </div>
 </div>
@@ -3086,14 +3111,69 @@ function comboLabel(c){
   return mod+(IS_MAC?'':'+')+key;
 }
 const keyForChar=ch=>Object.keys(palKeysMap).find(k=>palKeysMap[k]===ch)||'';
-let palKeyMode=false, palKeyWaitFor=null;   // 割り当てモードと、キー入力待ちの記号
+// 式表示用に「⌃」「⌥」「Z」のような粒に分解する
+function comboParts(c){
+  if(!c)return [];
+  const parts=c.split('+'), code=parts.pop();
+  const key=code.replace(/^Key/,'').replace(/^Digit/,'')
+    .replace('Backquote','`').replace('Period','.').replace('Comma',',').replace('Minus','-')
+    .replace('Semicolon',';').replace('Quote',"'").replace('Slash','/').replace('Space','Space');
+  return parts.map(x=>IS_MAC?({Ctrl:'⌃',Alt:'⌥',Shift:'⇧',Meta:'⌘'})[x]:x).concat([key]);
+}
+let palKeyMode=false, palKeyWaitFor=null, palKeyJustDone=null;   // 割り当てモード／キー入力待ちの記号／直前に登録した記号
+function renderKeyPanel(){
+  const box=$('palKeyPanel'); if(!box)return;
+  box.hidden=!palKeyMode;
+  if(!palKeyMode)return;
+  const en=(()=>{try{return !!(window.__bltLangEN&&window.__bltLangEN())}catch(e){return false}})();
+  const T=en?{s1:'① Click a symbol below',s2:'② Press the keys',s3:'③ Added to the palette',
+              pick:'pick a symbol',press:'press the keys now…',done:'added — it now works and stays on the palette',
+              hint:'Backspace clears this symbol’s key · Esc finishes',list:'Current shortcuts',done_btn:'Finish'}
+            :{s1:'① 下のパレットで記号を選ぶ',s2:'② 使いたいキーを押す',s3:'③ パレットに登録',
+              pick:'記号を選んでください',press:'いまキーを押してください…',done:'登録しました（このキーで入ります）',
+              hint:'Backspace＝この記号のキーを解除／Esc＝終了',list:'いまの割り当て',done_btn:'設定を終える'};
+  const stage=palKeyWaitFor?2:(palKeyJustDone?3:1);
+  const sym=palKeyWaitFor||palKeyJustDone||'';
+  const parts=palKeyJustDone&&!palKeyWaitFor?comboParts(keyForChar(palKeyJustDone)):[];
+  const fx='<div class="fx">'
+    +'<span class="sym'+(sym?'':' empty')+'">'+(sym?escHtml(sym):'？')+'</span>'
+    +'<span class="eq">=</span>'
+    +(stage===1?'<span class="wait">'+T.pick+'</span>'
+      :stage===2?'<span class="wait">'+T.press+'</span>'
+      :parts.map(k=>'<span class="key">'+escHtml(k)+'</span>').join('<span class="plus">＋</span>')+'<span class="ok">✓ '+T.done+'</span>')
+    +'</div>';
+  const items=Object.keys(palKeysMap).map(k=>({k,ch:palKeysMap[k]}))
+    .sort((a,b)=>a.ch.localeCompare(b.ch))
+    .map(o=>'<span class="kitem"><span class="s">'+escHtml(isComb(o.ch)?combPreview(o.ch):o.ch)+'</span>'
+      +'<span class="k">'+escHtml(comboLabel(o.k))+'</span>'
+      +'<button type="button" data-del="'+escHtml(o.k)+'" title="解除">✕</button></span>').join('');
+  box.innerHTML='<div class="steps">'
+      +'<span class="'+(stage===1?'cur':'')+'">'+T.s1+'</span>→'
+      +'<span class="'+(stage===2?'cur':'')+'">'+T.s2+'</span>→'
+      +'<span class="'+(stage===3?'cur':'')+'">'+T.s3+'</span></div>'
+    +fx
+    +'<div id="palKeyList">'+(items||'<span class="hint" style="font-size:11.5px;color:var(--muted)">—</span>')+'</div>'
+    +'<div class="prow"><button type="button" id="palKeyDone">'+T.done_btn+'</button>'
+    +'<span class="hint" style="font-size:11.5px;color:var(--muted)">'+T.hint+'</span></div>';
+}
+// パネル内の操作（解除・終了）
+document.addEventListener('click',e=>{
+  if(!palKeyMode)return;
+  const del=e.target.closest&&e.target.closest('[data-del]');
+  if(del){delete palKeysMap[del.getAttribute('data-del')];savePalKeys();renderPalette();renderPalFav();renderKeyPanel();if(typeof updatePalSetupCount==='function')updatePalSetupCount();return}
+  if(e.target.id==='palKeyDone'){setPalKeyMode(false);return}
+});
 function setPalKeyMode(on){
-  palKeyMode=on; palKeyWaitFor=null;
+  palKeyMode=on; palKeyWaitFor=null; palKeyJustDone=null;
   $('paletteCard').classList.toggle('keymode',on);
   const lbl=$('palHeadLabel');
-  if(on){if(lbl.__norm==null)lbl.__norm=lbl.textContent;lbl.textContent='記号をクリック→使いたいキーを押す（Backspaceで解除／Escで終了）';lbl.style.color='var(--accent)';}
+  if(on){
+    if(lbl.__norm==null)lbl.__norm=lbl.textContent;
+    lbl.textContent='ショートカットの設定中';lbl.style.color='var(--accent)';
+    if(palMin){palMin=false;try{localStorage.setItem('pal_min','0');}catch(e){}$('paletteCard').classList.remove('min');setPalToggleLabel();}
+  }
   else{if(lbl.__norm!=null){lbl.textContent=lbl.__norm;lbl.__norm=null;}lbl.style.color='';}
-  renderPalette(); renderPalFav(); reservePalSpace();
+  renderPalette(); renderPalFav(); renderKeyPanel(); reservePalSpace();
 }
 // 割り当てモード中のキー取り込み
 window.addEventListener('keydown',e=>{
@@ -3104,20 +3184,23 @@ window.addEventListener('keydown',e=>{
   e.preventDefault(); e.stopPropagation();
   if(e.key==='Backspace'){   // 解除
     const cur=keyForChar(palKeyWaitFor); if(cur)delete palKeysMap[cur];
-    savePalKeys(); palKeyWaitFor=null; renderPalette(); renderPalFav(); return;
+    savePalKeys(); palKeyWaitFor=null; palKeyJustDone=null;
+    renderPalette(); renderPalFav(); renderKeyPanel(); return;
   }
   const c=comboOf(e);
-  if(!c){$('palHeadLabel').textContent='修飾キー（⌃⌥ など）と一緒に押してください';return}
+  const warn=t=>{const el=$('palKeyPanel').querySelector('.fx .wait');if(el){el.textContent=t;el.style.animation='none';el.style.color='var(--warn)';}};
+  if(!c){warn('修飾キー（⌃⌥ など）と一緒に押してください');return}
   if(IS_MAC&&/^Alt\+/.test(c)){   // ⌥単独は macOS 側が先に処理してしまう（⌥Z→Ω など）
-    $('palHeadLabel').textContent='⌥ だけの組み合わせは macOS が先に使ってしまいます。⌃⌥（Ctrl＋Option）などにしてください';
+    warn('⌥ だけは macOS が先に使ってしまいます。⌃⌥（Ctrl＋Option）などにしてください');
     return;
   }
   const prev=keyForChar(palKeyWaitFor); if(prev)delete palKeysMap[prev];
   palKeysMap[c]=palKeyWaitFor;   // 既に他の記号が使っていれば上書き
-  savePalKeys(); palKeyWaitFor=null;
+  if(palKeep.size&&!palKeep.has(palKeyWaitFor)){palKeep.add(palKeyWaitFor);savePalKeep();}   // 割り当てた記号は必ずパレットに載せる
+  savePalKeys();
+  palKeyJustDone=palKeyWaitFor; palKeyWaitFor=null;
   if(typeof updatePalSetupCount==='function')updatePalSetupCount();
-  $('palHeadLabel').textContent='記号をクリック→使いたいキーを押す（Backspaceで解除／Escで終了）';
-  renderPalette(); renderPalFav();
+  renderPalette(); renderPalFav(); renderKeyPanel(); reservePalSpace();
 },true);
 // 通常時：割り当てたキーで記号を入力（注釈セル・辞書の語義欄などで有効）
 window.addEventListener('keydown',e=>{
@@ -3393,8 +3476,8 @@ function renderPalFav(){
 // 記号クリックの共通処理：通常＝挿入、✎選択モード＝使う記号の選択/解除（ボタンのハイライトを直接切替＝スクロール位置を保つ）
 function onPalSymbolClick(ch,btn){
   if(palKeyMode){   // ショートカット割り当て：この記号に割り当てるキーの入力を待つ
-    palKeyWaitFor=ch;
-    $('palHeadLabel').textContent='「'+ch+'」に割り当てるキーを押してください（Backspaceで解除／Escで終了）';
+    palKeyWaitFor=ch; palKeyJustDone=null;
+    renderKeyPanel(); reservePalSpace();
     return;
   }
   if(palEditing){
@@ -4397,7 +4480,7 @@ $('dlDict').addEventListener('click',async()=>{
 '波形で区間を確認・修正':{t:'Check / fix segments on the waveform',b:'This is the waveform of your audio. Segments (colored bands) can be <b>resized by dragging an edge</b> and <b>played by clicking + Space</b>. Speech left out of any segment (“missed”) is flagged with a <b>red band</b> — there is one in this demo too. Review with ◀▶ and “Preview”, then <b>“✓ Add as segment”</b> to keep it, or “Ignore”. Use <b>“⟳ Re-run auto-segmentation”</b> to tune the sensitivity.'},
 '複数話者に対応':{t:'Multiple speakers',b:'The waveform is <b>color-coded and split into lanes per speaker</b> (above, different colors per segment mean different speakers). Add speakers with <b>+ Speaker</b> below the waveform.<br><b>Different speakers may overlap in time</b> (not within one speaker), so conversational overlap is handled as-is.<br>Example: a <b>Speaker B</b> was added and the 2nd segment assigned to it (its color changes).'},
 '② 文字起こし（text）と訳（trans）':{t:'② Transcription (text) and translation (trans)',b:'Type the transcription in the <b>text</b> field and the translation in the <b>trans</b> field.<br>e.g. <i style="font-family:var(--ipa)">nkjaan=du anna=tu uja=tu tamamiga=ti asɨ ffa-gama=nu u-tar=ca.</i><br>Translation: “Long ago there were a mother, a father, and a child named Tamamiga.”'},
-'⚙ 表記のためのショートカットを設定':{t:'⚙ Set up shortcuts for your orthography',b:'Loading the audio brings you here first. Decide which <b>symbols</b> your orthography needs and which <b>keys</b> type them, and the rest of the annotation can stay on the keyboard.<br>e.g. type <b>z</b> then <b>⌃⌥V</b> → <b>ž</b> (you can also bind a key to <b>ž</b> itself). “<b>Choose your symbols</b>” narrows the palette to just what this language uses.<br><b>Setting nothing is fine</b> — the ⚙ and ✎ buttons on the palette change it any time. Your setup is <b>saved in the project</b> and comes back when you resume.'},
+'⚙ 表記のためのショートカットを設定':{t:'⚙ Set up shortcuts for your orthography',b:'Loading the audio brings you here first. Decide which <b>symbols</b> your orthography needs and which <b>keys</b> type them, and the rest of the annotation can stay on the keyboard.<br>e.g. type <b>z</b> then <b>⌃⌥V</b> → <b>ž</b> (you can also bind a key to <b>ž</b> itself). Pressing “<b>⚙ Set up shortcuts</b>” opens a panel above the palette: <b>① click a symbol → ② press the keys → ③ it is registered</b>, shown as a formula (<b>ž = ⌃ + ⌥ + Z</b>). Existing bindings are listed, <b>✕</b> removes one, and <b>Finish</b> closes the panel.<br>“<b>Choose your symbols</b>” narrows the palette to just what this language uses.<br><b>Setting nothing is fine</b> — the ⚙ and ✎ buttons on the palette change it any time. Your setup is <b>saved in the project</b> and comes back when you resume.'},
 '合成用の記号で文字を作る（ž ü á …）':{t:'Build letters with combining marks (ž ü á …)',b:'The <b>“Combine (adds to previous letter)”</b> row holds marks that <b>merge into the letter before them</b>.<br>e.g. type <b>z</b>, then press <b style="outline:2px solid var(--sel);border-radius:3px;padding:0 3px">◌̌</b> (haček) to get <b>ž</b> (likewise <b>ü</b> = u + ◌̈, <b>á</b> = a + ◌́).<br>Letters you build this way <b>stay in the palette and in the “frequently used” bar</b>, so next time they are one click away. Pre-composed letters are also listed under <b>Orthography</b>.<br><b>You can stay on the keyboard</b>: type <b>z</b> then press <b>⌃⌥V</b> (Ctrl+Alt+V on Windows) to get <b>ž</b> — likewise <b>⌃⌥U</b> = ¨, <b>⌃⌥E</b> = ´, <b>⌃⌥I</b> = ˆ, <b>⌃⌥N</b> = ˜. Reassign any of them under <b>⚙ Shortcuts</b> (bare ⌥ combos are avoided because macOS claims them).'},
 'IPAパレットで発音記号を挿入':{t:'Insert phonetic symbols with the IPA palette',b:'Symbols that are hard to type go in via this <b>IPA palette</b> (it appears at the bottom while editing).<br>Here, after “<b>as</b>” we inserted <b style="outline:2px solid var(--sel);border-radius:3px;padding:0 3px">ɨ</b> (a central vowel) to make <b>asɨ</b>. Clicking a button in the vowels section inserts it at the cursor in the cell being edited.<br><b>Order does not matter</b>: press palette buttons before you enter a cell and they wait in the header bar, then drop in as soon as you click a cell.'},
 'morph層：形態素が自動で区切られる':{t:'morph layer: morphemes split automatically',b:'Using <b>-</b> (affix), <b>=</b> (clitic) and spaces in the text as cues, morphemes are split automatically into an interlinear display.<br>e.g. <i>nkjaan / =du / anna / =tu …</i> (the = clitic and - affix boundaries are kept).'},
@@ -4423,7 +4506,7 @@ $('dlDict').addEventListener('click',async()=>{
   var STEPS=[
     {sel:'#brand', title:'BLTへようこそ', body:'ブラウザだけで完結するフィールドデータ編集ツールです。<b>音声の読み込みから注釈・グロス・ELAN(EAF)書き出し</b>までを、このツアーで一通り案内します。', place:'bottom'},
     {sel:'#cardFile', title:'① 作業を始める', body:'まず <b>「新規に始める」</b>か<b>「既存の作業を再開する」</b>を選びます。<br><b>新規</b>＝音声（WAV）を読み込み→自動区切り→注釈。<b>既存再開</b>＝音声を読み込んでから、以前の .json や ELAN .eaf を読み込みます。<br><span style="color:var(--muted)">▶ お持ちの音声が無ければ「次へ」でデモ音声を使って続けられます。</span>', place:'bottom', waitLoaded:true},
-    {sel:'#cardPal', title:'⚙ 表記のためのショートカットを設定', body:'音声を読み込むと、まずここに来ます。その言語の表記で使う<b>記号</b>と、それを入れる<b>キー</b>をここで決めておくと、注釈がキーボードだけで進みます。<br>（例）<b>z</b> と打って <b>⌃⌥V</b> → <b>ž</b>（<b>ž</b> そのものにキーを割り当てることもできます）。「<b>✎ 使う記号を選ぶ</b>」で、その言語に必要な記号だけをパレットに絞ることもできます。<br><b>設定しなくても構いません</b>（あとからパレットの ⚙・✎ でいつでも変更できます）。設定は<b>プロジェクトに保存</b>され、再開時はそのまま使えます。', place:'bottom', needsAudio:true, action:'demoPalSetup'},
+    {sel:'#cardPal', title:'⚙ 表記のためのショートカットを設定', body:'音声を読み込むと、まずここに来ます。その言語の表記で使う<b>記号</b>と、それを入れる<b>キー</b>をここで決めておくと、注釈がキーボードだけで進みます。<br>（例）<b>z</b> と打って <b>⌃⌥V</b> → <b>ž</b>（<b>ž</b> そのものにキーを割り当てることもできます）。「<b>⚙ ショートカットを設定する</b>」を押すと、パレットの上に設定パネルが出ます。<b>①下のパレットで記号をクリック → ②使いたいキーを押す → ③その場で登録</b>（<b>ž ＝ ⌃ ＋ ⌥ ＋ Z</b> のように式で確認できます）。割り当て済みは一覧に並び、<b>✕</b>で解除、<b>設定を終える</b>で閉じます。<br>「<b>✎ 使う記号を選ぶ</b>」で、その言語に必要な記号だけをパレットに絞ることもできます。<br><b>設定しなくても構いません</b>（あとからパレットの ⚙・✎ でいつでも変更できます）。設定は<b>プロジェクトに保存</b>され、再開時はそのまま使えます。', place:'bottom', needsAudio:true, action:'demoPalSetup'},
     {sel:'#cardSeg', title:'② 自動区切り（無音検出で発話に分割）', body:'音声を読み込んだら、パネル2の「<b>自動検出を実行</b>」を押します。無音部分を手がかりに、音声が<b>発話区間（レコード）に自動分割</b>されます。<br>「<b>しきい値を自動推定</b>」のままでOK。うまく切れないときは、しきい値・最小無音長・最小区間長を調整して再実行できます（境界は後から波形上でドラッグ調整も可能）。', place:'bottom', needsAudio:true},
     {sel:'#cardWave', title:'→ 発話区間に分割されました', body:'「自動検出を実行」を押すと、このように音声が<b>色付きの区間（発話）</b>に分割されます。次の画面で、この区間の確認・修正方法を見ていきます。', place:'bottom', needsAudio:true, demoOnly:true, action:'demoDetect', scrollTop:true},
     {sel:'#cardWave', title:'波形で区間を確認・修正', body:'読み込んだ音声の波形です。区間（色付き帯）は<b>ドラッグで境界調整</b>、<b>クリック＋Space で再生</b>。区間化されなかった有音（取りこぼし）は<b>赤帯</b>で警告されます — このデモにも1か所あります。◀▶や「確認再生」で確認し、<b>「✓ 区間に追加」</b>で区間化、対象外なら「無視」。「⟳ 自動区切りをやり直し」で検出の感度も調整できます。', place:'bottom', needsAudio:true, scrollTop:true},
@@ -4844,6 +4927,7 @@ $('dlDict').addEventListener('click',async()=>{
     "正書法（母音）":"Orthography: vowels","正書法（子音）":"Orthography: consonants","合成用（前の字に付ける）":"Combine (adds to previous letter)","作った記号":"Your symbols","✕ 消す":"✕ Clear",
     "表記のためのショートカットキーを設定する":"Set up shortcut keys for your orthography",
     "⚙ ショートカットを設定する":"⚙ Set up shortcuts","✎ 使う記号を選ぶ":"✎ Choose your symbols",
+    "ショートカットの設定中":"Setting up shortcuts",
     "設定を終えて区間づくりへ →":"Done — on to segmenting →",
     "⚙ ショートカット":"⚙ Shortcuts",
     "記号をクリック→使いたいキーを押す（Backspaceで解除／Escで終了）":"Click a symbol, then press the key you want (Backspace to clear, Esc to finish)",

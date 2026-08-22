@@ -274,7 +274,13 @@ code{background:var(--accent-soft);padding:1px 5px;border-radius:4px;font-size:1
 .pgroup .madeclear{font-size:10.5px;padding:1px 8px;min-width:0;font-family:var(--ui);color:var(--muted);border:1px solid var(--line);border-radius:10px;margin-left:4px}
 .pgroup .madeclear:hover{border-color:var(--warn);color:var(--warn)}
 #palToggle{font-size:12px;padding:2px 12px;cursor:pointer;border:1px solid var(--accent);color:var(--accent);background:var(--surface);border-radius:14px;font-weight:600}
-#palEdit,#palReset{font-size:12px;padding:2px 10px;cursor:pointer;border:1px solid var(--line);color:var(--muted);background:var(--surface);border-radius:14px}
+#palEdit,#palReset,#palKeys{font-size:12px;padding:2px 10px;cursor:pointer;border:1px solid var(--line);color:var(--muted);background:var(--surface);border-radius:14px}
+#palKeys:hover{border-color:var(--warn);color:var(--warn)}
+#paletteCard.keymode #palKeys{border-color:var(--accent);color:#fff;background:var(--accent)}
+#paletteCard.keymode .pgroup button{outline:1px dashed var(--accent);outline-offset:1px}
+/* 記号ボタンに割り当て済みキーを小さく表示 */
+.pgroup button .kb{display:block;font-family:var(--ui);font-size:8.5px;line-height:1;color:var(--accent);margin-top:1px;letter-spacing:.02em}
+#paletteCard.editing .pgroup button .kb{color:var(--muted)}
 #palEdit:hover,#palReset:hover{border-color:var(--warn);color:var(--warn)}
 #paletteCard.editing #palEdit{border-color:var(--accent);color:#fff;background:var(--accent)}
 /* 選択モード（ポジティブリスト）：全記号を表示し、クリックで「使う記号」を選ぶ。選択済み＝ハイライト、未選択＝薄く */
@@ -575,7 +581,7 @@ html[data-theme="dark"] code{color:var(--accent-ink)}
 <div class="card hidden" id="cardPal">
   <h2><span class="steplabel">✎</span>表記のためのパレットを作る</h2>
   <div class="note" style="margin:0 0 9px">注釈に使う記号を先に選んでおくと、パレットが短くなって入力が速くなります（選ばなければ全記号が並びます）。<br>
-  キーボードで打った文字に<b>「合成用」の記号</b>（ˇ ¨ ´ など）を重ねると <b>ž ü á</b> のような文字がその場ででき、パレットに残ります。<b>あとから ✎ でいつでも変更できます。</b></div>
+  キーボードで打った文字に<b>「合成用」の記号</b>（ˇ ¨ ´ など）を重ねると <b>ž ü á</b> のような文字がその場ででき、パレットに残ります。キーボード派は <b>z</b>→<b>⌥V</b> で <b>ž</b>（「⌨ ショートカット」で割り当て変更可）。<b>あとから ✎ でいつでも変更できます。</b></div>
   <div class="btns">
     <button class="primary" id="btnPalSetup">✎ 使う記号を選ぶ</button>
     <button id="btnPalSkip">今は選ばずに注釈へ進む</button>
@@ -705,6 +711,7 @@ html[data-theme="dark"] code{color:var(--accent-ink)}
     <span id="palPend" hidden></span>
     <span style="flex:1"></span>
     <button type="button" id="palReset" title="選択をリセットして、すべての記号を表示します" hidden>リセット</button>
+    <button type="button" id="palKeys" title="記号にキーボードショートカットを割り当てます（例: z と打ってから ⌥V で ž）">⌨ ショートカット</button>
     <button type="button" id="palEdit" title="使う記号を選べます（選んだものだけ表示。何も選ばなければ全表示）">✎ 記号を選ぶ</button>
     <button type="button" id="palToggle" title="IPAパレットを下に格納">↓ 最小化</button>
   </div>
@@ -3020,6 +3027,69 @@ const IPA={
 // 「作った記号」：キーボード文字＋補助記号の合成でできた文字をパレットに常備する
 let palMade=[]; try{palMade=JSON.parse(localStorage.getItem('pal_made')||'[]')||[];}catch(e){palMade=[];}
 function savePalMade(){try{localStorage.setItem('pal_made',JSON.stringify(palMade));}catch(e){}}
+/* ---- 記号のキーボードショートカット ----
+   例: z と打ってから ⌥V（Alt+V）で ž。合成用の記号に割り当てると「直前の字に付ける」動作になる。
+   キーは e.code で持つ（Mac の Option＋英字は e.key が別文字になるため）。Ctrl+Shift+Z などブラウザ既定
+   （やり直し等）と重なる組み合わせは避ける。                                                        */
+const PAL_KEYS_DEFAULT={'Alt+KeyE':'\u0301','Alt+Backquote':'\u0300','Alt+KeyI':'\u0302','Alt+KeyV':'\u030c',
+  'Alt+KeyU':'\u0308','Alt+KeyN':'\u0303','Alt+KeyM':'\u0304','Alt+Period':'\u0323'};
+let palKeysMap={}; try{const j=localStorage.getItem('pal_keys');palKeysMap=j?(JSON.parse(j)||{}):Object.assign({},PAL_KEYS_DEFAULT);}catch(e){palKeysMap=Object.assign({},PAL_KEYS_DEFAULT);}
+function savePalKeys(){try{localStorage.setItem('pal_keys',JSON.stringify(palKeysMap));}catch(e){}}
+const IS_MAC=/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent||'');
+function comboOf(e){
+  if(['Shift','Control','Alt','Meta','CapsLock'].includes(e.key))return '';
+  const m=[]; if(e.ctrlKey)m.push('Ctrl'); if(e.altKey)m.push('Alt'); if(e.shiftKey)m.push('Shift'); if(e.metaKey)m.push('Meta');
+  if(!m.length)return '';   // 修飾キー無しは対象外（通常の入力を邪魔しない）
+  return m.join('+')+'+'+e.code;
+}
+function comboLabel(c){
+  if(!c)return '';
+  const parts=c.split('+'), code=parts.pop();
+  const key=code.replace(/^Key/,'').replace(/^Digit/,'')
+    .replace('Backquote','`').replace('Period','.').replace('Comma',',').replace('Minus','-').replace('Semicolon',';').replace('Quote',"'").replace('Slash','/');
+  const mod=parts.map(x=>IS_MAC?({Ctrl:'⌃',Alt:'⌥',Shift:'⇧',Meta:'⌘'})[x]:x).join(IS_MAC?'':'+');
+  return mod+(IS_MAC?'':'+')+key;
+}
+const keyForChar=ch=>Object.keys(palKeysMap).find(k=>palKeysMap[k]===ch)||'';
+let palKeyMode=false, palKeyWaitFor=null;   // 割り当てモードと、キー入力待ちの記号
+function setPalKeyMode(on){
+  palKeyMode=on; palKeyWaitFor=null;
+  $('paletteCard').classList.toggle('keymode',on);
+  const lbl=$('palHeadLabel');
+  if(on){if(lbl.__norm==null)lbl.__norm=lbl.textContent;lbl.textContent='記号をクリック→使いたいキーを押す（Backspaceで解除／Escで終了）';lbl.style.color='var(--accent)';}
+  else{if(lbl.__norm!=null){lbl.textContent=lbl.__norm;lbl.__norm=null;}lbl.style.color='';}
+  renderPalette(); renderPalFav(); reservePalSpace();
+}
+// 割り当てモード中のキー取り込み
+window.addEventListener('keydown',e=>{
+  if(!palKeyMode)return;
+  if(e.key==='Escape'){e.preventDefault();setPalKeyMode(false);return}
+  if(!palKeyWaitFor)return;
+  e.preventDefault(); e.stopPropagation();
+  if(e.key==='Backspace'){   // 解除
+    const cur=keyForChar(palKeyWaitFor); if(cur)delete palKeysMap[cur];
+    savePalKeys(); palKeyWaitFor=null; renderPalette(); renderPalFav(); return;
+  }
+  const c=comboOf(e);
+  if(!c){$('palHeadLabel').textContent='修飾キー（⌥ / Ctrl など）と一緒に押してください';return}
+  const prev=keyForChar(palKeyWaitFor); if(prev)delete palKeysMap[prev];
+  palKeysMap[c]=palKeyWaitFor;   // 既に他の記号が使っていれば上書き
+  savePalKeys(); palKeyWaitFor=null;
+  $('palHeadLabel').textContent='記号をクリック→使いたいキーを押す（Backspaceで解除／Escで終了）';
+  renderPalette(); renderPalFav();
+},true);
+// 通常時：割り当てたキーで記号を入力（注釈セル・辞書の語義欄などで有効）
+window.addEventListener('keydown',e=>{
+  if(palKeyMode)return;
+  const c=comboOf(e); if(!c)return;
+  const ch=palKeysMap[c]; if(!ch)return;
+  const t=e.target;
+  const ok=(t&&t.closest&&t.closest('[contenteditable]'))||(t&&(t.tagName==='TEXTAREA'||t.tagName==='INPUT'));
+  if(!ok)return;
+  e.preventDefault();
+  if(insertIpaChar(ch))bumpPalFreq(ch);
+},true);
+
 const isComb=ch=>/[̀-ͯ᪰-᫿⃐-⃿]/.test(ch);
 /* 結合記号のプレビュー土台。◌（点線円）と結合記号が別フォントに割り当てられる端末では
    合字にならず豆腐（□）になるため、実際に描いて確かめ、崩れる場合は o を土台にする */
@@ -3059,12 +3129,13 @@ function renderPalette(){
   $('palette').innerHTML=Object.entries(IPA).map(([g,chars])=>{
     const btns=chars.split(' ').filter(Boolean)
       .filter(ch=>palEditing||!palKeep.size||palKeep.has(ch))   // 選択モード中は全表示、通常は選択のみ（空なら全）
-      .map(ch=>'<button type="button" class="'+((isComb(ch)||g==='補助記号')?'comb':'')+(palEditing&&palKeep.has(ch)?' keep':'')+'" data-ch="'+ch+'">'+(isComb(ch)?combPreview(ch):ch)+'</button>').join('');
+      .map(ch=>'<button type="button" class="'+((isComb(ch)||g==='補助記号')?'comb':'')+(palEditing&&palKeep.has(ch)?' keep':'')+'" data-ch="'+ch+'" title="'+escHtml(ch)+(keyForChar(ch)?' ('+escHtml(comboLabel(keyForChar(ch)))+')':'')+'">'
+        +(isComb(ch)?combPreview(ch):ch)+(keyForChar(ch)?'<span class="kb">'+escHtml(comboLabel(keyForChar(ch)))+'</span>':'')+'</button>').join('');
     return btns?'<div class="pgroup"><span class="glabel">'+g+'</span>'+btns+'</div>':'';
   }).join('')
   +(palMade.length?('<div class="pgroup"><span class="glabel">作った記号</span>'
      +palMade.filter(ch=>palEditing||!palKeep.size||palKeep.has(ch))
-       .map(ch=>'<button type="button" class="'+(palEditing&&palKeep.has(ch)?'keep':'')+'" data-ch="'+escHtml(ch)+'" title="'+escHtml(ch)+'">'+escHtml(ch)+'</button>').join('')
+       .map(ch=>'<button type="button" class="'+(palEditing&&palKeep.has(ch)?'keep':'')+'" data-ch="'+escHtml(ch)+'" title="'+escHtml(ch)+(keyForChar(ch)?' ('+escHtml(comboLabel(keyForChar(ch)))+')':'')+'">'+escHtml(ch)+(keyForChar(ch)?'<span class="kb">'+escHtml(comboLabel(keyForChar(ch)))+'</span>':'')+'</button>').join('')
      +'<button type="button" class="madeclear" id="palMadeClear" title="作った記号をすべて消します">✕ 消す</button></div>'):'');
 }
 renderPalette();
@@ -3107,6 +3178,7 @@ function applyProjPalette(pal){
     if(Array.isArray(pal.keep)){palKeep=new Set(pal.keep);savePalKeep();}
     if(Array.isArray(pal.made)){palMade=pal.made.filter(x=>typeof x==='string'&&x);savePalMade();}
     if(pal.freq&&typeof pal.freq==='object'){palFreq=pal.freq;try{localStorage.setItem('pal_freq',JSON.stringify(palFreq));}catch(e){}}
+    if(pal.keys&&typeof pal.keys==='object'){palKeysMap=pal.keys;savePalKeys();}
     renderPalette();
   }
   palMin=true; try{localStorage.setItem('pal_min','1');}catch(e){}   // 畳んだ状態で待機
@@ -3278,6 +3350,11 @@ function renderPalFav(){
 }
 // 記号クリックの共通処理：通常＝挿入、✎選択モード＝使う記号の選択/解除（ボタンのハイライトを直接切替＝スクロール位置を保つ）
 function onPalSymbolClick(ch,btn){
+  if(palKeyMode){   // ショートカット割り当て：この記号に割り当てるキーの入力を待つ
+    palKeyWaitFor=ch;
+    $('palHeadLabel').textContent='「'+ch+'」に割り当てるキーを押してください（Backspaceで解除／Escで終了）';
+    return;
+  }
   if(palEditing){
     if(palKeep.has(ch)){palKeep.delete(ch);if(btn)btn.classList.remove('keep');}
     else{palKeep.add(ch);if(btn)btn.classList.add('keep');}
@@ -3313,7 +3390,9 @@ function setPalEditing(on){
   reservePalSpace();
 }
 $('palEdit').addEventListener('mousedown',e=>e.preventDefault());
-$('palEdit').addEventListener('click',()=>setPalEditing(!palEditing));
+$('palEdit').addEventListener('click',()=>{if(palKeyMode)setPalKeyMode(false);setPalEditing(!palEditing)});
+$('palKeys').addEventListener('mousedown',e=>e.preventDefault());
+$('palKeys').addEventListener('click',()=>{if(palEditing)setPalEditing(false);setPalKeyMode(!palKeyMode)});
 $('palReset').addEventListener('mousedown',e=>e.preventDefault());
 $('palReset').addEventListener('click',()=>{
   if(palKeep.size&&!confirm('選択をリセットして、すべての記号を表示します。よろしいですか？'))return;
@@ -3793,7 +3872,7 @@ $('dlJson').addEventListener('click',()=>{
 });
 $('dlProj').addEventListener('click',()=>{
   const multi=multiCh?{multiCh:true,trackFiles:tracks.map(t=>({spk:t.spk,name:t.name||(t.file&&t.file.name)||''}))}:{};
-  const palette={keep:[...palKeep],made:palMade.slice(),freq:palFreq};   // パレット構成も一緒に保存（再開時に復元）
+  const palette={keep:[...palKeep],made:palMade.slice(),freq:palFreq,keys:palKeysMap};   // パレット構成も一緒に保存（再開時に復元）
   dl(baseName()+'_project.json',JSON.stringify(Object.assign({wavName:wavFile?wavFile.name:'',glossOn,morphSrc,morphSeps,bdrSeps,tiersDef,speakers,segs,ignoredMiss,lexicon,palette},multi),null,1),'application/json');
   markSaved();   // プロジェクト保存＝この状態を「保存済み」基準に
 });
@@ -4277,7 +4356,7 @@ $('dlDict').addEventListener('click',async()=>{
 '複数話者に対応':{t:'Multiple speakers',b:'The waveform is <b>color-coded and split into lanes per speaker</b> (above, different colors per segment mean different speakers). Add speakers with <b>+ Speaker</b> below the waveform.<br><b>Different speakers may overlap in time</b> (not within one speaker), so conversational overlap is handled as-is.<br>Example: a <b>Speaker B</b> was added and the 2nd segment assigned to it (its color changes).'},
 '② 文字起こし（text）と訳（trans）':{t:'② Transcription (text) and translation (trans)',b:'Type the transcription in the <b>text</b> field and the translation in the <b>trans</b> field.<br>e.g. <i style="font-family:var(--ipa)">nkjaan=du anna=tu uja=tu tamamiga=ti asɨ ffa-gama=nu u-tar=ca.</i><br>Translation: “Long ago there were a mother, a father, and a child named Tamamiga.”'},
 '✎ 表記のためのパレットを作る':{t:'✎ Build a palette for your orthography',b:'Before you start annotating, you can pick <b>just the symbols your orthography uses</b> (“<b>Choose your symbols</b>”). Only those appear, so typing gets faster. <b>Pick nothing and every symbol stays available</b>, and you can change the selection any time with ✎.<br>The selection is <b>saved inside the project (.json)</b>, so you never have to choose again when you resume.'},
-'合成用の記号で文字を作る（ž ü á …）':{t:'Build letters with combining marks (ž ü á …)',b:'The <b>“Combine (adds to previous letter)”</b> row holds marks that <b>merge into the letter before them</b>.<br>e.g. type <b>z</b>, then press <b style="outline:2px solid var(--sel);border-radius:3px;padding:0 3px">◌̌</b> (haček) to get <b>ž</b> (likewise <b>ü</b> = u + ◌̈, <b>á</b> = a + ◌́).<br>Letters you build this way <b>stay in the palette and in the “frequently used” bar</b>, so next time they are one click away. Pre-composed letters are also listed under <b>Orthography</b>.'},
+'合成用の記号で文字を作る（ž ü á …）':{t:'Build letters with combining marks (ž ü á …)',b:'The <b>“Combine (adds to previous letter)”</b> row holds marks that <b>merge into the letter before them</b>.<br>e.g. type <b>z</b>, then press <b style="outline:2px solid var(--sel);border-radius:3px;padding:0 3px">◌̌</b> (haček) to get <b>ž</b> (likewise <b>ü</b> = u + ◌̈, <b>á</b> = a + ◌́).<br>Letters you build this way <b>stay in the palette and in the “frequently used” bar</b>, so next time they are one click away. Pre-composed letters are also listed under <b>Orthography</b>.<br><b>You can stay on the keyboard</b>: type <b>z</b> then press <b>⌥V</b> (Alt+V on Windows) to get <b>ž</b> — likewise <b>⌥U</b> = ¨, <b>⌥E</b> = ´, <b>⌥I</b> = ˆ, <b>⌥N</b> = ˜. Reassign any of them under <b>⌨ Shortcuts</b>.'},
 'IPAパレットで発音記号を挿入':{t:'Insert phonetic symbols with the IPA palette',b:'Symbols that are hard to type go in via this <b>IPA palette</b> (it appears at the bottom while editing).<br>Here, after “<b>as</b>” we inserted <b style="outline:2px solid var(--sel);border-radius:3px;padding:0 3px">ɨ</b> (a central vowel) to make <b>asɨ</b>. Clicking a button in the vowels section inserts it at the cursor in the cell being edited.<br><b>Order does not matter</b>: press palette buttons before you enter a cell and they wait in the header bar, then drop in as soon as you click a cell.'},
 'morph層：形態素が自動で区切られる':{t:'morph layer: morphemes split automatically',b:'Using <b>-</b> (affix), <b>=</b> (clitic) and spaces in the text as cues, morphemes are split automatically into an interlinear display.<br>e.g. <i>nkjaan / =du / anna / =tu …</i> (the = clitic and - affix boundaries are kept).'},
 '③ gloss層：グロスを付ける':{t:'③ gloss layer: add glosses',b:'Enter a gloss in the field under each morpheme.<br>e.g. <b>nkjaan→昔 (long ago)</b>, <b>du→FOC</b>, <b>anna→母親 (mother)</b>, <b>tu→COM</b> … Now you have <b>text + morph + gloss + trans</b>.'},
@@ -4309,7 +4388,7 @@ $('dlDict').addEventListener('click',async()=>{
     {sel:'#cardPal', title:'✎ 表記のためのパレットを作る', body:'注釈に入る前に、<b>その言語の表記で使う記号だけ</b>をパレットに選んでおけます（「<b>✎ 使う記号を選ぶ</b>」）。選んだものだけが並ぶので、入力が速くなります。<b>選ばなければ全記号が並びます</b>し、あとから ✎ でいつでも変更できます。<br>この構成は<b>プロジェクト（.json）に一緒に保存</b>され、再開したときは選び直す必要がありません。', place:'bottom', needsAudio:true, action:'demoPalSetup'},
     {sel:'#tb tr[data-i="0"]', title:'② 文字起こし（text）と訳（trans）', body:'区間の <b>text</b> 欄に文字起こし、<b>trans</b> 欄に訳を入力します。<br>例: <i style="font-family:var(--ipa)">nkjaan=du anna=tu uja=tu tamamiga=ti asɨ ffa-gama=nu u-tar=ca.</i><br>訳「昔々、母親と父親とタマミガという子がいたんだそうだ」', place:'bottom', needsAudio:true, action:'demoText', hideWave:true},
     {sel:'#paletteCard', title:'IPAパレットで発音記号を挿入', body:'キーボードで打ちにくい記号は、この <b>IPAパレット</b>（編集中に画面下に出ます）から挿入します。<br>例では「<b>as</b>」のあとに <b style="outline:2px solid var(--sel);border-radius:3px;padding:0 3px">ɨ</b>（中舌母音）を入れて <b>asɨ</b> にしました。母音セクションのボタンをクリックすると編集中のセルのカーソル位置に入ります。<br><b>押す順序は自由です</b>：セルに入る前にパレットを押しても、見出しバーに「入力待ち」として溜まり、セルをクリックした時点でまとめて入ります。', place:'top', needsAudio:true, hideWave:true, action:'demoIPA'},
-    {sel:'#paletteCard', title:'合成用の記号で文字を作る（ž ü á …）', body:'パレットの<b>「合成用（前の字に付ける）」</b>は、<b>直前の文字に重ねて1文字にする</b>記号です。<br>例: キーボードで <b>z</b> と打ってから <b style="outline:2px solid var(--sel);border-radius:3px;padding:0 3px">◌̌</b>（ハチェック）を押すと <b>ž</b> になります（<b>ü</b>＝u＋◌̈、<b>á</b>＝a＋◌́ も同様）。<br>こうして作った文字は<b>「よく使う」帯とパレットに残る</b>ので、次からは1クリックで入れられます。ウムラウトやハチェック付きの文字は「<b>正書法</b>」の段からそのまま選ぶこともできます。', place:'top', needsAudio:true, hideWave:true, action:'demoCompose'},
+    {sel:'#paletteCard', title:'合成用の記号で文字を作る（ž ü á …）', body:'パレットの<b>「合成用（前の字に付ける）」</b>は、<b>直前の文字に重ねて1文字にする</b>記号です。<br>例: キーボードで <b>z</b> と打ってから <b style="outline:2px solid var(--sel);border-radius:3px;padding:0 3px">◌̌</b>（ハチェック）を押すと <b>ž</b> になります（<b>ü</b>＝u＋◌̈、<b>á</b>＝a＋◌́ も同様）。<br>こうして作った文字は<b>「よく使う」帯とパレットに残る</b>ので、次からは1クリックで入れられます。ウムラウトやハチェック付きの文字は「<b>正書法</b>」の段からそのまま選ぶこともできます。<br><b>キーボードだけでも入れられます</b>：<b>z</b> と打って <b>⌥V</b>（Windowsは Alt+V）で <b>ž</b>。<b>⌥U</b>＝¨、<b>⌥E</b>＝´、<b>⌥I</b>＝ˆ、<b>⌥N</b>＝˜ など。割り当ては「<b>⌨ ショートカット</b>」から自由に変更できます。', place:'top', needsAudio:true, hideWave:true, action:'demoCompose'},
     {sel:'#tb tr.glossrow[data-i="0"]', title:'morph層：形態素が自動で区切られる', body:'text内の <b>-</b>（接辞）・<b>=</b>（接語）・空白を手がかりに、形態素が自動分割されてインターリニア表示になります。<br>例: <i>nkjaan / =du / anna / =tu …</i>（接語 = ・接辞 - の境界も保持されます）。', place:'bottom', needsAudio:true, hideWave:true, demoOnly:true},
     {sel:'#tb tr.glossrow[data-i="0"]', title:'③ gloss層：グロスを付ける', body:'各形態素の下の欄にグロスを記入します。<br>例: <b>nkjaan→昔</b>、<b>du→FOC</b>、<b>anna→母親</b>、<b>tu→COM</b> … のように。これで <b>text＋morph＋gloss＋trans</b> がそろいました。', place:'bottom', needsAudio:true, action:'demoGloss', hideWave:true},
     {sel:'#bdrSetting', title:'④ 文境界の設定（パネル操作）', body:'パネル4の「<b>詳細設定</b>」を開き、<b>文境界をコーディング（bdr層・ピリオド基準）</b> にチェックを入れます（このチェックが実際に入ります）。text の<b>ピリオド(.)</b>を文末の手がかりにします。', place:'top', needsAudio:true, action:'demoBdr'},
@@ -4723,6 +4802,9 @@ $('dlDict').addEventListener('click',async()=>{
     "正書法（母音）":"Orthography: vowels","正書法（子音）":"Orthography: consonants","合成用（前の字に付ける）":"Combine (adds to previous letter)","作った記号":"Your symbols","✕ 消す":"✕ Clear",
     "表記のためのパレットを作る":"Build a palette for your orthography",
     "✎ 使う記号を選ぶ":"✎ Choose your symbols","今は選ばずに注釈へ進む":"Skip and start annotating",
+    "⌨ ショートカット":"⌨ Shortcuts",
+    "記号をクリック→使いたいキーを押す（Backspaceで解除／Escで終了）":"Click a symbol, then press the key you want (Backspace to clear, Esc to finish)",
+    "修飾キー（⌥ / Ctrl など）と一緒に押してください":"Please include a modifier (⌥ / Ctrl …)",
     "作った記号をすべて消します。よろしいですか？":"Clear all of your composed symbols?",
     "▶ クリックで波形をひらく":"▶ Click to open the waveform",
     "詳細設定（形態素の分割記号・分割元）":"Advanced settings (morpheme separators / source)",

@@ -267,6 +267,12 @@ code{background:var(--accent-soft);padding:1px 5px;border-radius:4px;font-size:1
 #palFav button{font-family:var(--ipa);font-size:16px;line-height:1.2;padding:0 6px;min-width:26px;border-radius:4px;border:1px solid var(--line);background:var(--surface)}
 #palFav button:hover{background:var(--accent-soft);border-color:var(--accent)}
 #palFav button.comb{font-size:19px;padding:0 5px 2px}
+/* 入力先が未確定のときに押した記号を溜めておくチップ（順序を問わないための待機表示） */
+#palPend{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--accent-ink);background:var(--accent-soft);border:1px solid var(--accent);border-radius:6px;padding:1px 8px;white-space:nowrap}
+#palPend .chs{font-family:var(--ipa);font-size:15px;font-weight:700}
+#palPend button{border:none;background:none;color:var(--accent);cursor:pointer;padding:0 2px;font-size:12px;line-height:1}
+.pgroup .madeclear{font-size:10.5px;padding:1px 8px;min-width:0;font-family:var(--ui);color:var(--muted);border:1px solid var(--line);border-radius:10px;margin-left:4px}
+.pgroup .madeclear:hover{border-color:var(--warn);color:var(--warn)}
 #palToggle{font-size:12px;padding:2px 12px;cursor:pointer;border:1px solid var(--accent);color:var(--accent);background:var(--surface);border-radius:14px;font-weight:600}
 #palEdit,#palReset{font-size:12px;padding:2px 10px;cursor:pointer;border:1px solid var(--line);color:var(--muted);background:var(--surface);border-radius:14px}
 #palEdit:hover,#palReset:hover{border-color:var(--warn);color:var(--warn)}
@@ -565,6 +571,18 @@ html[data-theme="dark"] code{color:var(--accent-ink)}
   </div>
 </div>
 
+<!-- 新規のとき、注釈に入る前に「表記のためのパレット作成」へ誘導する -->
+<div class="card hidden" id="cardPal">
+  <h2><span class="steplabel">✎</span>表記のためのパレットを作る</h2>
+  <div class="note" style="margin:0 0 9px">注釈に使う記号を先に選んでおくと、パレットが短くなって入力が速くなります（選ばなければ全記号が並びます）。<br>
+  キーボードで打った文字に<b>「合成用」の記号</b>（ˇ ¨ ´ など）を重ねると <b>ž ü á</b> のような文字がその場ででき、パレットに残ります。<b>あとから ✎ でいつでも変更できます。</b></div>
+  <div class="btns">
+    <button class="primary" id="btnPalSetup">✎ 使う記号を選ぶ</button>
+    <button id="btnPalSkip">今は選ばずに注釈へ進む</button>
+    <span class="note" id="palSetupCount" style="margin-left:4px"></span>
+  </div>
+</div>
+
 <div id="workArea">
 <div id="waveCol">
 <div class="card hidden" id="cardWave">
@@ -684,6 +702,7 @@ html[data-theme="dark"] code{color:var(--accent-ink)}
   <div id="palHead">
     <span class="note" id="palHeadLabel" style="font-size:11.5px;font-weight:600">IPA入力パレット</span>
     <span id="palFav" title="よく使う記号（使うほど自動で並びます）。最小化中もここから挿入できます"></span>
+    <span id="palPend" hidden></span>
     <span style="flex:1"></span>
     <button type="button" id="palReset" title="選択をリセットして、すべての記号を表示します" hidden>リセット</button>
     <button type="button" id="palEdit" title="使う記号を選べます（選んだものだけ表示。何も選ばなければ全表示）">✎ 記号を選ぶ</button>
@@ -958,6 +977,7 @@ $('projInput').addEventListener('change',async ev=>{
     refreshTierUI();
     ignoredMiss=(p.ignoredMiss||[]).map(g=>({t0:+g.t0,t1:+g.t1}));
     lexicon=(p.lexicon&&typeof p.lexicon==='object')?p.lexicon:{};
+    applyProjPalette(p.palette);   // 保存されたパレット構成を復元し、パレットは畳んだ状態で待機させる
     sel=-1;afterSegChange();
     hideSetup();   // 復元した区間を自動区切りで上書きしないよう、検出パネルは隠す
     markSaved();   // 復元直後を「保存済み」基準に
@@ -1426,12 +1446,35 @@ function setWaveCompact(on){
 }
 $('btnWaveSize').addEventListener('click',()=>setWaveCompact(!$('waveCol').classList.contains('compact3')));
 // パネル1・2（セットアップ）の表示／非表示。作業を始めたら隠してクリーンに、やり直しボタンで再表示
-function hideSetup(){$('cardFile').classList.add('hidden');$('cardSeg').classList.add('hidden');setWaveCompact(true)}
+let palSetupDone=false;   // 誘導カードを出したか（新規のとき、注釈に入る直前に1度だけ）
+function updatePalSetupCount(){
+  const el=$('palSetupCount'); if(!el)return;
+  const en=(()=>{try{return !!(window.__bltLangEN&&window.__bltLangEN())}catch(e){return false}})();
+  el.textContent=palKeep.size?(en?palKeep.size+' selected':'選択中: '+palKeep.size+'記号'):(en?'nothing selected yet (all shown)':'未選択（すべて表示されます）');
+}
+function maybeShowPalSetup(){
+  if(palSetupDone||startMode==='resume')return;
+  palSetupDone=true;
+  $('cardPal').classList.remove('hidden');
+  updatePalSetupCount();
+}
+function hideSetup(){$('cardFile').classList.add('hidden');$('cardSeg').classList.add('hidden');setWaveCompact(true);maybeShowPalSetup()}
 function showSetup(){
   $('cardFile').classList.remove('hidden');$('cardSeg').classList.remove('hidden');
   $('cardSeg').scrollIntoView({block:'center',behavior:'smooth'});
 }
 $('btnRedetect').addEventListener('click',showSetup);
+// 誘導カード：✎選択モードでパレットを開く／今は選ばない
+$('btnPalSetup').addEventListener('click',()=>{
+  showPalette();
+  if(palMin){palMin=false;try{localStorage.setItem('pal_min','0');}catch(e){}$('paletteCard').classList.remove('min');setPalToggleLabel();reservePalSpace();}
+  if(!palEditing)setPalEditing(true);
+  updatePalSetupCount();
+});
+$('btnPalSkip').addEventListener('click',()=>{
+  if(palEditing)setPalEditing(false);
+  $('cardPal').classList.add('hidden');
+});
 
 /* ---------- 取りこぼし検出（区間に入っていない有音部分） ---------- */
 let missed=[], ignoredMiss=[];   // ignoredMiss: 「無視」で件数から除外した範囲
@@ -2967,9 +3010,37 @@ const IPA={
   '母音':'i y ɨ ʉ ɯ u ɪ ʏ ʊ e ø ɘ ɵ ɤ o ə ɛ œ ɜ ɞ ʌ ɔ æ ɐ a ɶ ɑ ɒ',
   '子音':'ʈ ɖ ɟ ɡ ɢ ʔ ɱ ɳ ɲ ŋ ɴ ʙ ʀ ɾ ɽ ɸ β θ ð ʃ ʒ ʂ ʐ ɕ ʑ ç ʝ ɣ χ ʁ ħ ʕ ɦ ɬ ɮ ʋ ɹ ɻ ɰ ɭ ʎ ʟ ɺ ʍ ɥ ʜ ʢ ʡ ɧ ɓ ɗ ʄ ɠ ʛ ʘ ǀ ǃ ǂ ǁ',
   '超分節・声調':'ˈ ˌ ː ˑ . ‿ | ‖ ↗ ↘ ˥ ˦ ˧ ˨ ˩ ꜜ ꜛ',
-  '補助記号':'̥ ̬ ʰ ̤ ̰ ̼ ̪ ̺ ̻ ̹ ̜ ̟ ̠ ̈ ̽ ̩ ̯ ˞ ʷ ʲ ˠ ˤ ̴ ̝ ̞ ̘ ̙ ̃ ̚ ⁿ ˡ'
+  '補助記号':'̥ ̬ ʰ ̤ ̰ ̼ ̪ ̺ ̻ ̹ ̜ ̟ ̠ ̈ ̽ ̩ ̯ ˞ ʷ ʲ ˠ ˤ ̴ ̝ ̞ ̘ ̙ ̃ ̚ ⁿ ˡ',
+  // 正書法でよく使う合成済みの文字（ウムラウト・ハチェック等）。キーボード＋補助記号の合成でも作れる
+  '正書法（母音）':'ä ö ü ë ï ÿ á é í ó ú ý à è ì ò ù â ê î ô û ǎ ě ǐ ǒ ǔ ā ē ī ō ū ã ẽ ĩ õ ũ ą ę į ǫ ų ạ ẹ ị ọ ụ å ø æ œ',
+  '正書法（子音）':'č š ž ǰ ǧ ǯ ř ň ď ť ľ ć ń ś ź ĺ ŕ ç ş ţ ģ ķ ļ ņ ż ċ ė ġ ṁ ṅ ṡ ḥ ṭ ḍ ṣ ẓ ṇ ṛ ḷ ṃ ḳ ĉ ĝ ĥ ĵ ŝ ŵ đ ħ ł ŧ ŋ ñ ð þ ß',
+  // 合成用：直前の文字に付けると1文字に合成される（例: z＋ˇ→ž）。IPAの補助記号に無い正書法の記号もここに
+  '合成用（前の字に付ける）':'\u0301 \u0300 \u0302 \u030c \u0308 \u0303 \u0304 \u0306 \u0307 \u0323 \u030a \u030b \u0328 \u0327 \u0331 \u0324 \u0326 \u0338 \u0309'
 };
+// 「作った記号」：キーボード文字＋補助記号の合成でできた文字をパレットに常備する
+let palMade=[]; try{palMade=JSON.parse(localStorage.getItem('pal_made')||'[]')||[];}catch(e){palMade=[];}
+function savePalMade(){try{localStorage.setItem('pal_made',JSON.stringify(palMade));}catch(e){}}
 const isComb=ch=>/[̀-ͯ᪰-᫿⃐-⃿]/.test(ch);
+/* 結合記号のプレビュー土台。◌（点線円）と結合記号が別フォントに割り当てられる端末では
+   合字にならず豆腐（□）になるため、実際に描いて確かめ、崩れる場合は o を土台にする */
+const combBaseCache={};
+function combBase(ch){
+  if(combBaseCache[ch])return combBaseCache[ch];
+  let base='◌';
+  try{
+    const font=(getComputedStyle(document.documentElement).getPropertyValue('--ipa')||'sans-serif').trim();
+    const cv=document.createElement('canvas'); cv.width=90; cv.height=48;
+    const c=cv.getContext('2d'); c.font='22px '+font; c.textBaseline='middle';
+    const ink=t=>{c.clearRect(0,0,90,48);c.fillStyle='#000';c.fillText(t,8,24);
+      const d=c.getImageData(0,0,90,48).data; let mx=0;
+      for(let y=0;y<48;y++)for(let x=0;x<90;x++)if(d[(y*90+x)*4+3]>30&&x>mx)mx=x;
+      return mx;};
+    if(ink('◌'+ch)-ink('◌')>3)base='o';   // 土台の右に別グリフ（豆腐）が出た＝合字になっていない
+  }catch(e){}
+  combBaseCache[ch]=base;
+  return base;
+}
+const combPreview=ch=>combBase(ch)+ch;
 // カスタマイズ（ポジティブリスト）：使う記号を選ぶ。選択が空なら全記号を表示。localStorageに永続化
 function savePalKeep(){try{localStorage.setItem('pal_keep',JSON.stringify([...palKeep]));}catch(e){}}
 let palKeep=new Set(); try{palKeep=new Set(JSON.parse(localStorage.getItem('pal_keep')||'[]'));}catch(e){palKeep=new Set();}
@@ -2988,9 +3059,13 @@ function renderPalette(){
   $('palette').innerHTML=Object.entries(IPA).map(([g,chars])=>{
     const btns=chars.split(' ').filter(Boolean)
       .filter(ch=>palEditing||!palKeep.size||palKeep.has(ch))   // 選択モード中は全表示、通常は選択のみ（空なら全）
-      .map(ch=>'<button type="button" class="'+((isComb(ch)||g==='補助記号')?'comb':'')+(palEditing&&palKeep.has(ch)?' keep':'')+'" data-ch="'+ch+'">'+(isComb(ch)?'◌'+ch:ch)+'</button>').join('');
+      .map(ch=>'<button type="button" class="'+((isComb(ch)||g==='補助記号')?'comb':'')+(palEditing&&palKeep.has(ch)?' keep':'')+'" data-ch="'+ch+'">'+(isComb(ch)?combPreview(ch):ch)+'</button>').join('');
     return btns?'<div class="pgroup"><span class="glabel">'+g+'</span>'+btns+'</div>':'';
-  }).join('');
+  }).join('')
+  +(palMade.length?('<div class="pgroup"><span class="glabel">作った記号</span>'
+     +palMade.filter(ch=>palEditing||!palKeep.size||palKeep.has(ch))
+       .map(ch=>'<button type="button" class="'+(palEditing&&palKeep.has(ch)?'keep':'')+'" data-ch="'+escHtml(ch)+'" title="'+escHtml(ch)+'">'+escHtml(ch)+'</button>').join('')
+     +'<button type="button" class="madeclear" id="palMadeClear" title="作った記号をすべて消します">✕ 消す</button></div>'):'');
 }
 renderPalette();
 let palHideTimer=null;
@@ -3025,6 +3100,19 @@ reservePalSpace();
 window.addEventListener('resize',reservePalSpace);
 // IPAパレットの最小化（下に格納）状態。↑↓ボタンで切替、設定は保持
 let palMin=false; try{palMin=localStorage.getItem('pal_min')==='1';}catch(e){}
+/* プロジェクト（.json）に保存されたパレット構成を復元する。
+   再開時は「もう記号は決まっている」状態なので、パレットは畳んで置いておく（↑開くでいつでも出せる） */
+function applyProjPalette(pal){
+  if(pal&&typeof pal==='object'){
+    if(Array.isArray(pal.keep)){palKeep=new Set(pal.keep);savePalKeep();}
+    if(Array.isArray(pal.made)){palMade=pal.made.filter(x=>typeof x==='string'&&x);savePalMade();}
+    if(pal.freq&&typeof pal.freq==='object'){palFreq=pal.freq;try{localStorage.setItem('pal_freq',JSON.stringify(palFreq));}catch(e){}}
+    renderPalette();
+  }
+  palMin=true; try{localStorage.setItem('pal_min','1');}catch(e){}   // 畳んだ状態で待機
+  showPalette();   // 見出しバー（↑開く・よく使う帯）は出しておく
+  if(typeof updatePalSetupCount==='function')updatePalSetupCount();
+}
 function setPalToggleLabel(){
   const b=$('palToggle');if(!b)return;
   b.textContent=palMin?'↑ 開く':'↓ 最小化';
@@ -3053,6 +3141,15 @@ $('palToggle').addEventListener('click',()=>{
 document.addEventListener('focusin',e=>{
   const cell=e.target.closest&&e.target.closest('#tb [contenteditable]');
   if(cell){
+    palLastCell=cell;
+    if(palPending){   // パレットを先に押していた分をここでまとめて挿入（押す順序を問わない）
+      const buf=palPending; setPalPending('');
+      setTimeout(()=>{try{
+        document.execCommand('insertText',false,buf);
+        [...buf].forEach(c=>{if(!isComb(c))bumpPalFreq(c)});
+        const cl=trailingCluster(buf); if([...cl].length>1||buf.normalize('NFC')!==buf)registerMade(cl);
+      }catch(_){}} ,0);
+    }
     palSel=null; drawPalWave();   // 編集中の区間の波形を表示（gloss等でも区間の確認に使える）
     // パレットや上部固定の波形に隠れるときだけ、必要最小限だけスクロールする
     setTimeout(()=>{try{
@@ -3065,12 +3162,106 @@ document.addEventListener('focusin',e=>{
     }catch(_){}drawPalWave();} ,60);
   }
 });
-// IPA記号を現在の編集位置に挿入（パレット本体・よく使う帯の共通処理）
-function insertIpaChar(ch){
-  const s=document.getSelection(), node=s.anchorNode;
-  const el=node&&(node.nodeType===1?node:node.parentElement);
-  if(!el||!el.closest('[contenteditable]')){alert('先に挿入先のセル（text欄など）をクリックしてください');return false}
+/* ---- 記号の挿入：入力先が決まっていなくても押せる（順序を問わない） ----
+   1) いま編集中のセルがあればそこへ  2) 直前まで編集していたセルがあれば戻して挿入
+   3) どちらも無ければ「入力待ち」に溜め、次にセルへ入った時点でまとめて挿入            */
+let palLastCell=null, palLastRange=null, palPending='';
+// 編集位置を常に控えておく（パレット操作でフォーカスが外れても戻せるように）
+document.addEventListener('selectionchange',()=>{
+  const s=document.getSelection(); if(!s||!s.rangeCount)return;
+  const n=s.anchorNode, el=n&&(n.nodeType===1?n:n.parentElement);
+  const cell=el&&el.closest&&el.closest('#tb [contenteditable]');
+  if(cell){palLastCell=cell;palLastRange=s.getRangeAt(0).cloneRange();}
+});
+function liveEditable(){
+  const s=document.getSelection(), n=s&&s.anchorNode;
+  const el=n&&(n.nodeType===1?n:n.parentElement);
+  return (el&&el.closest&&el.closest('[contenteditable]'))||null;
+}
+// 直前のセルへフォーカスと編集位置を戻す
+function restoreLastCell(){
+  if(!palLastCell||!palLastCell.isConnected)return false;
+  palLastCell.focus();
+  try{
+    if(palLastRange&&palLastRange.startContainer.isConnected){
+      const s=document.getSelection();s.removeAllRanges();s.addRange(palLastRange);
+    }
+  }catch(_){}
+  return true;
+}
+function setPalPending(str){
+  palPending=str;
+  const box=$('palPend'); if(!box)return;
+  const en=(()=>{try{return !!(window.__bltLangEN&&window.__bltLangEN())}catch(e){return false}})();
+  box.hidden=!palPending;
+  if(palPending)box.innerHTML='<span class="chs">'+escHtml(palPending)+'</span>'
+    +'<span data-i18n-skip>'+(en?'← click a cell to insert':'← セルをクリックすると入ります')+'</span>'
+    +'<button type="button" id="palPendX" title="'+(en?'discard':'取り消す')+'">✕</button>';
+}
+// 補助記号は直前の文字と合成して1文字にする（例: z + ˇ → ž）。合成できない組み合わせはそのまま重ねる
+function trailingCluster(txt){
+  const cps=[...txt]; let i=cps.length-1;
+  while(i>0&&isComb(cps[i]))i--;
+  return cps.slice(i).join('');
+}
+function insertWithCompose(ch){
+  if(isComb(ch)){
+    const s=document.getSelection();
+    if(s&&s.rangeCount){
+      const r=s.getRangeAt(0);
+      if(r.collapsed&&r.startContainer.nodeType===3&&r.startOffset>0){
+        const before=r.startContainer.nodeValue.slice(0,r.startOffset);
+        const base=[...before].pop()||'';
+        if(base&&base.length===1&&!isComb(base)){
+          const composed=(base+ch).normalize('NFC');
+          if([...composed].length===1){        // 合成済み文字が存在する組み合わせ
+            document.execCommand('delete');    // 直前の文字を消して
+            document.execCommand('insertText',false,composed);   // 合成済み1文字に置き換え
+            return composed;
+          }
+        }
+      }
+    }
+  }
   document.execCommand('insertText',false,ch);
+  if(!isComb(ch))return ch;
+  // 合成済み文字が無い組み合わせ（例: ɨ + ˇ）は、結合した見た目のまとまりを1つの記号として扱う
+  const s2=document.getSelection();
+  if(s2&&s2.rangeCount){
+    const r2=s2.getRangeAt(0);
+    if(r2.collapsed&&r2.startContainer.nodeType===3)return trailingCluster(r2.startContainer.nodeValue.slice(0,r2.startOffset));
+  }
+  return ch;
+}
+// 合成でできた記号をパレット（作った記号）に登録
+function registerMade(ch){
+  if(!ch)return;
+  const all=Object.values(IPA).join(' ').split(' ').filter(Boolean);
+  if(all.includes(ch)){   // もともとパレットにある文字：絞り込み中なら見えるように加えるだけ
+    if(palKeep.size&&!palKeep.has(ch)){palKeep.add(ch);savePalKeep();renderPalette();reservePalSpace();}
+    return;
+  }
+  if(palMade.includes(ch))return;
+  palMade.push(ch); savePalMade();
+  if(palKeep.size){palKeep.add(ch);savePalKeep();}   // 記号を絞り込み中でも、作った記号は見えるように
+  renderPalette(); reservePalSpace();
+}
+function insertIpaChar(ch){
+  // テキストエリア・入力欄（辞書の語義など）にフォーカスがあるときはそこへ
+  const ae=document.activeElement;
+  if(ae&&(ae.tagName==='TEXTAREA'||ae.tagName==='INPUT')&&typeof ae.setRangeText==='function'){
+    const st=ae.selectionStart,en2=ae.selectionEnd;
+    ae.setRangeText(ch,st,en2,'end');
+    ae.dispatchEvent(new Event('input',{bubbles:true}));
+    return true;
+  }
+  if(!liveEditable()&&!restoreLastCell()){
+    setPalPending((palPending+ch).normalize('NFC'));   // 入力先が無い→溜めておく（順序を問わない）
+    return false;
+  }
+  if(!liveEditable())return false;
+  const made=insertWithCompose(ch);
+  if(made&&made!==ch){registerMade(made);bumpPalFreq(made);}
   return true;
 }
 /* ---- よく使うIPAの帯：使用回数を記憶し、見出しバーに常駐表示（最小化でも残る） ---- */
@@ -3083,7 +3274,7 @@ const PAL_FAV_N=14;   // 帯に出す最大数
 function renderPalFav(){
   const wrap=$('palFav'); if(!wrap)return;
   const top=Object.entries(palFreq).filter(([ch,n])=>n>0&&(!palKeep.size||palKeep.has(ch))).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0])).slice(0,PAL_FAV_N);   // 帯もポジティブリストに従う
-  wrap.innerHTML=top.map(([ch])=>'<button type="button"'+(isComb(ch)?' class="comb"':'')+' data-ch="'+escHtml(ch)+'" title="'+escHtml(ch)+' を挿入">'+(isComb(ch)?'◌'+ch:ch)+'</button>').join('');
+  wrap.innerHTML=top.map(([ch])=>'<button type="button"'+(isComb(ch)?' class="comb"':'')+' data-ch="'+escHtml(ch)+'" title="'+escHtml(ch)+' を挿入">'+(isComb(ch)?combPreview(ch):ch)+'</button>').join('');
 }
 // 記号クリックの共通処理：通常＝挿入、✎選択モード＝使う記号の選択/解除（ボタンのハイライトを直接切替＝スクロール位置を保つ）
 function onPalSymbolClick(ch,btn){
@@ -3091,14 +3282,23 @@ function onPalSymbolClick(ch,btn){
     if(palKeep.has(ch)){palKeep.delete(ch);if(btn)btn.classList.remove('keep');}
     else{palKeep.add(ch);if(btn)btn.classList.add('keep');}
     savePalKeep();
+    updatePalSetupCount();
     return;
   }
   if(insertIpaChar(ch))bumpPalFreq(ch);   // 挿入は回数に加算（帯の並び替えは次回表示時）
 }
 $('palFav').addEventListener('mousedown',e=>{if(e.target.hasAttribute('data-ch'))e.preventDefault()});   // フォーカス保持
 $('palFav').addEventListener('click',e=>{if(!palEditing&&e.target.hasAttribute('data-ch'))onPalSymbolClick(e.target.getAttribute('data-ch'),e.target)});   // 選択モード中は帯からは選ばない
-$('palette').addEventListener('mousedown',e=>{if(e.target.hasAttribute('data-ch'))e.preventDefault()});
-$('palette').addEventListener('click',e=>{if(e.target.hasAttribute('data-ch'))onPalSymbolClick(e.target.getAttribute('data-ch'),e.target)});
+$('palette').addEventListener('mousedown',e=>{if(e.target.hasAttribute('data-ch')||e.target.id==='palMadeClear')e.preventDefault()});
+$('palette').addEventListener('click',e=>{
+  if(e.target.id==='palMadeClear'){
+    if(!palMade.length||!confirm('作った記号をすべて消します。よろしいですか？'))return;
+    palMade=[]; savePalMade(); renderPalette(); renderPalFav(); reservePalSpace(); return;
+  }
+  if(e.target.hasAttribute('data-ch'))onPalSymbolClick(e.target.getAttribute('data-ch'),e.target);
+});
+$('palPend').addEventListener('mousedown',e=>e.preventDefault());
+$('palPend').addEventListener('click',e=>{if(e.target.id==='palPendX')setPalPending('')});
 // ✎選択モードの出入り（全記号を表示して選ぶ）と、選択のリセット（＝全表示に戻す）
 function setPalEditing(on){
   palEditing=on;
@@ -3593,7 +3793,8 @@ $('dlJson').addEventListener('click',()=>{
 });
 $('dlProj').addEventListener('click',()=>{
   const multi=multiCh?{multiCh:true,trackFiles:tracks.map(t=>({spk:t.spk,name:t.name||(t.file&&t.file.name)||''}))}:{};
-  dl(baseName()+'_project.json',JSON.stringify(Object.assign({wavName:wavFile?wavFile.name:'',glossOn,morphSrc,morphSeps,bdrSeps,tiersDef,speakers,segs,ignoredMiss,lexicon},multi),null,1),'application/json');
+  const palette={keep:[...palKeep],made:palMade.slice(),freq:palFreq};   // パレット構成も一緒に保存（再開時に復元）
+  dl(baseName()+'_project.json',JSON.stringify(Object.assign({wavName:wavFile?wavFile.name:'',glossOn,morphSrc,morphSeps,bdrSeps,tiersDef,speakers,segs,ignoredMiss,lexicon,palette},multi),null,1),'application/json');
   markSaved();   // プロジェクト保存＝この状態を「保存済み」基準に
 });
 // ヘッダーの保存バー（書き出しカードと同じ処理を呼ぶ）
@@ -4075,7 +4276,9 @@ $('dlDict').addEventListener('click',async()=>{
 '波形で区間を確認・修正':{t:'Check / fix segments on the waveform',b:'This is the waveform of your audio. Segments (colored bands) can be <b>resized by dragging an edge</b> and <b>played by clicking + Space</b>. Speech left out of any segment (“missed”) is flagged with a <b>red band</b> — there is one in this demo too. Review with ◀▶ and “Preview”, then <b>“✓ Add as segment”</b> to keep it, or “Ignore”. Use <b>“⟳ Re-run auto-segmentation”</b> to tune the sensitivity.'},
 '複数話者に対応':{t:'Multiple speakers',b:'The waveform is <b>color-coded and split into lanes per speaker</b> (above, different colors per segment mean different speakers). Add speakers with <b>+ Speaker</b> below the waveform.<br><b>Different speakers may overlap in time</b> (not within one speaker), so conversational overlap is handled as-is.<br>Example: a <b>Speaker B</b> was added and the 2nd segment assigned to it (its color changes).'},
 '② 文字起こし（text）と訳（trans）':{t:'② Transcription (text) and translation (trans)',b:'Type the transcription in the <b>text</b> field and the translation in the <b>trans</b> field.<br>e.g. <i style="font-family:var(--ipa)">nkjaan=du anna=tu uja=tu tamamiga=ti asɨ ffa-gama=nu u-tar=ca.</i><br>Translation: “Long ago there were a mother, a father, and a child named Tamamiga.”'},
-'IPAパレットで発音記号を挿入':{t:'Insert phonetic symbols with the IPA palette',b:'Symbols that are hard to type go in via this <b>IPA palette</b> (it appears at the bottom while editing).<br>Here, after “<b>as</b>” we inserted <b style="outline:2px solid var(--sel);border-radius:3px;padding:0 3px">ɨ</b> (a central vowel) to make <b>asɨ</b>. Clicking a button in the vowels section inserts it at the cursor in the cell being edited.'},
+'✎ 表記のためのパレットを作る':{t:'✎ Build a palette for your orthography',b:'Before you start annotating, you can pick <b>just the symbols your orthography uses</b> (“<b>Choose your symbols</b>”). Only those appear, so typing gets faster. <b>Pick nothing and every symbol stays available</b>, and you can change the selection any time with ✎.<br>The selection is <b>saved inside the project (.json)</b>, so you never have to choose again when you resume.'},
+'合成用の記号で文字を作る（ž ü á …）':{t:'Build letters with combining marks (ž ü á …)',b:'The <b>“Combine (adds to previous letter)”</b> row holds marks that <b>merge into the letter before them</b>.<br>e.g. type <b>z</b>, then press <b style="outline:2px solid var(--sel);border-radius:3px;padding:0 3px">◌̌</b> (haček) to get <b>ž</b> (likewise <b>ü</b> = u + ◌̈, <b>á</b> = a + ◌́).<br>Letters you build this way <b>stay in the palette and in the “frequently used” bar</b>, so next time they are one click away. Pre-composed letters are also listed under <b>Orthography</b>.'},
+'IPAパレットで発音記号を挿入':{t:'Insert phonetic symbols with the IPA palette',b:'Symbols that are hard to type go in via this <b>IPA palette</b> (it appears at the bottom while editing).<br>Here, after “<b>as</b>” we inserted <b style="outline:2px solid var(--sel);border-radius:3px;padding:0 3px">ɨ</b> (a central vowel) to make <b>asɨ</b>. Clicking a button in the vowels section inserts it at the cursor in the cell being edited.<br><b>Order does not matter</b>: press palette buttons before you enter a cell and they wait in the header bar, then drop in as soon as you click a cell.'},
 'morph層：形態素が自動で区切られる':{t:'morph layer: morphemes split automatically',b:'Using <b>-</b> (affix), <b>=</b> (clitic) and spaces in the text as cues, morphemes are split automatically into an interlinear display.<br>e.g. <i>nkjaan / =du / anna / =tu …</i> (the = clitic and - affix boundaries are kept).'},
 '③ gloss層：グロスを付ける':{t:'③ gloss layer: add glosses',b:'Enter a gloss in the field under each morpheme.<br>e.g. <b>nkjaan→昔 (long ago)</b>, <b>du→FOC</b>, <b>anna→母親 (mother)</b>, <b>tu→COM</b> … Now you have <b>text + morph + gloss + trans</b>.'},
 '④ 文境界の設定（パネル操作）':{t:'④ Sentence-boundary setting',b:'Open <b>“Advanced settings”</b> in panel 4 and check <b>“Code sentence boundaries (bdr layer, period-based).”</b> The <b>period (.)</b> in the text is used as the sentence-end cue.'},
@@ -4103,8 +4306,10 @@ $('dlDict').addEventListener('click',async()=>{
     {sel:'#cardWave', title:'→ 発話区間に分割されました', body:'「自動検出を実行」を押すと、このように音声が<b>色付きの区間（発話）</b>に分割されます。次の画面で、この区間の確認・修正方法を見ていきます。', place:'bottom', needsAudio:true, demoOnly:true, action:'demoDetect', scrollTop:true},
     {sel:'#cardWave', title:'波形で区間を確認・修正', body:'読み込んだ音声の波形です。区間（色付き帯）は<b>ドラッグで境界調整</b>、<b>クリック＋Space で再生</b>。区間化されなかった有音（取りこぼし）は<b>赤帯</b>で警告されます — このデモにも1か所あります。◀▶や「確認再生」で確認し、<b>「✓ 区間に追加」</b>で区間化、対象外なら「無視」。「⟳ 自動区切りをやり直し」で検出の感度も調整できます。', place:'bottom', needsAudio:true, scrollTop:true},
     {sel:'#cardWave', title:'複数話者に対応', body:'波形は<b>話者ごとに色分け・レーン分割</b>されます（上の波形で、区間ごとに色が違うのが話者の違いです）。波形の下の <b>＋話者</b> で話者を増やせます。<br><b>別の話者どうしは時刻が重なってもOK</b>（同じ話者内は重複不可）なので、会話のオーバーラップもそのまま扱えます。<br>例：<b>話者B</b>を追加し、2番目の区間を話者Bに割り当てました（色が変わります）。', place:'bottom', needsAudio:true, action:'demoSpk'},
+    {sel:'#cardPal', title:'✎ 表記のためのパレットを作る', body:'注釈に入る前に、<b>その言語の表記で使う記号だけ</b>をパレットに選んでおけます（「<b>✎ 使う記号を選ぶ</b>」）。選んだものだけが並ぶので、入力が速くなります。<b>選ばなければ全記号が並びます</b>し、あとから ✎ でいつでも変更できます。<br>この構成は<b>プロジェクト（.json）に一緒に保存</b>され、再開したときは選び直す必要がありません。', place:'bottom', needsAudio:true, action:'demoPalSetup'},
     {sel:'#tb tr[data-i="0"]', title:'② 文字起こし（text）と訳（trans）', body:'区間の <b>text</b> 欄に文字起こし、<b>trans</b> 欄に訳を入力します。<br>例: <i style="font-family:var(--ipa)">nkjaan=du anna=tu uja=tu tamamiga=ti asɨ ffa-gama=nu u-tar=ca.</i><br>訳「昔々、母親と父親とタマミガという子がいたんだそうだ」', place:'bottom', needsAudio:true, action:'demoText', hideWave:true},
-    {sel:'#paletteCard', title:'IPAパレットで発音記号を挿入', body:'キーボードで打ちにくい記号は、この <b>IPAパレット</b>（編集中に画面下に出ます）から挿入します。<br>例では「<b>as</b>」のあとに <b style="outline:2px solid var(--sel);border-radius:3px;padding:0 3px">ɨ</b>（中舌母音）を入れて <b>asɨ</b> にしました。母音セクションのボタンをクリックすると編集中のセルのカーソル位置に入ります。', place:'top', needsAudio:true, hideWave:true, action:'demoIPA'},
+    {sel:'#paletteCard', title:'IPAパレットで発音記号を挿入', body:'キーボードで打ちにくい記号は、この <b>IPAパレット</b>（編集中に画面下に出ます）から挿入します。<br>例では「<b>as</b>」のあとに <b style="outline:2px solid var(--sel);border-radius:3px;padding:0 3px">ɨ</b>（中舌母音）を入れて <b>asɨ</b> にしました。母音セクションのボタンをクリックすると編集中のセルのカーソル位置に入ります。<br><b>押す順序は自由です</b>：セルに入る前にパレットを押しても、見出しバーに「入力待ち」として溜まり、セルをクリックした時点でまとめて入ります。', place:'top', needsAudio:true, hideWave:true, action:'demoIPA'},
+    {sel:'#paletteCard', title:'合成用の記号で文字を作る（ž ü á …）', body:'パレットの<b>「合成用（前の字に付ける）」</b>は、<b>直前の文字に重ねて1文字にする</b>記号です。<br>例: キーボードで <b>z</b> と打ってから <b style="outline:2px solid var(--sel);border-radius:3px;padding:0 3px">◌̌</b>（ハチェック）を押すと <b>ž</b> になります（<b>ü</b>＝u＋◌̈、<b>á</b>＝a＋◌́ も同様）。<br>こうして作った文字は<b>「よく使う」帯とパレットに残る</b>ので、次からは1クリックで入れられます。ウムラウトやハチェック付きの文字は「<b>正書法</b>」の段からそのまま選ぶこともできます。', place:'top', needsAudio:true, hideWave:true, action:'demoCompose'},
     {sel:'#tb tr.glossrow[data-i="0"]', title:'morph層：形態素が自動で区切られる', body:'text内の <b>-</b>（接辞）・<b>=</b>（接語）・空白を手がかりに、形態素が自動分割されてインターリニア表示になります。<br>例: <i>nkjaan / =du / anna / =tu …</i>（接語 = ・接辞 - の境界も保持されます）。', place:'bottom', needsAudio:true, hideWave:true, demoOnly:true},
     {sel:'#tb tr.glossrow[data-i="0"]', title:'③ gloss層：グロスを付ける', body:'各形態素の下の欄にグロスを記入します。<br>例: <b>nkjaan→昔</b>、<b>du→FOC</b>、<b>anna→母親</b>、<b>tu→COM</b> … のように。これで <b>text＋morph＋gloss＋trans</b> がそろいました。', place:'bottom', needsAudio:true, action:'demoGloss', hideWave:true},
     {sel:'#bdrSetting', title:'④ 文境界の設定（パネル操作）', body:'パネル4の「<b>詳細設定</b>」を開き、<b>文境界をコーディング（bdr層・ピリオド基準）</b> にチェックを入れます（このチェックが実際に入ります）。text の<b>ピリオド(.)</b>を文末の手がかりにします。', place:'top', needsAudio:true, action:'demoBdr'},
@@ -4115,7 +4320,7 @@ $('dlDict').addEventListener('click',async()=>{
     {sel:'#newTierParent', title:'層の「親」＝粒度を選ぶ', body:'追加時に<b>親</b>を選びます—これが入力の粒度を決めます。<br>・<b>区間</b>＝1区間に1つ（<i>trans</i> のような層）<br>・<b>形態素</b>＝形態素ごと（<i>gloss・pos</i> のような層）<br>pos は「形態素」を親にしたので、形態素ごとに記入できます。', place:'bottom', needsAudio:true, hideWave:true, action:'demoAddLayer'},
     {sel:'#tierChips', title:'追加した層はチップで管理', body:'追加した層はこの<b>チップ</b>に並びます（「← 形態素」など親も表示）。<br>不要になったら <b>✕</b> でいつでも削除できます。', place:'bottom', needsAudio:true, hideWave:true, action:'demoAddLayer'},
     {sel:'#cardTable', title:'udl層：基底形の境界で morph 分割', body:'<b>udl層（基底形）</b>を加えると、morph は <b>表層の text</b> ではなく <b>udl の形態素境界</b>に従って分割されます。表層 text は区切らずそのまま、udl に境界を書くだけ。<br>下の表でも、<b>表層 text の <span style="background:var(--sel);color:#5a4200;border-radius:3px;padding:0 4px">midummasii</span></b> と、<b>udl の <span style="background:var(--sel);color:#5a4200;border-radius:3px;padding:0 4px">midum-as-i-i</span></b> をハイライトしています。表層と基底がずれていても、udl に書いた境界どおりに morph 分割されます。', place:'bottom', needsAudio:true, action:'demoUdl', hideWave:true, marks:[{sel:'#tb tr[data-i="0"] [data-k="text"]', find:'midummasii', tag:'表層 text', tagEn:'surface text'},{sel:'#tb tr.glossrow[data-i="0"] [data-t="udl"]', find:'midum-as-i-i', tag:'udl（基底形）', tagEn:'udl (underlying)'}]},
-    {sel:'#cardExport', title:'⑤ 書き出し・保存', body:'仕上がったら <b>EAF / TSV / JSON / WAV ZIP</b> で書き出し。<b>プロジェクト途中保存</b>（.json）で、同じWAVを読み込めば続きから再開できます。', place:'top', needsAudio:true},
+    {sel:'#cardExport', title:'⑤ 書き出し・保存', body:'仕上がったら <b>EAF / TSV / JSON / WAV ZIP</b> で書き出し。<b>パレットの構成（選んだ記号・作った記号）も一緒に保存</b>され、再開時は復元されたうえで<b>パレットは畳んだ状態</b>で待機します（「↑ 開く」でいつでも出せます）。<br><b>プロジェクト途中保存</b>（.json）で、同じWAVを読み込めば続きから再開できます。', place:'top', needsAudio:true},
     {sel:'#srchConds', title:'🔎 検索タブ：層で探す', body:'ここからは<b>検索タブ</b>です。各<b>層（text・gloss・morph など）</b>に条件を付けて、区間や形態素を探せます。<br>「<b>を含む／に一致／正規表現／空でない</b>」から選べます。<br><b>いま『text に dondon を含む』で検索しました。</b>', place:'bottom', needsAudio:true, tab:'search', fill:'demoSearch'},
     {sel:'#srchResults', title:'検索結果から注釈へジャンプ', body:'結果は<b>KWIC（前後文脈付き）</b>で並びます。行のリンクを押すと<b>その区間へ（注釈タブに戻って）ジャンプ</b>します。<br>・複数条件を <b>AND／OR</b> で組み合わせ、<b>結果の単位（区間／形態素）</b>も選べます。', place:'top', needsAudio:true, tab:'search'},
     {sel:'#anStats', title:'📊 分析・辞書タブ：集計', body:'ここからは<b>分析・辞書タブ</b>。まず<b>集計</b>で、区間数・語数・形態素数・異なる形態素数などが一目でわかります。', place:'bottom', needsAudio:true, tab:'analysis'},
@@ -4172,7 +4377,26 @@ $('dlDict').addEventListener('click',async()=>{
       }
     }catch(e){}
   }
-  function clearIPAHighlight(){ var b=document.querySelector('#paletteCard button[data-ch="ɨ"]'); if(b){ b.style.outline=''; b.style.outlineOffset=''; } var pc=document.getElementById('paletteCard'); if(pc){ pc.style.transform=''; pc.style.transition=''; } }
+  // パレット作成の誘導カードを（一度閉じていても）ツアー中は見せる
+  function demoPalSetup(){
+    try{
+      var c=document.getElementById('cardPal'); if(c)c.classList.remove('hidden');
+      if(typeof updatePalSetupCount==='function')updatePalSetupCount();
+    }catch(e){}
+  }
+  // 合成の実演：パレットを開き、ハチェック（◌̌）のボタンを強調する
+  function demoCompose(){
+    try{
+      if(typeof showPalette==='function')showPalette();
+      if(typeof palMin!=='undefined'&&palMin&&typeof $!=='undefined'){ palMin=false; document.getElementById('paletteCard').classList.remove('min'); if(typeof setPalToggleLabel==='function')setPalToggleLabel(); if(typeof reservePalSpace==='function')reservePalSpace(); }
+      var pcEl=document.getElementById('paletteCard'); if(pcEl){ pcEl.style.transition='none'; pcEl.style.transform='none'; }
+      var b=document.querySelector('#paletteCard button[data-ch="\u030c"]');
+      if(b){ b.style.outline='3px solid var(--sel,#f5b942)'; b.style.outlineOffset='2px'; b.style.borderRadius='4px';
+        try{ b.scrollIntoView({block:'nearest',inline:'center'}); }catch(e){} }
+    }catch(e){}
+  }
+  function clearIPAHighlight(){
+    var hb=document.querySelector('#paletteCard button[data-ch="\u030c"]'); if(hb){ hb.style.outline=''; hb.style.outlineOffset=''; } var b=document.querySelector('#paletteCard button[data-ch="ɨ"]'); if(b){ b.style.outline=''; b.style.outlineOffset=''; } var pc=document.getElementById('paletteCard'); if(pc){ pc.style.transform=''; pc.style.transition=''; } }
   // 発話境界≠文境界 の実演：別の発話(_003)を読み込んで注釈
   var utt2Loading=false, utt2Ready=false, utt2Cbs=[];
   function makeDemo2Wav(){
@@ -4302,7 +4526,7 @@ $('dlDict').addEventListener('click',async()=>{
       if(first) first.click();
     }catch(e){}
   }
-  var ACTIONS={demoDetect:demoDetect, demoText:demoText, demoGloss:demoGloss, demoBdr:demoBdr, demoIPA:demoIPA, demoUtt2:demoUtt2, demoUdl:demoUdl, demoAddLayer:demoAddLayer, demoSearch:demoSearch, demoDict:demoDict, demoSpk:demoSpk};
+  var ACTIONS={demoDetect:demoDetect, demoText:demoText, demoGloss:demoGloss, demoBdr:demoBdr, demoIPA:demoIPA, demoPalSetup:demoPalSetup, demoCompose:demoCompose, demoUtt2:demoUtt2, demoUdl:demoUdl, demoAddLayer:demoAddLayer, demoSearch:demoSearch, demoDict:demoDict, demoSpk:demoSpk};
   function isVisible(el){ if(!el) return false; var cs=getComputedStyle(el); if(cs.display==='none'||cs.visibility==='hidden') return false; var r=el.getBoundingClientRect(); return r.width>0&&r.height>0; }
   function clearWatch(){ if(watch){ clearInterval(watch); watch=null; } }
   function audioLoaded(){ var wv=document.getElementById('cardWave'); return (wv&&isVisible(wv))||(typeof segs!=='undefined'&&segs.length>0); }
@@ -4496,6 +4720,10 @@ $('dlDict').addEventListener('click',async()=>{
     "全話者を、それぞれのチャンネルで自動検出します。入力済みの注釈は、時間が重なる新しい区間に引き継がれます。よろしいですか？":"Auto-detect every speaker on their own channel. Existing annotations carry over to the new overlapping segments. Proceed?",
     // 追補（このセッションの新機能・取りこぼし分）
     "母音":"Vowels","子音":"Consonants","超分節・声調":"Suprasegmentals / tone","補助記号":"Diacritics",
+    "正書法（母音）":"Orthography: vowels","正書法（子音）":"Orthography: consonants","合成用（前の字に付ける）":"Combine (adds to previous letter)","作った記号":"Your symbols","✕ 消す":"✕ Clear",
+    "表記のためのパレットを作る":"Build a palette for your orthography",
+    "✎ 使う記号を選ぶ":"✎ Choose your symbols","今は選ばずに注釈へ進む":"Skip and start annotating",
+    "作った記号をすべて消します。よろしいですか？":"Clear all of your composed symbols?",
     "▶ クリックで波形をひらく":"▶ Click to open the waveform",
     "詳細設定（形態素の分割記号・分割元）":"Advanced settings (morpheme separators / source)",
     "詳細設定（morphの分割元）":"Advanced settings (morpheme source)",

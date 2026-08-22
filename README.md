@@ -44,7 +44,8 @@ If you use BLT in your research, please cite the archived release:
 > Shimoji, Michinori. (2026). *BLT: Browser-based Lightweight Toolkit for Editing Field Data* (v1.1.0) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.20707256
 
 - **Concept DOI** (always resolves to the latest version): [10.5281/zenodo.20707256](https://doi.org/10.5281/zenodo.20707256)
-- Version DOIs: v1.0.2 — [10.5281/zenodo.20749188](https://doi.org/10.5281/zenodo.20749188) ·
+- **This version (v1.1.0)**: [10.5281/zenodo.22056173](https://doi.org/10.5281/zenodo.22056173)
+- Earlier versions: v1.0.2 — [10.5281/zenodo.20749188](https://doi.org/10.5281/zenodo.20749188) ·
   v1.0.1 — [10.5281/zenodo.20707257](https://doi.org/10.5281/zenodo.20707257)
 
 A machine-readable citation is in [`CITATION.cff`](CITATION.cff) (GitHub shows a

@@ -32,10 +32,31 @@ header button.primary:hover{background:linear-gradient(180deg,#e32433,#a01019)}
 #brand .logo svg{height:32px;width:auto;filter:drop-shadow(0 2px 0 rgba(0,0,0,.85)) drop-shadow(0 0 9px rgba(210,27,42,.6))}
 #brandToggle{flex:none;width:22px;height:22px;padding:0;border:1px solid var(--steel);border-radius:50%;background:#2a2c31;color:#aeb4bf;font-size:12px;line-height:1;cursor:pointer}
 #brandToggle:hover{border-color:#e2404d;color:#fff;background:#3a3d44}
-#brandInfo{display:none;position:absolute;top:calc(100% + 14px);left:0;z-index:45;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.18);padding:14px 16px;width:min(700px,calc(100vw - 40px))}
+#brandInfo{display:none;position:absolute;top:calc(100% + 14px);left:0;z-index:45;padding:15px 18px;width:min(700px,calc(100vw - 40px))}
 header.brandOpen #brandInfo{display:block}
-#brand .bname,#brandHero .bname{font-family:var(--jp-serif);font-size:15px;font-weight:600;color:var(--accent-ink);letter-spacing:.01em;line-height:1.25}
-#brand .btag,#brandHero .btag{font-size:11.5px;color:var(--muted);margin-top:3px;line-height:1.3}
+/* ロゴ文字ホバー: 当てた文字を赤クロームに点火し、メッセージを吹き出す */
+path[data-word]{cursor:pointer}
+path[data-word]:hover{fill:url(#logoChromeHot)}
+/* 吹き出しは可読性優先: 地はベタの濃色プレート、文字はベタ白（クローム文字は小さいと読めないため使わない） */
+#logoTip{position:fixed;z-index:120;pointer-events:none;display:none;transform:translateX(-50%);
+  background:linear-gradient(180deg,#2b2e34,#111216);border:1px solid #6b7280;border-bottom:3px solid var(--accent);border-radius:9px;
+  padding:9px 16px 10px;max-width:min(360px,calc(100vw - 24px));
+  box-shadow:0 8px 22px rgba(0,0,0,.6),0 0 16px rgba(210,27,42,.35);animation:logoTipPop .13s ease-out}
+#logoTip .l1{font-family:Impact,"Arial Black","Avenir Next Condensed",sans-serif;font-style:italic;font-size:21px;line-height:1.15;letter-spacing:.045em;
+  color:#fff;text-shadow:0 2px 0 #000,0 0 10px rgba(226,64,77,.75)}
+#logoTip .l2{margin-top:5px;font-family:var(--ui);font-size:12.5px;line-height:1.5;color:#d3d9e2}
+@keyframes logoTipPop{from{opacity:0;transform:translateX(-50%) translateY(-4px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+/* ロゴ右の情報プレート（ヘッダーのⓘ／初期画面カード共通）: ロゴ台座と同じ鋼板仕上げで揃える */
+#brandInfo,#brandHero .bh-info{background:linear-gradient(180deg,#25272c,#131418);border:1px solid #4a4e55;border-bottom:2px solid var(--accent);border-radius:10px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.10),0 6px 18px rgba(0,0,0,.5)}
+/* 正式名称: 明朝からロゴ寄りの太いサンセリフへ（暗い鋼板でも太く読める）。頭文字 B・L・T はロゴと同じクローム */
+#brandInfo .bname,#brandHero .bname{font-family:var(--ui);font-size:18.5px;font-weight:800;color:#f2f5fa;letter-spacing:.005em;line-height:1.38;text-shadow:0 1px 0 rgba(0,0,0,.75);
+  transform:skewX(-4deg);transform-origin:0 100%}   /* ロゴと同じ傾き。頭文字だけイタリックにすると角度が食い違うので行ごと傾ける */
+#brandInfo .bname .ini,#brandHero .bname .ini{font-family:Impact,"Arial Black","Avenir Next Condensed",var(--ui);font-weight:400;font-size:21px;letter-spacing:.02em;
+  background:linear-gradient(180deg,#ffffff 0%,#ffffff 52%,#d8dfea 78%,#b9c2d1 100%);   /* 小さい文字なので暗い帯は入れない（沈んで読めなくなるため） */
+  -webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none;
+  filter:drop-shadow(0 1px 0 rgba(0,0,0,.9)) drop-shadow(0 0 8px rgba(226,64,77,.75))}
+#brandInfo .btag,#brandHero .btag{font-size:13px;color:#c8cfda;margin-top:6px;line-height:1.5}
 /* 初期画面のブランドカード（音声を読み込むと隠れる）: ダイヤモンドプレート仕様 */
 #cardBrand{border:1px solid #3a3d44;background-color:#26282d;
   background-image:linear-gradient(180deg,rgba(255,255,255,.07),rgba(0,0,0,.30)),url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56'%3E%3Crect width='56' height='56' fill='%2326282d'/%3E%3Cg transform='translate(14 14) rotate(45)'%3E%3Crect x='-10' y='-3.5' width='20' height='7' rx='3.5' fill='%23111216' transform='translate(1.3 1.7)'/%3E%3Crect x='-10' y='-3.5' width='20' height='7' rx='3.5' fill='%23434750'/%3E%3Crect x='-8.5' y='-3' width='17' height='2.6' rx='1.3' fill='%235f6570'/%3E%3C/g%3E%3Cg transform='translate(42 42) rotate(-45)'%3E%3Crect x='-10' y='-3.5' width='20' height='7' rx='3.5' fill='%23111216' transform='translate(1.3 1.7)'/%3E%3Crect x='-10' y='-3.5' width='20' height='7' rx='3.5' fill='%23434750'/%3E%3Crect x='-8.5' y='-3' width='17' height='2.6' rx='1.3' fill='%235f6570'/%3E%3C/g%3E%3C/svg%3E");
@@ -43,14 +64,15 @@ header.brandOpen #brandInfo{display:block}
 #brandHero{display:flex;align-items:center;gap:24px;flex-wrap:wrap}
 #brandHero .bh-logo{background:linear-gradient(180deg,#1b1c20,#0b0c0f);border:1px solid #4a4e55;border-bottom:2px solid var(--accent);border-radius:10px;padding:18px 28px;display:flex;align-items:center;box-shadow:0 3px 10px rgba(0,0,0,.55)}
 #brandHero .bh-logo svg{height:64px;width:auto;filter:drop-shadow(0 2px 0 rgba(0,0,0,.85)) drop-shadow(0 0 12px rgba(210,27,42,.6))}
-#brandHero .bh-info{flex:1 1 340px;min-width:0;background:rgba(17,18,22,.74);border:1px solid #4a4e55;border-radius:10px;padding:12px 16px;box-shadow:0 3px 10px rgba(0,0,0,.35)}
-#brandHero .bname{font-size:17px;color:#eef1f6}
-#brandHero .btag{color:#b8bec8}
-#brandHero .bcredit{color:#a7adb8}
-#brandHero .bcredit a{color:#ff8089}
-#brandHero .bcite{background:rgba(179,18,31,.16);color:#f0dadc;border-left:3px solid var(--accent)}
-#brandHero .bcite a{color:#ff8089}
-#brandHero .bcite .lab{color:#ff6b74}
+#brandHero .bh-info{flex:1 1 340px;min-width:0;padding:15px 18px}
+/* クレジット・引用情報: 文字を一段大きく・明るくして鋼板の上でも読み切れるように */
+#brandInfo .bcredit,#brandHero .bcredit{font-size:12px;color:#aeb6c2;margin-top:8px}
+#brandInfo .bcredit a,#brandHero .bcredit a{color:#ff9aa2}
+#brandInfo .bcredit .sep,#brandHero .bcredit .sep{color:#5a5f68}
+#brandInfo .bcite,#brandHero .bcite{margin-top:11px;max-width:none;font-size:12.5px;line-height:1.68;color:#eee0e2;
+  background:rgba(179,18,31,.20);border:1px solid rgba(226,64,77,.32);border-left:3px solid var(--accent);border-radius:6px;padding:8px 12px}
+#brandInfo .bcite a,#brandHero .bcite a{color:#ff9aa2}
+#brandInfo .bcite .lab,#brandHero .bcite .lab{display:inline-block;color:#fff;background:linear-gradient(180deg,#d21b2a,#8e0d17);border:1px solid #e2404d;border-radius:4px;padding:0 7px;margin-right:8px}
 .bcredit{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.3}
 .bcredit a{color:var(--accent);text-decoration:none;font-weight:600}
 .bcredit a:hover{text-decoration:underline}
@@ -428,14 +450,14 @@ html[data-theme="dark"] code{color:var(--accent-ink)}
         <stop offset="1" stop-color="#a01019"/>
       </linearGradient></defs>
       <g fill="url(#logoChrome)" stroke="#0c0d11" stroke-width="1.6" stroke-linejoin="miter" transform="skewX(-4)">
-        <path data-word="Browser!" fill-rule="evenodd" d="M14,8 L10,2 L54,8 L76,24 L64,48 L78,72 L54,92 L10,98 L14,92 Z M32,22 H52 L60,33 L48,45 H32 Z M32,55 H50 L58,70 L48,78 H32 Z"/>
-        <path data-word="Lightweight!" d="M100,6 L130,6 L118,38 L144,32 L116,74 L156,74 L178,84 L152,94 L100,94 L112,50 L90,56 Z"/>
-        <path data-word="Toolkit!" d="M188,8 H268 L252,28 H240 V76 L226,92 L212,76 V28 H198 Z"/>
+        <path data-word="BREAKING THE SILENCE" data-sub="無音を切り裂いて、発話区間を撃ち抜く。" data-sub-en="Rip through the silence — carve out every utterance." fill-rule="evenodd" d="M14,8 L10,2 L54,8 L76,24 L64,48 L78,72 L54,92 L10,98 L14,92 Z M32,22 H52 L60,33 L48,45 H32 Z M32,55 H50 L58,70 L48,78 H32 Z"/>
+        <path data-word="LIVING AFTER GLOSSING" data-sub="夜が明けるまで、グロスを刻み続けろ。" data-sub-en="Keep carving glosses till the sun comes up." d="M100,6 L130,6 L118,38 L144,32 L116,74 L156,74 L178,84 L152,94 L100,94 L112,50 L90,56 Z"/>
+        <path data-word="TIER OF THE BEAST" data-sub="注釈層は、何段でも積み上げろ。" data-sub-en="Stack your annotation tiers as deep as you dare." d="M188,8 H268 L252,28 H240 V76 L226,92 L212,76 V28 H198 Z"/>
       </g>
     </svg></span>
     <button type="button" id="brandToggle" title="BLTについて（正式名称・引用情報）" data-i18n-skip>ⓘ</button>
     <div id="brandInfo">
-      <div class="bname">Browser-based Lightweight Toolkit for Editing Field Data</div>
+      <div class="bname"><b class="ini">B</b>rowser-based <b class="ini">L</b>ightweight <b class="ini">T</b>oolkit for Editing Field Data</div>
       <div class="btag">A simple, intuitive toolkit for transcription, annotation, glossing, and conversion.</div>
       <div class="bcredit"><a href="https://michinorishimoji.github.io/mshimoji.com/" target="_blank" rel="noopener">下地理則の研究室</a><span class="sep">|</span>© 2026 Michinori Shimoji</div>
       <div class="bcite"><span class="lab">Cite</span>Shimoji, M. (2026). <i>BLT: Browser-based Lightweight Toolkit for Editing Field Data</i> [Computer software]. Zenodo. <a href="https://doi.org/10.5281/zenodo.20707256" target="_blank" rel="noopener">https://doi.org/10.5281/zenodo.20707256</a></div>
@@ -465,13 +487,13 @@ html[data-theme="dark"] code{color:var(--accent-ink)}
   <div id="brandHero">
     <div class="bh-logo"><svg viewBox="-8 0 288 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       <g fill="url(#logoChrome)" stroke="#0c0d11" stroke-width="1.6" stroke-linejoin="miter" transform="skewX(-4)">
-        <path data-word="Browser!" fill-rule="evenodd" d="M14,8 L10,2 L54,8 L76,24 L64,48 L78,72 L54,92 L10,98 L14,92 Z M32,22 H52 L60,33 L48,45 H32 Z M32,55 H50 L58,70 L48,78 H32 Z"/>
-        <path data-word="Lightweight!" d="M100,6 L130,6 L118,38 L144,32 L116,74 L156,74 L178,84 L152,94 L100,94 L112,50 L90,56 Z"/>
-        <path data-word="Toolkit!" d="M188,8 H268 L252,28 H240 V76 L226,92 L212,76 V28 H198 Z"/>
+        <path data-word="BREAKING THE SILENCE" data-sub="無音を切り裂いて、発話区間を撃ち抜く。" data-sub-en="Rip through the silence — carve out every utterance." fill-rule="evenodd" d="M14,8 L10,2 L54,8 L76,24 L64,48 L78,72 L54,92 L10,98 L14,92 Z M32,22 H52 L60,33 L48,45 H32 Z M32,55 H50 L58,70 L48,78 H32 Z"/>
+        <path data-word="LIVING AFTER GLOSSING" data-sub="夜が明けるまで、グロスを刻み続けろ。" data-sub-en="Keep carving glosses till the sun comes up." d="M100,6 L130,6 L118,38 L144,32 L116,74 L156,74 L178,84 L152,94 L100,94 L112,50 L90,56 Z"/>
+        <path data-word="TIER OF THE BEAST" data-sub="注釈層は、何段でも積み上げろ。" data-sub-en="Stack your annotation tiers as deep as you dare." d="M188,8 H268 L252,28 H240 V76 L226,92 L212,76 V28 H198 Z"/>
       </g>
     </svg></div>
     <div class="bh-info">
-      <div class="bname">Browser-based Lightweight Toolkit for Editing Field Data</div>
+      <div class="bname"><b class="ini">B</b>rowser-based <b class="ini">L</b>ightweight <b class="ini">T</b>oolkit for Editing Field Data</div>
       <div class="btag">A simple, intuitive toolkit for transcription, annotation, glossing, and conversion.</div>
       <div class="bcredit"><a href="https://michinorishimoji.github.io/mshimoji.com/" target="_blank" rel="noopener">下地理則の研究室</a><span class="sep">|</span>© 2026 Michinori Shimoji</div>
       <div class="bcite"><span class="lab">Cite</span>Shimoji, M. (2026). <i>BLT: Browser-based Lightweight Toolkit for Editing Field Data</i> [Computer software]. Zenodo. <a href="https://doi.org/10.5281/zenodo.20707256" target="_blank" rel="noopener">https://doi.org/10.5281/zenodo.20707256</a></div>
@@ -2092,6 +2114,30 @@ function syncStickyTop(){
 }
 syncStickyTop();
 window.addEventListener('resize',()=>{syncStickyTop();if(env){draw();drawOvw()}});
+// ロゴ文字ホバー: B/L/T にメタルなメッセージを出す遊び（ヘッダーとカードの両方のロゴで動く）
+(()=>{
+  const tip=document.createElement('div');tip.id='logoTip';tip.setAttribute('data-i18n-skip','');
+  const l1=document.createElement('div');l1.className='l1';
+  const l2=document.createElement('div');l2.className='l2';
+  tip.appendChild(l1);tip.appendChild(l2);document.body.appendChild(tip);
+  const enOn=()=>{try{return !!(window.__bltLangEN&&window.__bltLangEN())}catch(e){return false}};
+  document.addEventListener('pointerover',e=>{
+    const path=e.target.closest&&e.target.closest('path[data-word]');
+    if(!path)return;
+    l1.textContent=path.dataset.word||'';
+    l2.textContent=(enOn()?path.dataset.subEn:path.dataset.sub)||'';
+    tip.style.display='none';   // 再ホバーでポップアニメを毎回再生
+    void tip.offsetWidth;
+    const r=path.getBoundingClientRect();
+    tip.style.top=(r.bottom+10)+'px';
+    tip.style.display='block';
+    const hw=tip.offsetWidth/2;   // 画面端で見切れないようにクランプ
+    tip.style.left=Math.max(8+hw,Math.min(window.innerWidth-8-hw,r.left+r.width/2))+'px';
+  });
+  document.addEventListener('pointerout',e=>{
+    if(e.target.closest&&e.target.closest('path[data-word]'))tip.style.display='none';
+  });
+})();
 // ヘッダーⓘ：正式名称・引用情報のドロップダウン（絶対配置なので開閉してもレイアウトは動かない）
 $('brandToggle').addEventListener('click',e=>{e.stopPropagation();document.querySelector('header').classList.toggle('brandOpen')});
 document.addEventListener('click',e=>{

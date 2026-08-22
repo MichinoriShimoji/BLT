@@ -2639,8 +2639,8 @@ function morphSplit(text){
 function hasExplicitMorphs(s){return Array.isArray(s.morphs)&&s.morphs.length>0}
 // 形態素列を分割元テキストに照合し、語境界（空白）と境界記号（-=+）を復元して語ごとに整列する。
 // 返り値: [{text:'nkjaan=ca.', gloss:'昔=HS'}, ...]（形態素が区切り記号を持つ/持たないどちらでも動作）
-function alignIGT(s){
-  const flat=flatMorphs(s), gl=(s.tv||{}).gloss||[], text=String(morphSrcText(s)||'');
+function alignIGT(s,f){
+  const flat=flatMorphs(s), gl=(s.tv||{})[f||'gloss']||[], text=String(morphSrcText(s)||'');
   const words=[]; let cur=null, pos=0;
   for(let k=0;k<flat.length;k++){
     const surf=String(flat[k]==null?'':flat[k]);
@@ -3164,15 +3164,21 @@ window.addEventListener('keydown',e=>{
   palKeyPopEl().innerHTML=palKeyPopDoneHtml(palKeyJustDone);   // その場で式を見せて自動で閉じる
   palKeyPopTimer=setTimeout(palKeyPopHide,1400);
 },true);
-// 通常時：割り当てたキーで記号を入力（注釈セル・辞書の語義欄などで有効）
+// 通常時：割り当てたキーで記号を入力。対象は「その言語を書く欄」＝text と udl（morphの分割元）だけ。
+// gloss・pos などの注釈欄では無効（略語入力とぶつからないように）。パレットのクリック挿入はどの欄でも可。
+function palKeyTarget(t){
+  const cell=t&&t.closest&&t.closest('[data-k="text"],[data-t]');
+  if(!cell)return false;
+  if(cell.getAttribute('data-k')==='text')return true;
+  const tn=cell.getAttribute('data-t');
+  return tn===morphSrc||tn==='udl';
+}
 window.addEventListener('keydown',e=>{
   if(palKeyMode)return;
   if(e.isComposing||e.keyCode===229)return;   // 日本語入力の変換中は横取りしない
   const c=comboOf(e); if(!c)return;
   const ch=palKeysMap[c]; if(!ch)return;
-  const t=e.target;
-  const ok=(t&&t.closest&&t.closest('[contenteditable]'))||(t&&(t.tagName==='TEXTAREA'||t.tagName==='INPUT'));
-  if(!ok)return;
+  if(!palKeyTarget(e.target))return;
   e.preventDefault();
   if(insertIpaChar(ch))bumpPalFreq(ch);
 },true);
@@ -3663,17 +3669,24 @@ function igtSmallCapsOn(){const c=document.getElementById('igtSmallCaps');return
 function igtRowsAll(){
   const morphOn=glossOn&&morphTiers().some(t=>t.name==='gloss');
   const sp=s=>String(s||'').trim()?String(s).trim().split(/\s+/):[];
+  // gloss 以外の morph 層（自動コーディングの bdr/wbdr は除く）も語揃えの行として出す
+  const extraMorphNames=glossOn?morphTiers().filter(t=>t.name!=='gloss'&&t.name!=='bdr'&&t.name!=='wbdr').map(t=>t.name):[];
+  // 区間層（morphの分割元は surface/text 行で既出なので除く）は全幅の行として出す
+  const extraSegNames=segTiers().map(t=>t.name).filter(n=>n!==morphSrc);
   return segs.map(s=>{
     let surfaceWords=[],textWords=[],glossWords=[];
-    if(morphOn){
+    if(glossOn){
       const words=alignIGT(s);
       textWords=words.map(w=>w.text);
-      glossWords=words.map(w=>w.gloss);
+      if(morphOn)glossWords=words.map(w=>w.gloss);
       surfaceWords=sp(s.text);
     }else{ textWords=sp(s.text); }
-    const has4=morphOn&&surfaceWords.length===textWords.length&&surfaceWords.join(' ')!==textWords.join(' ');
-    return {surfaceWords,textWords,glossWords,trans:(s.note||'').trim(),has4};
-  }).filter(ex=>ex.textWords.length||ex.glossWords.length||ex.trans);
+    const extraRows=glossOn?extraMorphNames.map(f=>({name:f,words:alignIGT(s,f).map(w=>w.gloss)}))
+      .filter(r=>r.words.some(x=>x&&String(x).replace(/[-=+.\s]/g,'')!=='')):[];
+    const extras=extraSegNames.map(f=>({name:f,val:String(((s.tv||{})[f])||'').trim()})).filter(x=>x.val);
+    const has4=glossOn&&surfaceWords.length===textWords.length&&surfaceWords.join(' ')!==textWords.join(' ');
+    return {surfaceWords,textWords,glossWords,extraRows,trans:(s.note||'').trim(),extras,has4};
+  }).filter(ex=>ex.textWords.length||ex.glossWords.length||ex.extraRows.length||ex.trans);
 }
 // gloss語を区切り(- = .)で分割し、各片が大文字略語か判定
 function igtGlossParts(word){
@@ -3759,6 +3772,8 @@ function wPara(runs,ppr){return '<w:p>'+(ppr?'<w:pPr>'+ppr+'</w:pPr>':'')+(runs|
 // 罫線なし固定幅テーブルでインターリニアを列整列（タブよりCJK幅に強く、各列は内容幅に固定して折り返さない）
 function wCell(runs,w){return '<w:tc><w:tcPr><w:tcW w:w="'+w+'" w:type="dxa"/><w:noWrap/><w:tcMar><w:top w:w="0" w:type="dxa"/><w:left w:w="0" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="120" w:type="dxa"/></w:tcMar><w:vAlign w:val="bottom"/></w:tcPr><w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/></w:pPr>'+(runs||'')+'</w:p></w:tc>';}
 function wRow(cells){return '<w:tr>'+cells+'</w:tr>';}
+// 語列をまたぐ全幅セル（trans・区間層用。折り返し可）
+function wCellSpan(runs,span){return '<w:tc><w:tcPr><w:tcW w:w="0" w:type="auto"/><w:gridSpan w:val="'+span+'"/><w:tcMar><w:top w:w="0" w:type="dxa"/><w:left w:w="0" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="120" w:type="dxa"/></w:tcMar><w:vAlign w:val="bottom"/></w:tcPr><w:p><w:pPr><w:spacing w:before="40" w:after="0" w:line="240" w:lineRule="auto"/></w:pPr>'+(runs||'')+'</w:p></w:tc>';}
 function wTable(rows,widths){
   const nil=['top','left','bottom','right','insideH','insideV'].map(b=>'<w:'+b+' w:val="nil"/>').join('');
   const grid='<w:tblGrid>'+widths.map(w=>'<w:gridCol w:w="'+w+'"/>').join('')+'</w:tblGrid>';  // Word必須：各列幅
@@ -3768,8 +3783,9 @@ function wTable(rows,widths){
 function wTabsXml(ps){return '<w:tabs>'+ps.map(p=>'<w:tab w:val="left" w:pos="'+Math.round(p)+'"/>').join('')+'</w:tabs>';}
 function igtEstW(str){let w=0;for(const ch of String(str))w+=(ch.charCodeAt(0)>255)?2:1;return w;}
 function igtChunks(ex,maxWidth,numberIndent){
-  const ncols=Math.max(ex.textWords.length,ex.glossWords.length,ex.surfaceWords.length,1),cw=[];
-  for(let c=0;c<ncols;c++){const m=Math.max(igtEstW(ex.textWords[c]||''),igtEstW(ex.glossWords[c]||''),igtEstW(ex.surfaceWords[c]||''));cw.push(Math.max(m*150+300,900));}
+  const aligned=[ex.textWords,ex.glossWords,ex.surfaceWords].concat((ex.extraRows||[]).map(r=>r.words));
+  const ncols=Math.max(1,...aligned.map(a=>a.length)),cw=[];
+  for(let c=0;c<ncols;c++){const m=Math.max(...aligned.map(a=>igtEstW(a[c]||'')));cw.push(Math.max(m*150+300,900));}
   const chunks=[];let ch={start:0,end:0},cur=numberIndent;
   for(let c=0;c<ncols;c++){if(cur+cw[c]>maxWidth&&c>ch.start){ch.end=c;chunks.push(ch);ch={start:c,end:c};cur=numberIndent;}cur+=cw[c];ch.end=c+1;}
   if(ch.end>ch.start)chunks.push(ch);
@@ -3793,10 +3809,15 @@ function buildWordDocx(){
       if(ex.has4){ rows+=rowOf(ex.surfaceWords,false,num); rows+=rowOf(ex.textWords,false,''); }
       else { rows+=rowOf(ex.textWords,false,num); }
       if(ex.glossWords.length)rows+=rowOf(ex.glossWords,true,'');
+      (ex.extraRows||[]).forEach(r=>{rows+=rowOf(r.words,false,'')});   // pos などの morph 層も語揃えで
+      if(ci===chunks.length-1){   // 最終チャンクの表内に、全幅の行として trans と区間層を収める
+        const span=ch.end-ch.start;
+        if(ex.trans)rows+=wRow(wCell(wRun(''),LEADW)+wCellSpan(wRun(igtTransJP(ex.trans)?('「'+ex.trans+'」'):("'"+ex.trans+"'")),span));
+        (ex.extras||[]).forEach(x=>{rows+=wRow(wCell(wRun(''),LEADW)+wCellSpan(wRun(x.name+': '+x.val),span))});
+      }
       body+=wTable(rows,colW);
       body+=wPara('');   // テーブル間/末尾には段落が必要（Word互換）
     });
-    if(ex.trans)body+=wPara(wRun(igtTransJP(ex.trans)?('「'+ex.trans+'」'):("'"+ex.trans+"'")),'<w:ind w:left="'+NI+'"/>');
     body+=wPara('','');
     ex.glossWords.forEach(w=>String(w||'').split(/[\-=.]/).forEach(p=>{const a=p.trim().toUpperCase();if(a&&IGT_GLOSS_MAP[a])used.add(a);}));
   });

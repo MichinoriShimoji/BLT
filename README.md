@@ -26,14 +26,26 @@ no external libraries, and your data never leaves your machine.
 
 Download [`blt.html`](blt.html) and open it in a browser, or use the live version linked above.
 
+## Interoperability with ELAN
+
+BLT reads and writes [ELAN](https://archive.mpi.nl/tla/elan) `.eaf` files so that data can
+move freely between the two tools — for example, segment and gloss in BLT, then continue in
+ELAN. The EAF support is an independent implementation written from the publicly documented
+EAF schema; no ELAN source code is used or included.
+
+BLT is an independent project. It is **not** affiliated with, endorsed by, or derived from
+ELAN, the Max Planck Institute for Psycholinguistics, or The Language Archive. "ELAN" is the
+name of their software and is referred to here only to describe file-format compatibility.
+
 ## Citation
 
 If you use BLT in your research, please cite the archived release:
 
-> Shimoji, Michinori. (2026). *BLT: Browser-based Lightweight Toolkit for Editing Field Data* (v1.0.1) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.20707256
+> Shimoji, Michinori. (2026). *BLT: Browser-based Lightweight Toolkit for Editing Field Data* (v1.1.0) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.20707256
 
-- **Concept DOI** (always the latest version): [10.5281/zenodo.20707256](https://doi.org/10.5281/zenodo.20707256)
-- **This version (v1.0.1)**: [10.5281/zenodo.20707257](https://doi.org/10.5281/zenodo.20707257)
+- **Concept DOI** (always resolves to the latest version): [10.5281/zenodo.20707256](https://doi.org/10.5281/zenodo.20707256)
+- Version DOIs: v1.0.2 — [10.5281/zenodo.20749188](https://doi.org/10.5281/zenodo.20749188) ·
+  v1.0.1 — [10.5281/zenodo.20707257](https://doi.org/10.5281/zenodo.20707257)
 
 A machine-readable citation is in [`CITATION.cff`](CITATION.cff) (GitHub shows a
 "Cite this repository" button).

@@ -1,0 +1,61 @@
+<script>
+(function(){
+ var EX='nkjaan=du anna=tu uja=tu tamamiga=ti asɨ ffa-gama=nu u-tar=ca.';
+ var TR='昔々、母親と父親とタマミガという子がいたんだそうだ。';
+ var GL=['long.ago','FOC','mother','COM','father','COM','Tamamiga','QT','do','child','DIM','NOM','exist','PST','HS'];
+ var EX2='uri=kara=du tamamiga=a mmja jama=nkai nn-tar=ca.';
+ var TR2='それから、タマミガはもう山へ行ったんだそうだ。';
+ var GL2=['that','ABL','FOC','Tamamiga','TOP','already','mountain','ALL','go','PST','HS'];
+ var RECS=[
+  [2,'anna=a ffa=nu kutu=ba umui-tar=ca.','母親は子どものことを思っていたんだそうだ。',['mother','TOP','child','GEN','thing','ACC','think','PST','HS']],
+  [3,'tamamiga=a jama=nkai=du nn-tar.','タマミガは山へ行った。',['Tamamiga','TOP','mountain','ALL','FOC','go','PST']],
+  [4,'sunu atu=nu kutu=a ssa-n.','その後のことは知らない。',['that','after','GEN','thing','TOP','know','NEG']]
+ ];
+ function fo(el){el.dispatchEvent(new FocusEvent('focusout',{bubbles:true}));}
+ function q(s){return document.querySelector(s);}
+ var steps=[];
+ function wait(cond,then,n){n=n||0;if(n>80){then();return;}if(cond()){then();return;}setTimeout(function(){wait(cond,then,n+1);},150);}
+ window.addEventListener('load',function(){
+  setTimeout(function(){
+   try{q('#btnStartNew').click();}catch(e){}
+   setTimeout(function(){
+    try{q('#btnDemoMulti').click();}catch(e){}
+    wait(function(){var b=q('#btnDetect');return b&&!b.disabled&&b.offsetParent;},function(){
+     try{q('#btnDetect').click();}catch(e){}
+     wait(function(){return document.querySelectorAll('#tb tr[data-i]').length>0;},function(){
+      // tier preset
+      var ps=q('#tierPreset'); if(ps){ps.value='standard';ps.dispatchEvent(new Event('change',{bubbles:true}));}
+      setTimeout(function(){
+       function fill(i,txt,tr,gl){
+        var tc=q('#tb tr[data-i="'+i+'"] [data-k="text"]'); if(!tc)return;
+        tc.textContent=txt; fo(tc);
+        var nc=q('#tb tr[data-i="'+i+'"] [data-k="note"]'); if(nc){nc.textContent=tr;fo(nc);}
+        setTimeout(function(){
+         document.querySelectorAll('#tb tr.glossrow[data-i="'+i+'"] [data-f="gloss"]').forEach(function(c,j){
+          if(gl[j]){c.textContent=gl[j];fo(c);}
+         });
+        },30);
+       }
+       fill(0,EX,TR,GL);
+       setTimeout(function(){ fill(1,EX2,TR2,GL2); },250);
+       RECS.forEach(function(r,k){ setTimeout(function(){ fill(r[0],r[1],r[2],r[3]); }, 500+k*250); });
+       setTimeout(function(){
+        // dismiss tour if present
+        var sk=[].slice.call(document.querySelectorAll('a,button')).filter(function(x){return /スキップ/.test(x.textContent)&&x.offsetParent;});
+        if(sk[0])sk[0].click();
+        var fb=q('#fbOpen'); if(fb)fb.style.display='none';
+        var mz=[].slice.call(document.querySelectorAll('button')).filter(function(x){return /最小化/.test(x.textContent)&&x.offsetParent;});
+        if(mz[0])mz[0].click();
+        var pcx=q('#paletteCard'); if(pcx)pcx.style.display='none';
+        var cb=q('#cardBrand'); if(cb)cb.style.display='none';
+        var cf=q('#cardFile'); if(cf)cf.style.display='none';
+        setTimeout(function(){ window.scrollTo(0,0); document.title='SHOT-READY'; },400);
+       },1600);
+      },120);
+     });
+    });
+   },200);
+  },300);
+ });
+})();
+</script>

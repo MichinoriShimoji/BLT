@@ -2443,17 +2443,22 @@ const PRESETS={
   udl:{glossOn:true,morphSrc:'udl',tiers:[{name:'udl',parent:'seg'},{name:'gloss',parent:'morph'}]}
 };
 function detectPreset(){
-  const sig=tiersDef.map(t=>t.name+':'+t.parent).join(',');
+  // 境界層（bdr/wbdr）はチェックボックスで独立に管理する設定であり、プリセットの一部ではない。
+  // 署名に混ぜると、チェックした瞬間に「カスタム」へ落ちて層構成が変更できなくなる（スタック）。
+  const core=tiersDef.filter(t=>t.name!=='bdr'&&t.name!=='wbdr');
+  const sig=core.map(t=>t.name+':'+t.parent).join(',');
+  const coreGloss=core.some(t=>tierLevel(t.name)==='morph');
   for(const [k,p] of Object.entries(PRESETS)){
-    if(p.glossOn===glossOn&&p.morphSrc===morphSrc&&p.tiers.map(t=>t.name+':'+t.parent).join(',')===sig)return k;
+    if(p.glossOn===coreGloss&&p.morphSrc===morphSrc&&p.tiers.map(t=>t.name+':'+t.parent).join(',')===sig)return k;
   }
   return 'custom';
 }
 $('tierPreset').addEventListener('change',()=>{
   const p=PRESETS[$('tierPreset').value];
   if(!p){$('tierPreset').value=detectPreset();return}
-  // 新構成に含まれない層に入力済みデータがあれば確認
-  const newNames=p.tiers.map(t=>t.name);
+  const keepB=tiersDef.filter(t=>t.name==='bdr'||t.name==='wbdr');   // 境界層はチェックボックス管理なので維持
+  // 新構成に含まれない層に入力済みデータがあれば確認（自動生成の境界層は対象外）
+  const newNames=p.tiers.map(t=>t.name).concat(keepB.map(t=>t.name));
   const losing=tiersDef.filter(t=>!newNames.includes(t.name)&&segs.some(s=>{
     const v=(s.tv||{})[t.name];
     return Array.isArray(v)?v.some(x=>x):!!v;
@@ -2462,8 +2467,10 @@ $('tierPreset').addEventListener('change',()=>{
     $('tierPreset').value=detectPreset();return;
   }
   morphSrc=p.morphSrc;
-  tiersDef=p.tiers.map(t=>({name:t.name,parent:t.parent}));
-  refreshTierUI();renderTable();
+  tiersDef=p.tiers.map(t=>({name:t.name,parent:t.parent})).concat(keepB.map(t=>({name:t.name,parent:t.parent})));
+  refreshTierUI();
+  if(typeof computeBoundaries==='function')computeBoundaries();   // 分割元が変わったら境界コードを引き直す
+  renderTable();if(typeof renderContext==='function')renderContext();
 });
 const RESERVED=['ID','id','spk','text','trans','morph','bdr','wbdr'];   // 固定列・派生層・境界層と同名は不可
 

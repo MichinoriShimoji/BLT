@@ -289,6 +289,10 @@ code{background:var(--accent-soft);padding:1px 5px;border-radius:4px;font-size:1
 #palKeyList .kitem button{border:none;background:none;color:var(--muted);cursor:pointer;font-size:11px;padding:0 3px}
 #palKeyList .kitem button:hover{color:var(--warn)}
 #palKeyDone{font-size:12px;padding:3px 14px;border-radius:14px;background:var(--accent);border:1px solid var(--accent);color:#fff;font-weight:700;cursor:pointer}
+/* 特殊記号入力補助カード（注釈表の直上で目立たせる） */
+#cardSymHelp{border:2px solid var(--accent);padding:13px 16px}
+#paletteCard.attn{animation:palattn .8s ease-out 2}
+@keyframes palattn{0%{box-shadow:0 0 0 4px var(--accent)}100%{box-shadow:0 -4px 14px rgba(0,0,0,.12)}}
 /* 記号のすぐそばに出る割り当てポップ */
 #palKeyPop{position:fixed;z-index:130;display:none;background:var(--surface);border:2px solid var(--accent);border-radius:9px;padding:8px 13px;box-shadow:0 8px 24px rgba(0,0,0,.35)}
 #palKeyPop .fx{display:flex;align-items:center;gap:7px;white-space:nowrap}
@@ -601,13 +605,6 @@ html[data-theme="dark"] code{color:var(--accent-ink)}
 </div>
 
 <!-- 新規のとき、注釈に入る前に「表記のためのパレット作成」へ誘導する -->
-<div class="card hidden" id="cardPal">
-  <h2><span class="steplabel" data-i18n-skip>⚙</span><span id="palWizTitle">表記の設定</span></h2>
-  <div class="note" id="palWizBody" style="margin:0 0 10px"></div>
-  <div class="btns" id="palWizBtns"></div>
-  <div class="note" id="palSetupCount" style="margin-top:8px"></div>
-</div>
-
 <div id="workArea">
 <div id="waveCol">
 <div class="card hidden" id="cardWave">
@@ -744,6 +741,15 @@ html[data-theme="dark"] code{color:var(--accent-ink)}
     <div class="note" id="palScrubHint" style="font-size:11px;margin:0 0 6px">この区間の波形：クリック＝そこから再生／ドラッグ＝範囲を再生（入力位置はそのまま）</div>
     <div id="palKeyPanel" hidden></div>
     <div id="palette"></div>
+  </div>
+</div>
+
+<div class="card hidden" id="cardSymHelp">
+  <h2 style="margin-bottom:7px"><span class="steplabel" data-i18n-skip>⌨️</span>特殊記号の入力補助</h2>
+  <div class="note" style="margin:0 0 8px">ž・ü・ɨ など、キーボードで打ちにくい記号はここから。設定はプロジェクトに保存されます。</div>
+  <div class="btns" style="margin:0">
+    <button class="primary" id="btnSymKeys" title="記号にキーを割り当てます（記号をクリック→出てくるポップでキーを押すだけ）">⚙ ショートカットキーを設定</button>
+    <button id="btnSymPal" title="画面下のパレットからクリックで挿入します">記号パレットから直接入力</button>
   </div>
 </div>
 
@@ -965,8 +971,8 @@ function onWavLoaded(){
     $('cardSeg').classList.add('hidden');   // 区間は保存ファイルから復元するので自動区切りパネルは隠す
     $('flowMsg').innerHTML='✓ 音声を読み込みました。次に <b>②</b> 保存ファイル（.json か ELAN .eaf）を読み込んでください。';
   }else{
-    $('flowMsg').innerHTML='✓ 音声を読み込みました。まず下で<b>表記のショートカット</b>を決めてから、<b>区間づくり</b>に進みます。';
-    enterPalSetup();   // 新規：波形を出す前に、表記のためのショートカット設定へ誘導
+    $('flowMsg').innerHTML='✓ 音声を読み込みました。下の <b>パネル2「自動検出を実行」</b>で発話区間に分割します。';
+    try{$('cardSeg').scrollIntoView({block:'center',behavior:'smooth'});}catch(_){}   // 読み込んだらそのまま区間づくりへ
   }
   showPalette();   // IPAパレットは常設：作業開始とともに表示し、以降は自動で引っ込まない
 }
@@ -1211,7 +1217,7 @@ async function loadFile(f){
     $('player').src=URL.createObjectURL(f);
     $('wavName').textContent=f.name+'　'+wavInfo.rate+' Hz / '+wavInfo.bits+' bit / '+wavInfo.ch+'ch / '+env.dur.toFixed(1)+' 秒';
     $('wavName').classList.add('ok');
-    ['cardFile','cardSeg','cardWave','cardAnnoCtl','cardTable','cardExport'].forEach(id=>$(id).classList.remove('hidden'));
+    ['cardFile','cardSeg','cardWave','cardAnnoCtl','cardTable','cardSymHelp','cardExport'].forEach(id=>$(id).classList.remove('hidden'));
     $('cardBrand').classList.add('hidden');   // 作業が始まったら初期画面のブランドカードは隠す
     setWaveCompact(false);   // 検出するまではフル表示
     document.querySelectorAll('#saveBar button').forEach(b=>b.disabled=false);
@@ -1257,7 +1263,7 @@ async function loadFiles(fileList){
     applyWaveHeight();
     $('wavName').textContent=files.length+'チャンネル：'+tracks.map(t=>t.spk+'='+t.name).join(' / ')+'　'+env.dur.toFixed(1)+' 秒';
     $('wavName').classList.add('ok');
-    ['cardFile','cardSeg','cardWave','cardAnnoCtl','cardTable','cardExport'].forEach(id=>$(id).classList.remove('hidden'));
+    ['cardFile','cardSeg','cardWave','cardAnnoCtl','cardTable','cardSymHelp','cardExport'].forEach(id=>$(id).classList.remove('hidden'));
     setWaveCompact(false);
     document.querySelectorAll('#saveBar button').forEach(b=>b.disabled=false);
     view={t0:0,t1:Math.min(15,env.dur)};
@@ -1474,89 +1480,21 @@ function setWaveCompact(on){
 }
 $('btnWaveSize').addEventListener('click',()=>setWaveCompact(!$('waveCol').classList.contains('compact3')));
 // パネル1・2（セットアップ）の表示／非表示。作業を始めたら隠してクリーンに、やり直しボタンで再表示
-/* 表記の設定ステップ（新規のみ）：音声を読み込んだ直後に、波形・表を出さずに設定へ集中させる。
-   「区間づくりへ →」か自動検出で抜けると、通常のパネルが出そろう                                   */
-const PAL_SETUP_HIDE=['cardSeg','cardWave','cardAnnoCtl','cardTable','cardExport'];
-let palSetupOn=false, palSetupDone=false;
-function updatePalSetupCount(){
-  const el=$('palSetupCount'); if(!el)return;
-  const en=(()=>{try{return !!(window.__bltLangEN&&window.__bltLangEN())}catch(e){return false}})();
-  const k=Object.keys(palKeysMap).length;
-  const sym=palKeep.size?(en?palKeep.size+' symbols selected':'記号 '+palKeep.size+' 個を選択'):(en?'all symbols shown':'記号は全表示');
-  el.textContent=(en?'now: ':'いま: ')+sym+(en?' / '+k+' shortcuts':' ／ ショートカット '+k+' 個');
-}
-/* 設定はステップを1つずつ見せる（記号を選ぶ → キーを割り当てる → 完了）。
-   それぞれのステップに入ると、対応するパレットのモード（✎ / ⚙）を自動で開く                        */
-let palWizStep=1;
-function palWizText(){
-  const en=(()=>{try{return !!(window.__bltLangEN&&window.__bltLangEN())}catch(e){return false}})();
-  return en?{
-    t:['Step 1 of 2 — choose the symbols you use (optional)','Step 2 of 2 — assign keys to them (optional)'],
-    b:['<b>This setup is optional</b> — you can skip straight to segmenting and come back any time via ✎ / ⚙ on the palette.<br>Pick the symbols this language needs from the palette below; only those stay on the palette (pick none and every symbol stays available). Next you will give them keys.',
-       'Click a symbol in the palette — <b>a small pop-up appears right there</b>. Press the keys you want and it is registered (e.g. click <b>ž</b>, then press <b>⌃⌥V</b>). Finishing takes you straight to segmenting.'],
-    next:'Next: assign keys →', back:'← Back', done:'Finish → start segmenting', skip:'Skip → start segmenting'
-  }:{
-    t:['ステップ 1 / 2 — 使う記号を選ぶ（任意）','ステップ 2 / 2 — キーを割り当てる（任意）'],
-    b:['<b>この設定は任意です</b>。スキップしてすぐ区間づくりに進めます（あとからパレットの ✎ / ⚙ でいつでも設定できます）。<br>設定する場合：この言語の表記で使う記号を、下のパレットから選びます。選んだものだけがパレットに並びます（選ばなければ全記号が並びます）。次のステップで、選んだ記号にキーを割り当てます。',
-       'パレットで記号をクリックすると、<b>その場に小さなポップ</b>が出ます。使いたいキーを押せば登録完了です（例: <b>ž</b> をクリック → <b>⌃⌥V</b> を押す）。終えると自動で区間づくりに進みます。'],
-    next:'次へ：キーを割り当てる →', back:'← 戻る', done:'設定を終える（区間づくりへ）', skip:'スキップして区間づくりへ →'
-  };
-}
-function goPalWiz(n){
-  palWizStep=Math.max(1,Math.min(2,n));
-  if(palWizStep===1){if(palKeyMode)setPalKeyMode(false);if(!palEditing)setPalEditing(true);}
-  else{if(palEditing)setPalEditing(false);if(!palKeyMode)setPalKeyMode(true);}
-  renderPalWiz(); reservePalSpace();
-}
-// 設定を終えたら、自動で区間づくり（パネル2）へ誘導する
-function finishPalSetup(){
-  exitPalSetup();
-  $('flowMsg').innerHTML='✓ 音声を読み込みました。下の <b>パネル2「自動検出を実行」</b>で発話区間に分割します。';
-  try{$('cardSeg').scrollIntoView({block:'center',behavior:'smooth'});}catch(_){}
-}
-function renderPalWiz(){
-  const T=palWizText(), i=palWizStep-1;
-  $('palWizTitle').textContent=T.t[i];
-  $('palWizBody').innerHTML=T.b[i];
-  const btn=(id,label,cls)=>'<button type="button" id="'+id+'"'+(cls?' class="'+cls+'"':'')+'>'+label+'</button>';
-  $('palWizBtns').innerHTML=(palWizStep===1
-    ? btn('palWizSkip',T.skip,'primary')+btn('palWizNext',T.next)
-    : btn('palWizDone',T.done,'primary')+btn('palWizBack',T.back));
-  updatePalSetupCount();
-}
-// ウィザードのボタン（描画のたびに作り直すので委譲で受ける）
-document.addEventListener('click',e=>{
-  if(!palSetupOn)return;
-  const id=e.target.id;
-  if(id==='palWizNext'){goPalWiz(2);return}
-  if(id==='palWizBack'){goPalWiz(1);return}
-  if(id==='palWizDone'||id==='palWizSkip'){finishPalSetup();}
-});
-function enterPalSetup(){
-  if(palSetupOn||palSetupDone||startMode==='resume')return;
-  palSetupOn=palSetupDone=true;
-  $('cardPal').classList.remove('hidden');
-  PAL_SETUP_HIDE.forEach(id=>$(id).classList.add('hidden'));   // 波形や注釈表はまだ出さない（設定に集中）
-  showPalette();
-  if(palMin){palMin=false;try{localStorage.setItem('pal_min','0');}catch(e){}$('paletteCard').classList.remove('min');setPalToggleLabel();}
-  goPalWiz(1);   // 最初のステップ（記号を選ぶ）から1つずつ
-}
-function exitPalSetup(){
-  if(!palSetupOn)return;
-  palSetupOn=false;
-  if(typeof palKeyMode!=='undefined'&&palKeyMode)setPalKeyMode(false);
-  if(palEditing)setPalEditing(false);
-  $('cardPal').classList.add('hidden');
-  PAL_SETUP_HIDE.forEach(id=>$(id).classList.remove('hidden'));
-  reservePalSpace();
-}
-function hideSetup(){exitPalSetup();$('cardFile').classList.add('hidden');$('cardSeg').classList.add('hidden');setWaveCompact(true)}
+function hideSetup(){$('cardFile').classList.add('hidden');$('cardSeg').classList.add('hidden');setWaveCompact(true)}
 function showSetup(){
   $('cardFile').classList.remove('hidden');$('cardSeg').classList.remove('hidden');
   $('cardSeg').scrollIntoView({block:'center',behavior:'smooth'});
 }
 $('btnRedetect').addEventListener('click',showSetup);
-// （設定カードのボタンはウィザード側で委譲処理）
+// 特殊記号入力補助：パレットを開いて、⚙ショートカット設定 or 通常挿入モードへ
+function openPaletteMax(){
+  showPalette();
+  if(palMin){palMin=false;try{localStorage.setItem('pal_min','0');}catch(e){}$('paletteCard').classList.remove('min');setPalToggleLabel();}
+  reservePalSpace();
+  const pc=$('paletteCard');pc.classList.remove('attn');void pc.offsetWidth;pc.classList.add('attn');   // 目線誘導に一瞬ハイライト
+}
+$('btnSymKeys').addEventListener('click',()=>{if(palEditing)setPalEditing(false);openPaletteMax();if(!palKeyMode)setPalKeyMode(true);});
+$('btnSymPal').addEventListener('click',()=>{if(palKeyMode)setPalKeyMode(false);if(palEditing)setPalEditing(false);openPaletteMax();});
 
 /* ---------- 取りこぼし検出（区間に入っていない有音部分） ---------- */
 let missed=[], ignoredMiss=[];   // ignoredMiss: 「無視」で件数から除外した範囲
@@ -3160,7 +3098,7 @@ function renderKeyPanel(){
   box.innerHTML='<span><b>'+(en?'Click a symbol → press the keys in the pop-up.':'記号をクリック → 出てきたポップでキーを押すだけ。')+'</b></span>'
     +'<span id="palKeyList">'+(items||'')+'</span>'
     +'<span style="flex:1"></span>'
-    +(palSetupOn?'':'<button type="button" id="palKeyDone">'+(en?'Finish':'設定を終える')+'</button>');
+    +'<button type="button" id="palKeyDone">'+(en?'Finish':'設定を終える')+'</button>';
 }
 /* 記号のそばに出す割り当てポップ */
 let palKeyPopTimer=null;
@@ -3194,7 +3132,7 @@ document.addEventListener('click',e=>{
   if(!palKeyMode)return;
   const del=e.target.closest&&e.target.closest('[data-del]');
   if(del){delete palKeysMap[del.getAttribute('data-del')];savePalKeys();renderPalette();renderPalFav();renderKeyPanel();if(typeof updatePalSetupCount==='function')updatePalSetupCount();return}
-  if(e.target.id==='palKeyDone'){if(palSetupOn)finishPalSetup();else setPalKeyMode(false);return}
+  if(e.target.id==='palKeyDone'){setPalKeyMode(false);return}
   // 記号・ポップ以外をクリックしたらポップを閉じる
   if(!e.target.closest('#palKeyPop')&&!(e.target.hasAttribute&&e.target.hasAttribute('data-ch'))){palKeyWaitFor=null;palKeyPopHide();}
 });
@@ -3526,7 +3464,6 @@ function onPalSymbolClick(ch,btn){
     if(palKeep.has(ch)){palKeep.delete(ch);if(btn)btn.classList.remove('keep');}
     else{palKeep.add(ch);if(btn)btn.classList.add('keep');}
     savePalKeep();
-    updatePalSetupCount();
     return;
   }
   if(insertIpaChar(ch))bumpPalFreq(ch);   // 挿入は回数に加算（帯の並び替えは次回表示時）
@@ -4522,7 +4459,7 @@ $('dlDict').addEventListener('click',async()=>{
 '波形で区間を確認・修正':{t:'Check / fix segments on the waveform',b:'This is the waveform of your audio. Segments (colored bands) can be <b>resized by dragging an edge</b> and <b>played by clicking + Space</b>. Speech left out of any segment (“missed”) is flagged with a <b>red band</b> — there is one in this demo too. Review with ◀▶ and “Preview”, then <b>“✓ Add as segment”</b> to keep it, or “Ignore”. Use <b>“⟳ Re-run auto-segmentation”</b> to tune the sensitivity.'},
 '複数話者に対応':{t:'Multiple speakers',b:'The waveform is <b>color-coded and split into lanes per speaker</b> (above, different colors per segment mean different speakers). Add speakers with <b>+ Speaker</b> below the waveform.<br><b>Different speakers may overlap in time</b> (not within one speaker), so conversational overlap is handled as-is.<br>Example: a <b>Speaker B</b> was added and the 2nd segment assigned to it (its color changes).'},
 '② 文字起こし（text）と訳（trans）':{t:'② Transcription (text) and translation (trans)',b:'Type the transcription in the <b>text</b> field and the translation in the <b>trans</b> field.<br>e.g. <i style="font-family:var(--ipa)">nkjaan=du anna=tu uja=tu tamamiga=ti asɨ ffa-gama=nu u-tar=ca.</i><br>Translation: “Long ago there were a mother, a father, and a child named Tamamiga.”'},
-'⚙ 表記の設定（記号とショートカット）':{t:'⚙ Set up shortcuts for your orthography',b:'Loading the audio brings you here first. Decide which <b>symbols</b> your orthography needs and which <b>keys</b> type them, and the rest of the annotation can stay on the keyboard.<br>e.g. type <b>z</b> then <b>⌃⌥V</b> → <b>ž</b> (you can also bind a key to <b>ž</b> itself). This setup is <b>optional</b> — “Skip → start segmenting” moves right on. If you do set it up, it runs <b>one step at a time</b>: <b>step 1 — choose the symbols</b> this language needs (the palette narrows to them) → <b>step 2 — give them keys</b>: click a symbol and <b>a pop-up appears right there</b>; press the keys you want (shown as a formula, <b>ž = ⌃ + ⌥ + Z</b>). Finishing takes you straight to segmenting.<br><b>Setting nothing is fine</b> — the ⚙ and ✎ buttons on the palette change it any time. Your setup is <b>saved in the project</b> and comes back when you resume.'},
+'⌨️ 特殊記号の入力補助':{t:'⌨️ Special-symbol input help',b:'This card just above the annotation table is the gateway to symbols your keyboard lacks (<b>ž, ü, ɨ</b> …).<br><b>⚙ Set up shortcut keys</b> — bind keys to symbols and stay on the keyboard from then on (click a symbol, press the keys in the pop-up that appears).<br><b>Insert from the palette</b> — click symbols in the palette at the bottom.<br>Both are <b>saved in the project</b> and restored when you resume.'},
 '合成用の記号で文字を作る（ž ü á …）':{t:'Build letters with combining marks (ž ü á …)',b:'The <b>“Combine (adds to previous letter)”</b> row holds marks that <b>merge into the letter before them</b>.<br>e.g. type <b>z</b>, then press <b style="outline:2px solid var(--sel);border-radius:3px;padding:0 3px">◌̌</b> (haček) to get <b>ž</b> (likewise <b>ü</b> = u + ◌̈, <b>á</b> = a + ◌́).<br>Letters you build this way <b>stay in the palette and in the “frequently used” bar</b>, so next time they are one click away. Pre-composed letters are also listed under <b>Orthography</b>.<br><b>You can stay on the keyboard</b>: type <b>z</b> then press <b>⌃⌥V</b> (Ctrl+Alt+V on Windows) to get <b>ž</b> — likewise <b>⌃⌥U</b> = ¨, <b>⌃⌥E</b> = ´, <b>⌃⌥I</b> = ˆ, <b>⌃⌥N</b> = ˜. Reassign any of them under <b>⚙ Shortcuts</b> (bare ⌥ combos are avoided because macOS claims them).'},
 'IPAパレットで発音記号を挿入':{t:'Insert phonetic symbols with the IPA palette',b:'Symbols that are hard to type go in via this <b>IPA palette</b> (it appears at the bottom while editing).<br>Here, after “<b>as</b>” we inserted <b style="outline:2px solid var(--sel);border-radius:3px;padding:0 3px">ɨ</b> (a central vowel) to make <b>asɨ</b>. Clicking a button in the vowels section inserts it at the cursor in the cell being edited.<br><b>Order does not matter</b>: press palette buttons before you enter a cell and they wait in the header bar, then drop in as soon as you click a cell.'},
 'morph層：形態素が自動で区切られる':{t:'morph layer: morphemes split automatically',b:'Using <b>-</b> (affix), <b>=</b> (clitic) and spaces in the text as cues, morphemes are split automatically into an interlinear display.<br>e.g. <i>nkjaan / =du / anna / =tu …</i> (the = clitic and - affix boundaries are kept).'},
@@ -4548,12 +4485,12 @@ $('dlDict').addEventListener('click',async()=>{
   var STEPS=[
     {sel:'#brand', title:'BLTへようこそ', body:'ブラウザだけで完結するフィールドデータ編集ツールです。<b>音声の読み込みから注釈・グロス・ELAN(EAF)書き出し</b>までを、このツアーで一通り案内します。', place:'bottom'},
     {sel:'#cardFile', title:'① 作業を始める', body:'まず <b>「新規に始める」</b>か<b>「既存の作業を再開する」</b>を選びます。<br><b>新規</b>＝音声（WAV）を読み込み→自動区切り→注釈。<b>既存再開</b>＝音声を読み込んでから、以前の .json や ELAN .eaf を読み込みます。<br><span style="color:var(--muted)">▶ お持ちの音声が無ければ「次へ」でデモ音声を使って続けられます。</span>', place:'bottom', waitLoaded:true},
-    {sel:'#cardPal', title:'⚙ 表記の設定（記号とショートカット）', body:'音声を読み込むと、まずここに来ます。その言語の表記で使う<b>記号</b>と、それを入れる<b>キー</b>をここで決めておくと、注釈がキーボードだけで進みます。<br>（例）<b>z</b> と打って <b>⌃⌥V</b> → <b>ž</b>（<b>ž</b> そのものにキーを割り当てることもできます）。この設定は<b>任意</b>です（「スキップして区間づくりへ」ですぐ進めます）。設定する場合は<b>1ステップずつ</b>進みます。<b>ステップ1＝使う記号を選ぶ</b>（その言語に必要な記号だけをパレットに絞る）→ <b>ステップ2＝キーを割り当てる</b>。記号をクリックすると<b>その場にポップ</b>が出るので、使いたいキーを押すだけ（<b>ž ＝ ⌃ ＋ ⌥ ＋ Z</b> のように式で確認できます）。終えると<b>自動で区間づくりへ</b>進みます。<br><b>設定しなくても構いません</b>（あとからパレットの ⚙・✎ でいつでも変更できます）。設定は<b>プロジェクトに保存</b>され、再開時はそのまま使えます。', place:'bottom', needsAudio:true, action:'demoPalSetup'},
     {sel:'#cardSeg', title:'② 自動区切り（無音検出で発話に分割）', body:'音声を読み込んだら、パネル2の「<b>自動検出を実行</b>」を押します。無音部分を手がかりに、音声が<b>発話区間（レコード）に自動分割</b>されます。<br>「<b>しきい値を自動推定</b>」のままでOK。うまく切れないときは、しきい値・最小無音長・最小区間長を調整して再実行できます（境界は後から波形上でドラッグ調整も可能）。', place:'bottom', needsAudio:true},
     {sel:'#cardWave', title:'→ 発話区間に分割されました', body:'「自動検出を実行」を押すと、このように音声が<b>色付きの区間（発話）</b>に分割されます。次の画面で、この区間の確認・修正方法を見ていきます。', place:'bottom', needsAudio:true, demoOnly:true, action:'demoDetect', scrollTop:true},
     {sel:'#cardWave', title:'波形で区間を確認・修正', body:'読み込んだ音声の波形です。区間（色付き帯）は<b>ドラッグで境界調整</b>、<b>クリック＋Space で再生</b>。区間化されなかった有音（取りこぼし）は<b>赤帯</b>で警告されます — このデモにも1か所あります。◀▶や「確認再生」で確認し、<b>「✓ 区間に追加」</b>で区間化、対象外なら「無視」。「⟳ 自動区切りをやり直し」で検出の感度も調整できます。', place:'bottom', needsAudio:true, scrollTop:true},
     {sel:'#cardWave', title:'複数話者に対応', body:'波形は<b>話者ごとに色分け・レーン分割</b>されます（上の波形で、区間ごとに色が違うのが話者の違いです）。波形の下の <b>＋話者</b> で話者を増やせます。<br><b>別の話者どうしは時刻が重なってもOK</b>（同じ話者内は重複不可）なので、会話のオーバーラップもそのまま扱えます。<br>例：<b>話者B</b>を追加し、2番目の区間を話者Bに割り当てました（色が変わります）。', place:'bottom', needsAudio:true, action:'demoSpk'},
     {sel:'#tb tr[data-i="0"]', title:'② 文字起こし（text）と訳（trans）', body:'区間の <b>text</b> 欄に文字起こし、<b>trans</b> 欄に訳を入力します。<br>例: <i style="font-family:var(--ipa)">nkjaan=du anna=tu uja=tu tamamiga=ti asɨ ffa-gama=nu u-tar=ca.</i><br>訳「昔々、母親と父親とタマミガという子がいたんだそうだ」', place:'bottom', needsAudio:true, action:'demoText', hideWave:true},
+    {sel:'#cardSymHelp', title:'⌨️ 特殊記号の入力補助', body:'注釈表のすぐ上にあるこのカードが、キーボードにない記号（<b>ž・ü・ɨ</b> など）の入り口です。<br><b>⚙ ショートカットキーを設定</b>＝記号にキーを割り当てて、以後はキーボードだけで入力（記号をクリック→出てくるポップでキーを押すだけ）。<br><b>記号パレットから直接入力</b>＝画面下のパレットからクリックで挿入。<br>どちらの設定も<b>プロジェクトに保存</b>され、再開時はそのまま使えます。', place:'bottom', needsAudio:true},
     {sel:'#paletteCard', title:'IPAパレットで発音記号を挿入', body:'キーボードで打ちにくい記号は、この <b>IPAパレット</b>（編集中に画面下に出ます）から挿入します。<br>例では「<b>as</b>」のあとに <b style="outline:2px solid var(--sel);border-radius:3px;padding:0 3px">ɨ</b>（中舌母音）を入れて <b>asɨ</b> にしました。母音セクションのボタンをクリックすると編集中のセルのカーソル位置に入ります。<br><b>押す順序は自由です</b>：セルに入る前にパレットを押しても、見出しバーに「入力待ち」として溜まり、セルをクリックした時点でまとめて入ります。', place:'top', needsAudio:true, hideWave:true, action:'demoIPA'},
     {sel:'#paletteCard', title:'合成用の記号で文字を作る（ž ü á …）', body:'パレットの<b>「合成用（前の字に付ける）」</b>は、<b>直前の文字に重ねて1文字にする</b>記号です。<br>例: キーボードで <b>z</b> と打ってから <b style="outline:2px solid var(--sel);border-radius:3px;padding:0 3px">◌̌</b>（ハチェック）を押すと <b>ž</b> になります（<b>ü</b>＝u＋◌̈、<b>á</b>＝a＋◌́ も同様）。<br>こうして作った文字は<b>「よく使う」帯とパレットに残る</b>ので、次からは1クリックで入れられます。ウムラウトやハチェック付きの文字は「<b>正書法</b>」の段からそのまま選ぶこともできます。<br><b>キーボードだけでも入れられます</b>：<b>z</b> と打って <b>⌃⌥V</b>（Ctrl＋Option＋V／Windowsは Ctrl+Alt+V）で <b>ž</b>。<b>⌃⌥U</b>＝¨、<b>⌃⌥E</b>＝´、<b>⌃⌥I</b>＝ˆ、<b>⌃⌥N</b>＝˜ など。割り当ては「<b>⚙ ショートカット</b>」から自由に変更できます（<b>⌥ 単独は macOS が先に使ってしまう</b>ので避けています）。', place:'top', needsAudio:true, hideWave:true, action:'demoCompose'},
     {sel:'#tb tr.glossrow[data-i="0"]', title:'morph層：形態素が自動で区切られる', body:'text内の <b>-</b>（接辞）・<b>=</b>（接語）・空白を手がかりに、形態素が自動分割されてインターリニア表示になります。<br>例: <i>nkjaan / =du / anna / =tu …</i>（接語 = ・接辞 - の境界も保持されます）。', place:'bottom', needsAudio:true, hideWave:true, demoOnly:true},
@@ -4621,13 +4558,6 @@ $('dlDict').addEventListener('click',async()=>{
         var tc=document.querySelector('#tb tr[data-i="0"] [data-k="text"]'); if(tc) tc.textContent=s.text;
         if(typeof glossRowHtml==='function'){ var gr=document.querySelector('#tb tr.glossrow[data-i="0"]'); if(gr) gr.outerHTML=glossRowHtml(s,0); }
       }
-    }catch(e){}
-  }
-  // パレット作成の誘導カードを（一度閉じていても）ツアー中は見せる
-  function demoPalSetup(){
-    try{
-      var c=document.getElementById('cardPal'); if(c)c.classList.remove('hidden');
-      if(typeof updatePalSetupCount==='function')updatePalSetupCount();
     }catch(e){}
   }
   // 合成の実演：パレットを開き、ハチェック（◌̌）のボタンを強調する
@@ -4772,7 +4702,7 @@ $('dlDict').addEventListener('click',async()=>{
       if(first) first.click();
     }catch(e){}
   }
-  var ACTIONS={demoDetect:demoDetect, demoText:demoText, demoGloss:demoGloss, demoBdr:demoBdr, demoIPA:demoIPA, demoPalSetup:demoPalSetup, demoCompose:demoCompose, demoUtt2:demoUtt2, demoUdl:demoUdl, demoAddLayer:demoAddLayer, demoSearch:demoSearch, demoDict:demoDict, demoSpk:demoSpk};
+  var ACTIONS={demoDetect:demoDetect, demoText:demoText, demoGloss:demoGloss, demoBdr:demoBdr, demoIPA:demoIPA, demoCompose:demoCompose, demoUtt2:demoUtt2, demoUdl:demoUdl, demoAddLayer:demoAddLayer, demoSearch:demoSearch, demoDict:demoDict, demoSpk:demoSpk};
   function isVisible(el){ if(!el) return false; var cs=getComputedStyle(el); if(cs.display==='none'||cs.visibility==='hidden') return false; var r=el.getBoundingClientRect(); return r.width>0&&r.height>0; }
   function clearWatch(){ if(watch){ clearInterval(watch); watch=null; } }
   function audioLoaded(){ var wv=document.getElementById('cardWave'); return (wv&&isVisible(wv))||(typeof segs!=='undefined'&&segs.length>0); }
@@ -4967,7 +4897,9 @@ $('dlDict').addEventListener('click',async()=>{
     // 追補（このセッションの新機能・取りこぼし分）
     "母音":"Vowels","子音":"Consonants","超分節・声調":"Suprasegmentals / tone","補助記号":"Diacritics",
     "正書法（母音）":"Orthography: vowels","正書法（子音）":"Orthography: consonants","合成用（前の字に付ける）":"Combine (adds to previous letter)","作った記号":"Your symbols","✕ 消す":"✕ Clear",
-    "表記のためのショートカットキーを設定する":"Set up shortcut keys for your orthography",
+    "特殊記号の入力補助":"Special-symbol input help",
+    "ž・ü・ɨ など、キーボードで打ちにくい記号はここから。設定はプロジェクトに保存されます。":"Symbols that are hard to type (ž, ü, ɨ …) start here. Your setup is saved in the project.",
+    "⚙ ショートカットキーを設定":"⚙ Set up shortcut keys","記号パレットから直接入力":"Insert from the symbol palette",
     "⚙ ショートカットを設定する":"⚙ Set up shortcuts","✎ 使う記号を選ぶ":"✎ Choose your symbols",
     "ショートカットの設定中":"Setting up shortcuts",
     "設定を終えて区間づくりへ →":"Done — on to segmenting →",

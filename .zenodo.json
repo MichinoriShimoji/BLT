@@ -1,6 +1,6 @@
 {
   "title": "BLT: Browser-based Lightweight Toolkit for Editing Field Data",
-  "description": "BLT is a single-file, fully client-side browser tool for field-linguistic transcription, annotation, interlinear glossing, and format conversion. It reads raw WAV audio, auto-segments it by silence detection, supports waveform-based boundary editing, IPA input, customizable annotation tiers, multichannel recordings with one WAV per speaker, speaker overlap, and import/export of ELAN EAF, TSV, and JSON. No external libraries or server are required.",
+  "description": "BLT is a single-file, fully client-side browser tool for field-linguistic transcription, annotation, interlinear glossing, and format conversion. It reads raw WAV audio, auto-segments it by silence detection, supports waveform-based boundary editing, IPA input, customizable annotation tiers, multichannel recordings with one WAV per speaker, speaker overlap, assignable keyboard shortcuts for special symbols, and import/export of ELAN EAF plus export to TSV, JSON, LaTeX (gb4e) and Word (.docx). No external libraries or server are required.",
   "upload_type": "software",
   "license": "MIT",
   "creators": [

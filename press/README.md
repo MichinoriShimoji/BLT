@@ -13,6 +13,7 @@ Banner images for announcing a BLT release, plus everything needed to rebuild th
 | `igt_zoom.png` | Crop of the interlinear gloss rows, used by the layout. |
 | `tools/capture.mjs` | Renders any local page to PNG via headless Chrome (CDP). |
 | `tools/demo-inject.html` | Script injected into `blt.html` to set up the screenshot state. |
+| `note/` | Draft of the note.com article and the screenshots it uses. |
 
 The banner carries the **concept DOI** (`10.5281/zenodo.20707256`), which always
 resolves to the latest archived version — so it does not need reprinting when a
@@ -54,6 +55,21 @@ node tools/capture.mjs "file:///tmp/blt-shot.html" /tmp/app_raw.png 1500 1200 2
 
 Then crop `/tmp/app_raw.png` to `app_window.png` (the window, top through the third
 gloss row) and `igt_zoom.png` (the first sentence's morph/gloss rows).
+
+The URL fragment picks which state to shoot:
+
+| Fragment | State |
+|---|---|
+| `#start` | Just after choosing 新規 — the audio-loading card, nothing loaded yet. |
+| `#work` | Segmented and glossed, symbol palette collapsed. The default. |
+| `#palette` | Same, with the symbol palette left open. |
+| `#dict` | Same, switched to the 分析・辞書 tab. |
+
+```bash
+for m in start work palette dict; do
+  node tools/capture.mjs "file:///tmp/blt-shot.html#$m" /tmp/shot-$m.png 1500 1150 2
+done
+```
 
 Do **not** edit `blt.html` to take the screenshot — the injection is kept separate so
 the shipped file stays untouched.

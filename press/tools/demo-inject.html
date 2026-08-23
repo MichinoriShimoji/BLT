@@ -1,5 +1,6 @@
 <script>
 (function(){
+ var MODE=(location.hash||'#work').slice(1);
  var EX='nkjaan=du anna=tu uja=tu tamamiga=ti asɨ ffa-gama=nu u-tar=ca.';
  var TR='昔々、母親と父親とタマミガという子がいたんだそうだ。';
  var GL=['long.ago','FOC','mother','COM','father','COM','Tamamiga','QT','do','child','DIM','NOM','exist','PST','HS'];
@@ -13,11 +14,17 @@
  ];
  function fo(el){el.dispatchEvent(new FocusEvent('focusout',{bubbles:true}));}
  function q(s){return document.querySelector(s);}
+ function tidy(){
+  var sk=[].slice.call(document.querySelectorAll('a,button')).filter(function(x){return /スキップ/.test(x.textContent)&&x.offsetParent;});
+  if(sk[0])sk[0].click();
+  var fb=q('#fbOpen'); if(fb)fb.style.display='none';
+ }
  var steps=[];
  function wait(cond,then,n){n=n||0;if(n>80){then();return;}if(cond()){then();return;}setTimeout(function(){wait(cond,then,n+1);},150);}
  window.addEventListener('load',function(){
   setTimeout(function(){
    try{q('#btnStartNew').click();}catch(e){}
+   if(MODE==='start'){ setTimeout(function(){ tidy(); document.title='SHOT-READY'; },600); return; }
    setTimeout(function(){
     try{q('#btnDemoMulti').click();}catch(e){}
     wait(function(){var b=q('#btnDetect');return b&&!b.disabled&&b.offsetParent;},function(){
@@ -40,16 +47,19 @@
        setTimeout(function(){ fill(1,EX2,TR2,GL2); },250);
        RECS.forEach(function(r,k){ setTimeout(function(){ fill(r[0],r[1],r[2],r[3]); }, 500+k*250); });
        setTimeout(function(){
-        // dismiss tour if present
-        var sk=[].slice.call(document.querySelectorAll('a,button')).filter(function(x){return /スキップ/.test(x.textContent)&&x.offsetParent;});
-        if(sk[0])sk[0].click();
-        var fb=q('#fbOpen'); if(fb)fb.style.display='none';
-        var mz=[].slice.call(document.querySelectorAll('button')).filter(function(x){return /最小化/.test(x.textContent)&&x.offsetParent;});
-        if(mz[0])mz[0].click();
-        var pcx=q('#paletteCard'); if(pcx)pcx.style.display='none';
+        tidy();
+        if(MODE!=='palette'){
+          var mz=[].slice.call(document.querySelectorAll('button')).filter(function(x){return /最小化/.test(x.textContent)&&x.offsetParent;});
+          if(mz[0])mz[0].click();
+          var pcx=q('#paletteCard'); if(pcx)pcx.style.display='none';
+        }
         var cb=q('#cardBrand'); if(cb)cb.style.display='none';
         var cf=q('#cardFile'); if(cf)cf.style.display='none';
-        setTimeout(function(){ window.scrollTo(0,0); document.title='SHOT-READY'; },400);
+        if(MODE==='dict'){
+          var dt=[].slice.call(document.querySelectorAll('.tab')).filter(function(x){return /分析/.test(x.textContent);});
+          if(dt[0])dt[0].click();
+        }
+        setTimeout(function(){ window.scrollTo(0,0); document.title='SHOT-READY'; },500);
        },1600);
       },120);
      });

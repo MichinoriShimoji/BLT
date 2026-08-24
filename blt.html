@@ -2901,7 +2901,12 @@ function renderContext(){
     }
     return html;
   }).join(' ');
-  const cur=box.querySelector('.ctxrec.cur');if(cur)cur.scrollIntoView({block:'nearest'});
+  const cur=box.querySelector('.ctxrec.cur');
+  if(cur){   // 枠内だけスクロール（scrollIntoView はウィンドウまで動かして画面が跳ねるため使わない）
+    const cr=box.getBoundingClientRect(), rr=cur.getBoundingClientRect();
+    if(rr.top<cr.top)box.scrollTop+=rr.top-cr.top-4;
+    else if(rr.bottom>cr.bottom)box.scrollTop+=rr.bottom-cr.bottom+4;
+  }
 }
 $('ctxLayer').addEventListener('change',()=>{ctxLayer=$('ctxLayer').value;renderContext()});
 $('ctxBody').addEventListener('click',e=>{
@@ -3508,15 +3513,19 @@ document.addEventListener('focusin',e=>{
       }catch(_){}} ,0);
     }
     palSel=null; drawPalWave();   // 編集中の区間の波形を表示（gloss等でも区間の確認に使える）
-    // パレットや上部固定の波形に隠れるときだけ、必要最小限だけスクロールする
-    setTimeout(()=>{try{
-      const r=cell.getBoundingClientRect();
-      const wc=$('waveCol');
-      const top=(wc?Math.max(0,wc.getBoundingClientRect().bottom):0)+8;
-      const bottom=window.innerHeight-palH()-10;
-      if(r.bottom>bottom)window.scrollBy(0,r.bottom-bottom);
-      else if(r.top<top)window.scrollBy(0,r.top-top);
-    }catch(_){}drawPalWave();} ,60);
+    // 画面が隠れているときだけ最小限スクロールする。ただし「クリックで入った」ときは何もしない
+    // （利用者が見えている位置を選んでいるのに動くと、画面が跳ねて使いにくいため。Enter移動など鍵盤操作のみ対象）
+    setTimeout(()=>{
+      if(performance.now()-lastPointerT>=400)try{
+        const r=cell.getBoundingClientRect();
+        const wc=$('waveCol');
+        const top=(wc?Math.max(0,wc.getBoundingClientRect().bottom):0)+8;
+        const bottom=window.innerHeight-palH()-10;
+        if(r.bottom>bottom)window.scrollBy(0,r.bottom-bottom);
+        else if(r.top<top)window.scrollBy(0,r.top-top);
+      }catch(_){}
+      drawPalWave();
+    },60);
   }
 });
 /* ---- 記号の挿入：入力先が決まっていなくても押せる（順序を問わない） ----

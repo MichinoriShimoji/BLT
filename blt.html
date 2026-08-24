@@ -11,7 +11,7 @@ if(localStorage.getItem('blt_theme')==='dark')document.documentElement.setAttrib
 :root{
   --bg:#17181c; --surface:#ffffff; --ink:#1c2430; --muted:#5b6573;
   --line:#cdd0d8; --accent:#b3121f; --accent-soft:#f8e7e9; --accent-ink:#7d0b16;
-  --warn:#b4540f; --done:#2e7d5b; --sel:#f2b63f;
+  --warn:#b4540f; --done:#2e7d5b; --sel:#f2b63f; --danger:#c62828;
   --steel:#5a5f68; --steel-dark:linear-gradient(180deg,#3d4046,#25272c);
   --radius:11px; --radius-sm:8px;
   --shadow:0 1px 2px rgba(20,40,80,.04),0 6px 20px rgba(20,40,80,.06);
@@ -357,11 +357,12 @@ td.ttcell{min-width:220px}
 .ttline.ttrans{font-family:inherit;font-size:14.5px;font-weight:500;color:#3b424d;margin-top:3px;border-top:1px dashed var(--line);padding-top:3px}
 tr.selrow td{background:#fdf6e6}
 .rowbtn{padding:1px 8px;font-size:11px}
-/* 各レコードの操作セル：再生ボタンの直下に削除ボタンを縦並び */
+/* 各レコードの操作セル：再生と削除を縦に並べるが、押し間違えないよう間隔をあけ、削除は赤で示す */
 .rowctl{text-align:center;white-space:nowrap;vertical-align:top}
 .rowctl .rowbtn{display:block;margin:0 auto;min-width:30px}
-.rowctl .rowbtn.del{margin-top:5px;color:var(--muted);border:1px solid var(--line);background:var(--surface);border-radius:6px}
-.rowctl .rowbtn.del:hover{color:#fff;background:var(--warn);border-color:var(--warn)}
+.rowctl .rowbtn.del{position:relative;margin-top:26px;color:var(--danger);border:1px solid var(--danger);background:transparent;border-radius:6px;font-weight:700}
+.rowctl .rowbtn.del::before{content:"";position:absolute;left:50%;top:-14px;width:18px;height:1px;margin-left:-9px;background:var(--line)}   /* 再生との境目 */
+.rowctl .rowbtn.del:hover{color:#fff;background:var(--danger);border-color:var(--danger)}
 /* interlinear gloss */
 tr.glossrow td{background:#f6faf8;padding:6px 8px}
 .ilg{display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap}
@@ -461,7 +462,7 @@ html[data-theme="dark"] .tour-mark .tour-mark-tag{color:#2a2010}
 html[data-theme="dark"]{
   --bg:#0b0c0f; --surface:#1d2026; --ink:#e7ebf2; --muted:#9aa2af;
   --line:#33363e; --accent:#d21b2a; --accent-soft:#33191c; --accent-ink:#ff8089;
-  --warn:#e0843a; --done:#46b07f; --sel:#d9a73a;
+  --warn:#e0843a; --done:#46b07f; --sel:#d9a73a; --danger:#ff6b6b;
   --steel:#4a4e56;
   --shadow:0 1px 2px rgba(0,0,0,.35),0 6px 20px rgba(0,0,0,.45);
   --shadow-lg:0 18px 48px rgba(0,0,0,.6);
@@ -490,7 +491,7 @@ html[data-theme="dark"] code{color:var(--accent-ink)}
 html[data-skin="tech"]{
   --bg:#eef1f5; --surface:#ffffff; --ink:#101418; --muted:#5a6472;
   --line:#d5dae1; --accent:#0a7d55; --accent-soft:#e4f2ec; --accent-ink:#075c3f;
-  --warn:#b45309; --done:#0a7d55; --sel:#c8951a;
+  --warn:#b45309; --done:#0a7d55; --sel:#c8951a; --danger:#c62828;
   --steel:#39424e; --steel-dark:#171b21;
   --radius:4px; --radius-sm:3px;
   --shadow:0 1px 0 rgba(16,20,24,.05); --shadow-lg:0 10px 30px rgba(16,20,24,.20);
@@ -498,7 +499,7 @@ html[data-skin="tech"]{
 html[data-skin="tech"][data-theme="dark"]{
   --bg:#0b0e12; --surface:#151a20; --ink:#dfe6ee; --muted:#94a0ae;
   --line:#2a313a; --accent:#3ddc97; --accent-soft:#16241e; --accent-ink:#7fe9bd;
-  --warn:#e0a35a; --done:#3ddc97; --sel:#d9b155;
+  --warn:#e0a35a; --done:#3ddc97; --sel:#d9b155; --danger:#ff7b72;
   --steel:#39424e; --steel-dark:#1b2129;
   --shadow:0 1px 0 rgba(0,0,0,.4); --shadow-lg:0 14px 36px rgba(0,0,0,.6);
 }

@@ -264,6 +264,13 @@ code{background:var(--accent-soft);padding:1px 5px;border-radius:4px;font-size:1
 /* palette: 編集時だけ画面下に出る入力パネル */
 #paletteCard{position:fixed;left:auto;right:0;bottom:0;width:var(--palw,100%);z-index:30;margin:0;border-radius:8px 0 0 0;border:none;border-top:2px solid var(--accent);border-left:2px solid var(--accent);box-shadow:0 -4px 14px rgba(0,0,0,.12);padding:8px 18px 10px 22px;max-height:42vh;overflow-y:auto;transform:translateY(105%);transition:transform .16s ease}
 #paletteCard.show{transform:none}
+/* 再開時の通知。対象レコードまでスクロールするので、表の中に置くと画面外に出てしまう。
+   左下に固定して数秒だけ出す（右下はフィードバックボタン、下辺はIPAパレットが使う） */
+#resumeMsg{position:fixed;left:16px;bottom:16px;z-index:60;max-width:min(420px,calc(100vw - 32px));
+  padding:9px 13px;font-size:12.5px;line-height:1.55;cursor:pointer;
+  color:var(--accent-ink);background:var(--surface);border:1px solid var(--line);
+  border-left:3px solid var(--accent);border-radius:7px;box-shadow:var(--shadow-lg)}
+#resumeMsg:hover{border-color:var(--accent)}
 /* IPAパレットの見出しバー（最小化トグル）。最小化時は本体を隠して薄いバーだけ残す */
 #palHead{display:flex;align-items:center;gap:8px;margin-bottom:6px}
 /* よく使うIPAの帯：見出しバー内に常駐（最小化しても引っ込まない） */
@@ -1106,6 +1113,7 @@ $('projInput').addEventListener('change',async ev=>{
     sel=-1;afterSegChange();
     hideSetup();   // 復元した区間を自動区切りで上書きしないよう、検出パネルは隠す
     markSaved();   // 復元直後を「保存済み」基準に
+    jumpToResume();   // 前回の続き（最後に入力したレコード）へ移動する
   }catch(e){alert('読み込めませんでした：'+e.message)}
   ev.target.value='';
 });
@@ -2991,6 +2999,64 @@ function rowIntoView(i){
   const bottom=window.innerHeight-margin-palH();   // IPAパレット表示中はその上端までを可視域とする
   if(r.top<stickyBottom+margin) window.scrollBy(0, r.top-stickyBottom-margin);
   else if(r.bottom>bottom) window.scrollBy(0, r.bottom-bottom);
+}
+/* ---------- 途中保存の再開：前回の続きへ飛ぶ ----------
+   .json を読み込んだあと、注釈が何か入っている最後のレコードを探してそこへ選択を移す。
+   注釈は上から順に埋めていくので、これが保存直前に触っていた場所になる。
+   そのレコードが埋まりきっていれば次のレコードへ送る（前の続きは終わっている）。 */
+function morphCount(s){
+  const words=hasExplicitMorphs(s)?[s.morphs]:morphSplit(morphSrcText(s));
+  return words.reduce((n,w)=>n+(w?w.length:0),0);
+}
+// 注釈スロットが埋まっているかだけを並べた配列。表は現在のページしか描かれないので
+// DOMではなくデータから判定する。bdr/wbdr は自動コーディングなので数に入れない。
+function annoSlots(i){
+  const s=segs[i]; if(!s)return [];
+  const tv=s.tv||{}, fill=v=>String(v==null?'':v).trim()!=='';
+  const out=[fill(s.text),fill(s.note)];
+  if(glossOn){
+    const n=morphCount(s);
+    morphTiers().filter(t=>t.name!=='bdr'&&t.name!=='wbdr').forEach(t=>{
+      const a=tv[t.name]||[];
+      for(let m=0;m<n;m++)out.push(fill(a[m]));
+    });
+  }
+  segTiers().forEach(t=>out.push(fill(tv[t.name])));
+  return out;
+}
+// 戻り値の fresh は「注釈がまだ1つも無い保存」＝続きではなく最初から、の意味
+function resumeIndex(){
+  let last=-1;
+  for(let i=0;i<segs.length;i++)if(annoSlots(i).some(Boolean))last=i;
+  if(last<0)return {i:segs.length?0:-1,fresh:true};
+  return {i:annoSlots(last).every(Boolean)?Math.min(last+1,segs.length-1):last,fresh:false};
+}
+function jumpToResume(){
+  const {i,fresh}=resumeIndex(); if(i<0)return;
+  sel=i; setActiveSpk(segs[i].spk); afterSelChange(); focusSeg(i);   // 別ページなら afterSelChange が送る
+  // 表のマスのうち注釈として編集するものだけをDOM順に見て、最初の空欄へカーソルを置く
+  const cells=[...$('tb').querySelectorAll('tr[data-i="'+i+'"] [contenteditable="true"]')]
+    .filter(c=>c.dataset.k==='text'||c.dataset.k==='note'||c.dataset.t!=null
+      ||(c.dataset.f!=null&&!c.classList.contains('ro')));
+  const gap=cells.find(c=>!c.textContent.trim());
+  if(gap)gap.focus();
+  rowIntoView(i);   // focus 由来のスクロールを上書きし、波形パネルやパレットに隠れない位置へ
+  if(!fresh)showResumeMsg(i,gap);   // 何も入力の無い保存で「続きから」と言われても嘘になる
+}
+function showResumeMsg(i,gap){
+  const el=$('resumeMsg'); if(!el)return;
+  const label={note:'trans'};
+  const where=gap?(gap.dataset.t||gap.dataset.f||label[gap.dataset.k]||gap.dataset.k):'';
+  const name='#'+(i+1)+(segs[i].id?(' / '+segs[i].id):'');
+  const en=document.documentElement.lang==='en';
+  el.textContent=en
+    ?('Resumed where you left off — '+name+(where?('. The cursor is in the first empty '+where+' cell.'):'.'))
+    :('前回の続きから再開しました — '+name+(where?('（未入力の '+where+' にカーソルを置きました）'):''));
+  el.style.bottom=(16+palH())+'px';   // IPAパレットが開いていればその上に逃がす
+  el.classList.remove('hidden');
+  el.onclick=()=>el.classList.add('hidden');
+  clearTimeout(showResumeMsg.t);
+  showResumeMsg.t=setTimeout(()=>el.classList.add('hidden'),9000);
 }
 function updateRowTimes(i){
   const tr=$('tb').querySelector('tr[data-i="'+i+'"]:not(.glossrow)');
@@ -5232,5 +5298,6 @@ $('dlDict').addEventListener('click',async()=>{
   applyLang();
 })();
 </script>
+<div id="resumeMsg" class="hidden" title="クリックで閉じます"></div>
 </body>
 </html>

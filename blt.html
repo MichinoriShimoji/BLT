@@ -961,7 +961,26 @@ html[data-skin="tech"] .tierchip,html[data-skin="tech"] .spkchip,html[data-skin=
 const $=id=>document.getElementById(id);
 // 直近のポインタ操作時刻（クリックでセルに移った直後はウィンドウを自動スクロールさせない）
 let lastPointerT=0;
-document.addEventListener('pointerdown',()=>{lastPointerT=performance.now()},true);
+/* 入力中のセルから別行のボタンへ直接クリックすると、blur による再描画がそのボタン要素を差し替えてしまい、
+   mousedown と mouseup の相手が変わるためクリックが成立しない（1回目が空振りする）。
+   押している間は再描画を保留し、指を離してクリックが確定してから走らせる。                              */
+let pointerDown=false, pendingRerender=null, pendingRerenderTimer=null;
+function flushRerender(){
+  clearTimeout(pendingRerenderTimer); pendingRerenderTimer=null;
+  const f=pendingRerender; pendingRerender=null;
+  if(f)try{f()}catch(e){}
+}
+function rerenderSoon(fn){
+  if(!pointerDown){fn();return}
+  pendingRerender=fn;
+  clearTimeout(pendingRerenderTimer);
+  pendingRerenderTimer=setTimeout(flushRerender,800);   // ウィンドウ外で指を離した等で pointerup を取りこぼしても必ず反映する保険
+}
+document.addEventListener('pointerdown',()=>{lastPointerT=performance.now();pointerDown=true},true);
+['pointerup','pointercancel'].forEach(ev=>window.addEventListener(ev,()=>{
+  pointerDown=false;
+  if(pendingRerender)setTimeout(flushRerender,0);   // click の発火より後になるように次のタスクへ
+},true));
 
 /* ---------- 状態 ---------- */
 let wavFile=null, wavInfo=null;     // PCM情報（切り出し用）
@@ -3103,8 +3122,10 @@ $('tb').addEventListener('focusout',e=>{
       // morph\u306e\u5206\u5272\u5143\u304c\u5909\u308f\u3063\u305f\u3089\u5f62\u614b\u7d20\u5206\u5272\u3092\u3084\u308a\u76f4\u3059
       if(glossOn&&tp.dataset.t===morphSrc){
         trimMorphData(gs2);   // 分割元の層を削った分、紐づく形態素・gloss等も削除
-        const gr2=$('tb').querySelector('tr.glossrow[data-i="'+gi2+'"]');
-        if(gr2)gr2.outerHTML=glossRowHtml(gs2,gi2);
+        rerenderSoon(()=>{
+          if(segs[gi2]!==gs2){renderTable();return}   // 同上
+          const gr2=$('tb').querySelector('tr.glossrow[data-i="'+gi2+'"]');if(gr2)gr2.outerHTML=glossRowHtml(gs2,gi2);
+        });
       }
     }
     return;
@@ -3139,9 +3160,12 @@ $('tb').addEventListener('focusout',e=>{
     if(k==='text'){
       trimMorphData(s);
       if(tierRowsOn()){
-        // 境界コーディング中は文がレコードをまたぐので全体を再計算・再描画
-        if(hasBdr()||hasWbdr()){computeBoundaries();renderTable();renderContext()}
-        else{const gr=$('tb').querySelector('tr.glossrow[data-i="'+i+'"]');if(gr)gr.outerHTML=glossRowHtml(s,i)}
+        // 境界コーディング中は文がレコードをまたぐので全体を再計算・再描画（描画だけはクリック確定後に）
+        if(hasBdr()||hasWbdr()){computeBoundaries();rerenderSoon(()=>{renderTable();renderContext()})}
+        else rerenderSoon(()=>{
+          if(segs[i]!==s){renderTable();return}   // 保留中に削除等で行がずれたら、表ごと引き直す
+          const gr=$('tb').querySelector('tr.glossrow[data-i="'+i+'"]');if(gr)gr.outerHTML=glossRowHtml(s,i);
+        });
       }
     }
   }

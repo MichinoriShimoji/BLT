@@ -858,6 +858,10 @@ html[data-skin="tech"] .tierchip,html[data-skin="tech"] .spkchip,html[data-skin=
   </table>
   <div class="btns" style="margin-top:8px">
     <button id="btnRenumber">IDを連番で振り直す</button>
+    <span class="sep" style="width:1px;height:20px;background:var(--line)"></span>
+    <button id="btnPgPrev2" disabled>◀ 前の5件</button>
+    <span id="pgInfo2" class="note" style="font-family:var(--mono)">0件</span>
+    <button id="btnPgNext2" disabled>次の5件 ▶</button>
   </div>
 </div>
 </div><!-- /tableCol -->
@@ -2928,12 +2932,16 @@ function glossRowHtml(s,i){
   inner+=sts.map(tline).join('');
   return '<tr class="glossrow" data-i="'+i+'"><td colspan="2"></td><td colspan="'+(colCount()-2)+'">'+inner+'</td></tr>';
 }
+// ページ送りは表の上と下（IDの振り直しの隣）の2か所にある。長い表で下まで
+// 読んだあと、上まで戻らずに次の5件へ行けるように。
+function eachPager(ids,fn){ids.forEach(id=>{const e=$(id);if(e)fn(e)})}
 function updatePager(){
   const n=segs.length;
   const start=n?page*PAGE+1:0, end=Math.min(n,page*PAGE+PAGE);
-  $('pgInfo').textContent=n?(start+'–'+end+' / '+n+'件'):'0件';
-  $('btnPgPrev').disabled=page<=0;
-  $('btnPgNext').disabled=(page+1)*PAGE>=n;
+  const info=n?(start+'–'+end+' / '+n+'件'):'0件';
+  eachPager(['pgInfo','pgInfo2'],e=>e.textContent=info);
+  eachPager(['btnPgPrev','btnPgPrev2'],e=>e.disabled=page<=0);
+  eachPager(['btnPgNext','btnPgNext2'],e=>e.disabled=(page+1)*PAGE>=n);
 }
 function renderTable(){
   const tb=$('tb');
@@ -2965,8 +2973,14 @@ function renderTable(){
   }).join('');
   updatePager();
 }
-$('btnPgPrev').addEventListener('click',()=>{page--;renderTable()});
-$('btnPgNext').addEventListener('click',()=>{page++;renderTable()});
+function goPage(d,fromBottom){
+  page+=d; renderTable();
+  // 下のページ送りから来たときは、新しいページの先頭行まで戻す（そのままだと
+  // 表の末尾を見たまま中身が入れ替わって、どこを読んでいたか分からなくなる）
+  if(fromBottom) rowIntoView(page*PAGE);
+}
+eachPager(['btnPgPrev','btnPgPrev2'],e=>e.addEventListener('click',()=>goPage(-1,e.id==='btnPgPrev2')));
+eachPager(['btnPgNext','btnPgNext2'],e=>e.addEventListener('click',()=>goPage(1,e.id==='btnPgNext2')));
 $('viewLayer').addEventListener('change',()=>{viewLayer=$('viewLayer').value;renderTable()});
 function rowIntoView(i){
   const tr=$('tb').querySelector('tr[data-i="'+i+'"]:not(.glossrow)');

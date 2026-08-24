@@ -1,7 +1,10 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="ja" data-skin="tech">
 <head>
 <meta charset="UTF-8">
+<script>/* 保存した見た目を描画前に反映（既定＝テック調。ロック調を選んでいた人だけ属性を外す） */
+try{if(localStorage.getItem('blt_skin')==='rock')document.documentElement.removeAttribute('data-skin');
+if(localStorage.getItem('blt_theme')==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BLT — Browser-based Lightweight Toolkit for Editing Field Data</title>
 <style>
@@ -4973,8 +4976,8 @@ $('dlDict').addEventListener('click',async()=>{
 })();
 /* 見た目のスキン（ロック調／テック調）切替 — 配色と装飾だけが変わり、機能・データには影響しません */
 (function(){
-  var KEY='blt_skin', root=document.documentElement;
-  try{ if(localStorage.getItem(KEY)==='tech') root.setAttribute('data-skin','tech'); }catch(e){}
+  var KEY='blt_skin', root=document.documentElement;   // 既定はテック調（html の data-skin="tech"）。head の先行スクリプトで保存値は反映済み
+  try{ if(localStorage.getItem(KEY)==='rock') root.removeAttribute('data-skin'); }catch(e){}
   function en(){ try{ return !!(window.__bltLangEN && window.__bltLangEN()); }catch(e){ return false; } }
   function sync(){
     var b=document.getElementById('skinBtn'); if(!b)return;

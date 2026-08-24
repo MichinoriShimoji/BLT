@@ -474,6 +474,80 @@ html[data-theme="dark"] .btn-fit:hover{background:var(--accent-soft)}
 html[data-theme="dark"] .tybadge.root{background:#23262c;color:#9fb4c4}
 html[data-theme="dark"] .tybadge.affix{background:#2e2433;color:#c79bbf}
 html[data-theme="dark"] code{color:var(--accent-ink)}
+/* ===== テック・スキン（html[data-skin="tech"]）=====
+   端末／エディタ風の簡素な見た目。グラデーション・光沢・グローを使わず、
+   ヘアラインの枠＋小さい角丸＋等幅フォントで構成する。ロック調との切替はこの節と変数だけで完結。   */
+html[data-skin="tech"]{
+  --bg:#eef1f5; --surface:#ffffff; --ink:#101418; --muted:#5a6472;
+  --line:#d5dae1; --accent:#0a7d55; --accent-soft:#e4f2ec; --accent-ink:#075c3f;
+  --warn:#b45309; --done:#0a7d55; --sel:#c8951a;
+  --steel:#39424e; --steel-dark:#171b21;
+  --radius:4px; --radius-sm:3px;
+  --shadow:0 1px 0 rgba(16,20,24,.05); --shadow-lg:0 10px 30px rgba(16,20,24,.20);
+}
+html[data-skin="tech"][data-theme="dark"]{
+  --bg:#0b0e12; --surface:#151a20; --ink:#dfe6ee; --muted:#94a0ae;
+  --line:#2a313a; --accent:#3ddc97; --accent-soft:#16241e; --accent-ink:#7fe9bd;
+  --warn:#e0a35a; --done:#3ddc97; --sel:#d9b155;
+  --steel:#39424e; --steel-dark:#1b2129;
+  --shadow:0 1px 0 rgba(0,0,0,.4); --shadow-lg:0 14px 36px rgba(0,0,0,.6);
+}
+/* ヘッダー＝端末のタイトルバー。フラットな暗色に1本のアクセント線 */
+html[data-skin="tech"] header{background:#0f1318;border-bottom:1px solid var(--accent);box-shadow:none;padding:6px 18px}
+html[data-skin="tech"] header .lbl{color:#8b95a3;font-family:var(--mono);font-size:11.5px}
+html[data-skin="tech"] header button,html[data-skin="tech"] #tabbar .tab{background:var(--steel-dark);border:1px solid var(--steel);color:#c9d2dc;border-radius:3px;font-family:var(--mono);font-size:12px;font-weight:500;text-shadow:none}
+html[data-skin="tech"] header button:hover,html[data-skin="tech"] #tabbar .tab:hover{border-color:var(--accent);color:#fff;background:#1e242c}
+html[data-skin="tech"] header button.primary,html[data-skin="tech"] #tabbar .tab.cur{background:var(--accent);border-color:var(--accent);color:#04120c;font-weight:700}
+html[data-skin="tech"] header button.primary:hover{background:#0c9466;color:#04120c}
+html[data-skin="tech"] #tutBtn{background:transparent;border:1px solid var(--accent);color:#6fd7ae;border-radius:3px;font-family:var(--mono);font-size:12px;font-weight:500}
+html[data-skin="tech"] #tutBtn:hover{background:rgba(10,125,85,.18);color:#fff}
+html[data-skin="tech"] #tourBtn{background:transparent;border:1px solid #6b7484;color:#cbd3dd;border-radius:3px;font-family:var(--mono);font-size:12px;font-weight:500}
+html[data-skin="tech"] #tourBtn:hover{background:#1e242c;color:#fff;border-color:var(--accent)}
+html[data-skin="tech"] #themeBtn,html[data-skin="tech"] #langToggle,html[data-skin="tech"] #skinBtn{border-radius:3px;font-family:var(--mono);border-color:var(--steel)}
+html[data-skin="tech"] #themeBtn:hover,html[data-skin="tech"] #langToggle:hover,html[data-skin="tech"] #skinBtn:hover{border-color:var(--accent);color:#fff}
+/* ロゴ＝プロンプト付きの等幅テキスト（クロームのSVGは隠す） */
+html[data-skin="tech"] #brand .logo svg,html[data-skin="tech"] #brandHero .bh-logo svg{display:none}
+.tlogo{display:none}
+html[data-skin="tech"] .tlogo{display:inline-flex;align-items:baseline;font-family:var(--mono);font-size:23px;font-weight:700;letter-spacing:.04em;color:#e7edf4;white-space:nowrap}
+html[data-skin="tech"] .tlogo .pr{color:var(--accent);font-weight:400;margin-right:7px}
+html[data-skin="tech"] .tlogo b{font-weight:700;cursor:pointer}
+html[data-skin="tech"] .tlogo b:hover{color:var(--accent)}
+html[data-skin="tech"] .tlogo .cur{color:var(--accent);margin-left:3px;animation:tcur 1.05s steps(2,end) infinite}
+@keyframes tcur{50%{opacity:0}}
+html[data-skin="tech"] #brand .logo{border-right:1px solid #333b45;padding-right:11px}
+html[data-skin="tech"] #brandToggle{background:#171b21;border-color:var(--steel);color:#8b95a3;border-radius:3px}
+html[data-skin="tech"] #brandToggle:hover{border-color:var(--accent);color:#fff;background:#1e242c}
+/* ホバーの吹き出しも端末風（等幅・フラット） */
+html[data-skin="tech"] #logoTip{background:#0f1318;border:1px solid var(--accent);border-bottom-width:1px;border-radius:4px;box-shadow:0 6px 18px rgba(0,0,0,.5)}
+html[data-skin="tech"] #logoTip .l1{font-family:var(--mono);font-style:normal;font-size:15px;letter-spacing:0;color:#6fd7ae;text-shadow:none}
+html[data-skin="tech"] #logoTip .l2{color:#b9c3ce}
+/* 情報プレート・ブランドカード：鋼板をやめてフラット＋ドットグリッド */
+html[data-skin="tech"] #brandInfo,html[data-skin="tech"] #brandHero .bh-info{background:#12161b;border:1px solid #2b323b;border-bottom:1px solid var(--accent);border-radius:4px;box-shadow:none}
+html[data-skin="tech"] #cardBrand{background-color:#12161b;background-image:radial-gradient(rgba(255,255,255,.075) 1px,transparent 1px);background-size:14px 14px;border:1px solid #2b323b;border-radius:4px;box-shadow:none}
+html[data-skin="tech"] #brandHero .bh-logo{background:#0d1116;border:1px solid #2b323b;border-bottom:1px solid var(--accent);border-radius:4px;box-shadow:none;padding:16px 24px}
+html[data-skin="tech"] #brandHero .tlogo{font-size:42px}
+html[data-skin="tech"] #brandInfo .bname,html[data-skin="tech"] #brandHero .bname{font-family:var(--mono);font-size:15.5px;font-weight:700;letter-spacing:0;transform:none;text-shadow:none;color:#e7edf4}
+html[data-skin="tech"] #brandInfo .bname .ini,html[data-skin="tech"] #brandHero .bname .ini{font-family:var(--mono);font-size:15.5px;font-weight:700;letter-spacing:0;background:none;-webkit-text-fill-color:currentColor;color:var(--accent);filter:none}
+html[data-skin="tech"] #brandInfo .bcite,html[data-skin="tech"] #brandHero .bcite{background:rgba(10,125,85,.13);border:1px solid rgba(61,220,151,.28);border-left:2px solid var(--accent);border-radius:3px;color:#cfd8e2}
+html[data-skin="tech"] #brandInfo .bcite .lab,html[data-skin="tech"] #brandHero .bcite .lab{background:var(--accent);border:none;color:#04120c;border-radius:2px;font-family:var(--mono)}
+html[data-skin="tech"] #brandInfo .bcite a,html[data-skin="tech"] #brandHero .bcite a,
+html[data-skin="tech"] #brandInfo .bcredit a,html[data-skin="tech"] #brandHero .bcredit a{color:#6fd7ae}
+html[data-skin="tech"] #brandHero .bh-tut{background:transparent;border:1px solid var(--accent);color:#6fd7ae;border-radius:3px;font-family:var(--mono);font-weight:500}
+html[data-skin="tech"] #brandHero .bh-tut:hover{background:rgba(10,125,85,.18);color:#fff}
+/* パネル・ボタン：角を落として等幅の見出しに */
+html[data-skin="tech"] .card h2{font-family:var(--mono);font-size:14px;font-weight:700;letter-spacing:0}
+html[data-skin="tech"] .steplabel{border-radius:3px;font-family:var(--mono);font-weight:700}
+html[data-skin="tech"] button{border-radius:3px}
+html[data-skin="tech"] .btn-play{background:var(--accent-soft);border:1px solid var(--accent);color:var(--accent-ink);border-radius:3px;font-family:var(--mono);font-size:12.5px}
+html[data-skin="tech"] .btn-play:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+html[data-skin="tech"] .btn-play.btn-del{background:transparent;border:1px dashed var(--warn);color:var(--warn)}
+html[data-skin="tech"] .btn-play.btn-del:hover{background:var(--warn);color:#fff;border-style:solid}
+html[data-skin="tech"] .btn-big{background:var(--accent);border-color:var(--accent);color:#fff;border-radius:3px}
+html[data-skin="tech"] .btn-big:hover{background:var(--accent-ink)}
+html[data-skin="tech"] .btn-fit,html[data-skin="tech"] #palToggle,html[data-skin="tech"] #palEdit,html[data-skin="tech"] #palReset,html[data-skin="tech"] #palKeys{border-radius:3px;font-family:var(--mono)}
+html[data-skin="tech"] #cardSymHelp{border-width:1px}
+html[data-skin="tech"] #paletteCard{border-top-width:1px;border-left-width:1px;border-radius:4px 0 0 0}
+html[data-skin="tech"] .tierchip,html[data-skin="tech"] .spkchip,html[data-skin="tech"] #palKeyList .kitem{border-radius:3px}
 </style>
 </head>
 <body>
@@ -497,7 +571,7 @@ html[data-theme="dark"] code{color:var(--accent-ink)}
         <path data-word="LIVING AFTER GLOSSING" data-sub="夜が明けるまで、グロスを刻み続けろ。" data-sub-en="Keep carving glosses till the sun comes up." d="M100,6 L130,6 L118,38 L144,32 L116,74 L156,74 L178,84 L152,94 L100,94 L112,50 L90,56 Z"/>
         <path data-word="TIER OF THE BEAST" data-sub="注釈層は、何段でも積み上げろ。" data-sub-en="Stack your annotation tiers as deep as you dare." d="M188,8 H268 L252,28 H240 V76 L226,92 L212,76 V28 H198 Z"/>
       </g>
-    </svg></span>
+    </svg><span class="tlogo"><span class="pr">$</span><b data-word="browser-only: no upload" data-sub="音声もテキストも、このブラウザから出ません。" data-sub-en="Audio and text never leave this browser.">B</b><b data-word="lightweight: 1 file, 0 deps" data-sub="HTML 1枚で完結。ビルドもサーバも要りません。" data-sub-en="One HTML file. No build, no server, no install.">L</b><b data-word="toolchain: eaf | tsv | json | tex" data-sub="注釈から書き出しまで、これ一本で通ります。" data-sub-en="From annotation to export, all in one pipe.">T</b><span class="cur">█</span></span></span>
     <button type="button" id="brandToggle" title="BLTについて（正式名称・引用情報）" data-i18n-skip>ⓘ</button>
     <div id="brandInfo">
       <div class="bname"><b class="ini">B</b>rowser-based <b class="ini">L</b>ightweight <b class="ini">T</b>oolkit for Editing Field Data</div>
@@ -523,6 +597,7 @@ html[data-theme="dark"] code{color:var(--accent-ink)}
     <button type="button" class="tab" data-tab="analysis">分析・辞書</button>
     <a id="tutBtn" href="https://youtu.be/QjJDnYP2eME" target="_blank" rel="noopener" title="チュートリアル動画（YouTube・新しいタブで開きます）">▶ チュートリアル動画</a>
     <button type="button" id="tourBtn" title="BLTの使い方を順に案内します">🧭 使い方ツアー</button>
+    <button type="button" id="skinBtn" data-i18n-skip title="見た目を切り替えます（ロック調／テック調）"></button>
     <button type="button" id="themeBtn" title="ライト／ダークの切替" aria-label="テーマ切替">☾</button>
     <button type="button" id="langToggle" data-i18n-skip title="Switch language / 言語切替">English</button>
   </div>
@@ -538,7 +613,7 @@ html[data-theme="dark"] code{color:var(--accent-ink)}
         <path data-word="LIVING AFTER GLOSSING" data-sub="夜が明けるまで、グロスを刻み続けろ。" data-sub-en="Keep carving glosses till the sun comes up." d="M100,6 L130,6 L118,38 L144,32 L116,74 L156,74 L178,84 L152,94 L100,94 L112,50 L90,56 Z"/>
         <path data-word="TIER OF THE BEAST" data-sub="注釈層は、何段でも積み上げろ。" data-sub-en="Stack your annotation tiers as deep as you dare." d="M188,8 H268 L252,28 H240 V76 L226,92 L212,76 V28 H198 Z"/>
       </g>
-    </svg></div>
+    </svg><span class="tlogo"><span class="pr">$</span><b data-word="browser-only: no upload" data-sub="音声もテキストも、このブラウザから出ません。" data-sub-en="Audio and text never leave this browser.">B</b><b data-word="lightweight: 1 file, 0 deps" data-sub="HTML 1枚で完結。ビルドもサーバも要りません。" data-sub-en="One HTML file. No build, no server, no install.">L</b><b data-word="toolchain: eaf | tsv | json | tex" data-sub="注釈から書き出しまで、これ一本で通ります。" data-sub-en="From annotation to export, all in one pipe.">T</b><span class="cur">█</span></span></div>
     <div class="bh-info">
       <div class="bname"><b class="ini">B</b>rowser-based <b class="ini">L</b>ightweight <b class="ini">T</b>oolkit for Editing Field Data</div>
       <div class="btag">A simple, intuitive toolkit for transcription, annotation, glossing, and conversion.</div>
@@ -2182,7 +2257,7 @@ window.addEventListener('resize',()=>{syncStickyTop();if(env){draw();drawOvw()}}
   tip.appendChild(l1);tip.appendChild(l2);document.body.appendChild(tip);
   const enOn=()=>{try{return !!(window.__bltLangEN&&window.__bltLangEN())}catch(e){return false}};
   document.addEventListener('pointerover',e=>{
-    const path=e.target.closest&&e.target.closest('path[data-word]');
+    const path=e.target.closest&&e.target.closest('[data-word]');
     if(!path)return;
     l1.textContent=path.dataset.word||'';
     l2.textContent=(enOn()?path.dataset.subEn:path.dataset.sub)||'';
@@ -2195,7 +2270,7 @@ window.addEventListener('resize',()=>{syncStickyTop();if(env){draw();drawOvw()}}
     tip.style.left=Math.max(8+hw,Math.min(window.innerWidth-8-hw,r.left+r.width/2))+'px';
   });
   document.addEventListener('pointerout',e=>{
-    if(e.target.closest&&e.target.closest('path[data-word]'))tip.style.display='none';
+    if(e.target.closest&&e.target.closest('[data-word]'))tip.style.display='none';
   });
 })();
 // ヘッダーⓘ：正式名称・引用情報のドロップダウン（絶対配置なので開閉してもレイアウトは動かない）
@@ -4895,6 +4970,31 @@ $('dlDict').addEventListener('click',async()=>{
     sync();
   });
   sync();
+})();
+/* 見た目のスキン（ロック調／テック調）切替 — 配色と装飾だけが変わり、機能・データには影響しません */
+(function(){
+  var KEY='blt_skin', root=document.documentElement;
+  try{ if(localStorage.getItem(KEY)==='tech') root.setAttribute('data-skin','tech'); }catch(e){}
+  function en(){ try{ return !!(window.__bltLangEN && window.__bltLangEN()); }catch(e){ return false; } }
+  function sync(){
+    var b=document.getElementById('skinBtn'); if(!b)return;
+    var t=root.getAttribute('data-skin')==='tech';
+    b.textContent=t?'🤘 Rock':'</> Tech';                       // 押すと切り替わる先を出す
+    b.title=t?(en()?'Switch the look to Rock':'見た目をロック調に切り替えます')
+             :(en()?'Switch the look to Tech':'見た目をテック調に切り替えます');
+  }
+  var btn=document.getElementById('skinBtn');
+  if(btn) btn.addEventListener('click',function(){
+    var t=root.getAttribute('data-skin')==='tech';
+    if(t){ root.removeAttribute('data-skin'); } else { root.setAttribute('data-skin','tech'); }
+    try{ localStorage.setItem(KEY, t?'rock':'tech'); }catch(e){}
+    sync();
+    if(typeof reservePalSpace==='function'){ try{ reservePalSpace(); }catch(e){} }   // 高さが変わるので余白を取り直す
+    if(typeof syncStickyTop==='function'){ try{ syncStickyTop(); }catch(e){} }
+    if(typeof draw==='function'){ try{ draw(); drawOvw(); }catch(e){} }
+  });
+  sync();
+  try{ var lg=document.getElementById('langToggle'); if(lg) lg.addEventListener('click',function(){ setTimeout(sync,0); }); }catch(e){}
 })();
 </script>
 <!-- ===== i18n: 日本語 ⇄ English（移植・拡張） ===== -->

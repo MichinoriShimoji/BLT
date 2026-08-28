@@ -298,6 +298,24 @@ code{background:var(--accent-soft);padding:1px 5px;border-radius:4px;font-size:1
 #palKeyList .kitem .k{font-family:var(--mono);font-size:11px;color:var(--muted)}
 #palKeyList .kitem button{border:none;background:none;color:var(--muted);cursor:pointer;font-size:11px;padding:0 3px}
 #palKeyList .kitem button:hover{color:var(--warn)}
+/* プロジェクトタブ（wsBar）: ヘッダー直下に常時固定 */
+#wsBar{position:sticky;top:0;z-index:39;display:flex;align-items:flex-end;gap:4px;flex-wrap:wrap;
+  padding:6px 20px 0;background:var(--surface);border-bottom:2px solid var(--line);box-shadow:0 2px 6px rgba(0,0,0,.12)}
+.wstab{display:inline-flex;align-items:center;gap:6px;padding:7px 10px 7px 14px;font-size:13px;font-weight:600;
+  border:1px solid var(--line);border-bottom:none;border-radius:8px 8px 0 0;cursor:pointer;user-select:none;
+  background:transparent;color:var(--muted);max-width:260px;position:relative;top:2px}
+.wstab:hover{color:var(--ink);background:rgba(128,128,128,.1)}
+.wstab.cur{background:var(--surface);color:var(--ink);border-color:var(--accent);top:0;padding-top:9px;
+  box-shadow:inset 0 3px 0 var(--accent)}
+.wstab .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wstab .dot{color:var(--warn);font-size:10px;line-height:1}
+.wstab .x{border:none;background:none;color:var(--muted);cursor:pointer;font-size:12px;padding:2px 4px;border-radius:4px;line-height:1}
+.wstab .x:hover{color:#fff;background:var(--danger)}
+#wsAdd{border:1px dashed var(--line);background:none;color:var(--accent);cursor:pointer;font-size:12.5px;font-weight:600;
+  padding:6px 12px;border-radius:8px 8px 0 0;margin-bottom:2px;white-space:nowrap}
+#wsAdd:hover{border-color:var(--accent);background:rgba(128,128,128,.08)}
+.wshint{font-size:11.5px;color:var(--muted);margin:0 0 6px 8px;align-self:center}
+html[data-theme="dark"] #wsBar, html[data-skin="tech"][data-theme="dark"] #wsBar{box-shadow:0 2px 6px rgba(0,0,0,.4)}
 /* 辞書のバリアント整理（gloss・品詞の値ごとのチップ＋統一/書き換え/消去） */
 .vchip{display:inline-flex;align-items:center;gap:3px;border:1px solid var(--line);border-radius:12px;padding:1px 4px 1px 9px;margin:0 4px 4px 0;font-size:12.5px;background:var(--surface)}
 .vchip .vn{color:var(--muted);font-size:11px}
@@ -654,7 +672,7 @@ html[data-skin="tech"] .tierchip,html[data-skin="tech"] .spkchip,html[data-skin=
       <button id="btnStartResume">📂 既存の作業を再開する</button>
       <button id="btnStartCorpus" title="保存済みの .json を複数選んで、音声なしで横断の集計・検索・辞書を見ます（原本は変更されません）">📚 複数プロジェクトを横断で見る</button>
     </div>
-    <div class="note" style="margin-top:8px"><b>新規</b>＝音声（WAV）を読み込んで自動区切り→注釈。<b>既存再開</b>＝音声を読み込んでから、以前の保存（.json）や ELAN（.eaf）を読み込み。<b>横断</b>＝複数の保存（.json）を音声なしでまとめて読み、集計・検索・辞書をコーパスとして見る（読み取り専用）。</div>
+    <div class="note" style="margin-top:8px"><b>新規</b>＝音声（WAV）を読み込んで自動区切り→注釈。<b>既存再開</b>＝音声を読み込んでから、以前の保存（.json）や ELAN（.eaf）を読み込み。<b>横断</b>＝複数の保存（.json）を音声なしでまとめて読み、集計・検索・辞書をコーパスとして見る（読み取り専用）。<br>複数のプロジェクトを<b>同時に編集</b>したいときは、画面最上部のタブ列で「＋ プロジェクトを追加」（検索・分析・辞書は自動で串刺しになります）。</div>
   </div>
   <!-- 共通フロー（モード選択後に表示） -->
   <div id="startFlow" class="hidden">
@@ -1909,8 +1927,11 @@ function wsRenderTabs(){
       +'<span class="nm">'+escHtml(nm)+'</span>'
       +'<button type="button" class="x" data-close="'+i+'" title="このプロジェクトを閉じる">✕</button></span>';
   }).join('')
-  +'<button type="button" id="wsAdd" title="プロジェクトを追加で開く（音声・注釈は混ざりません。検索・分析は自動で串刺しになります）">＋</button>'
-  +(wsList.length>1?'<span class="wshint">検索・分析・辞書は開いている全プロジェクトを串刺しで見ます</span>':'');
+  +'<button type="button" id="wsAdd" title="プロジェクトを追加で開く（音声・注釈は混ざりません。検索・分析は自動で串刺しになります）">＋ プロジェクトを追加</button>'
+  +(wsList.length>1
+    ?'<span class="wshint">検索・分析・辞書は開いている全プロジェクトを串刺しで見ます</span>'
+    :'<span class="wshint">「＋」で別のプロジェクトを同時に開けます（このタブ列で切り替え）</span>');
+  if(typeof syncStickyTop==='function')syncStickyTop();
 }
 $('wsBar').addEventListener('click',e=>{
   const x=e.target.closest('[data-close]');
@@ -2427,10 +2448,12 @@ function zoomCenter(f){
 // 波形カードのsticky位置をヘッダーの高さに追従させる
 function syncStickyTop(){
   const hh=document.querySelector('header').offsetHeight;
-  $('waveCol').style.top=(hh+4)+'px';
+  const bar=$('wsBar'); let bh=0;
+  if(bar){bar.style.top=hh+'px'; bh=bar.offsetHeight;}   // タブ列はヘッダー直下に貼り付く
+  $('waveCol').style.top=(hh+bh+4)+'px';
   // 左サイドバー（パネル4操作部）は、上部固定の波形のすぐ下に貼り付ける
   const side=$('annoSide');
-  if(side)side.style.top=(hh+$('waveCol').offsetHeight+10)+'px';
+  if(side)side.style.top=(hh+bh+$('waveCol').offsetHeight+10)+'px';
 }
 syncStickyTop();
 window.addEventListener('resize',()=>{syncStickyTop();if(env){draw();drawOvw()}});

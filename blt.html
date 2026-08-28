@@ -943,6 +943,7 @@ html[data-skin="tech"] .tierchip,html[data-skin="tech"] .spkchip,html[data-skin=
     <button type="button" id="srchRun" class="primary">検索</button>
     <span id="srchCount" class="note" style="margin:0"></span>
   </div>
+  <div class="note hidden" id="srchCorpusNote" style="margin-top:8px;color:var(--warn)"></div>
 </div>
 <div class="card"><div id="srchResults"><span class="note">条件を入力して「検索」を押してください。</span></div></div>
 </div>
@@ -4404,6 +4405,10 @@ function refreshAnalysis(){buildAnalysis();renderStats();renderIndex();if(anSel)
 /* ---- コーパスの読み込み（読み取り専用・原本は不変） ---- */
 function corpusRefresh(){
   corpusRecs=null; anIndexCache=null; anSel=null;
+  if(typeof refreshSearch==='function')refreshSearch();   // 層の選択肢を全セッションの和集合に
+  const sn=$('srchCorpusNote');
+  if(sn){sn.classList.toggle('hidden',!corpusOn());
+    if(corpusOn())sn.textContent='コーパス横断で検索中（'+corpus.length+'件: '+corpus.map(c=>c.name).join(' / ')+'）。結果には出典を表示します（読み取り専用のため注釈タブへは移動しません）。';}
   $('btnCorpusClear').hidden=!corpusOn();
   $('corpusNote').classList.toggle('hidden',!corpusOn());
   $('dlDict').disabled=corpusOn();
@@ -4479,6 +4484,18 @@ document.getElementById('tabbar').addEventListener('click',e=>{const b=e.target.
 /* ---------- 検索（層ごと・層同士の掛け合わせ） ---------- */
 function searchLayers(){
   const L=[{name:'text',label:'text（文字起こし）',level:'seg'},{name:'trans',label:'trans（訳）',level:'seg'},{name:'spk',label:'spk（話者）',level:'seg'},{name:'id',label:'ID',level:'seg'}];
+  if(corpusOn()){   // 横断検索では全セッションの層の和集合を出す（どれかにあれば選べる）
+    const seen=new Set(L.map(x=>x.name)); seen.add('morph');
+    const seg=[],mor=[];
+    corpus.forEach(sess=>sess.tiersDef.forEach(t=>{
+      if(seen.has(t.name))return; seen.add(t.name);
+      (t.parent==='morph'||sess.tiersDef.some(p=>p.name===t.parent&&p.parent==='morph')?mor:seg).push(t.name);
+    }));
+    seg.forEach(n=>L.push({name:n,label:n+'（区間層）',level:'seg'}));
+    L.push({name:'morph',label:'morph（形態素）',level:'morph'});
+    mor.forEach(n=>L.push({name:n,label:n+'（形態素層）',level:'morph'}));
+    return L;
+  }
   segTiers().forEach(t=>L.push({name:t.name,label:t.name+'（区間層）',level:'seg'}));
   L.push({name:'morph',label:'morph（形態素）',level:'morph'});
   morphTiers().forEach(t=>L.push({name:t.name,label:t.name+'（形態素層）',level:'morph'}));
@@ -4540,10 +4557,24 @@ function morphMatchesAt(s,mi,conds,combine){
   return combine==='or'?bools.some(Boolean):bools.every(Boolean);
 }
 function runSearch(){
-  if(typeof segs==='undefined'||!segs.length){renderSearchResults('record',[],'先に音声・データを読み込んでください');return;}
+  const inCorpus=corpusOn();
+  if(!inCorpus&&(typeof segs==='undefined'||!segs.length)){renderSearchResults('record',[],'先に音声・データを読み込んでください');return;}
   const conds=srchGetConds(); if(!conds.length){renderSearchResults('record',[],'条件がありません');return;}
   const combine=$('srchCombine').value, sameMorph=$('srchSameMorph').checked, unit=$('srchUnit').value, out=[];
-  if(unit==='record'){segs.forEach((s,si)=>{if(recordMatches(s,conds,combine,sameMorph))out.push({si});});}
+  if(inCorpus){
+    // セッションごとに、そのセッション自身の設定で判定する（形態素の切れ方を取り違えない）
+    const recs=corpusRecs||buildCorpusRecs();
+    let base=0;
+    corpus.forEach(sess=>{
+      const off=base; base+=sess.segs.length;
+      withSession(sess,()=>{
+        sess.segs.forEach((s,si)=>{
+          if(unit==='record'){ if(recordMatches(s,conds,combine,sameMorph))out.push({si:off+si}); }
+          else flatMorphs(s).forEach((m,mi)=>{ if(morphMatchesAt(s,mi,conds,combine))out.push({si:off+si,mi}); });
+        });
+      });
+    });
+  }else if(unit==='record'){segs.forEach((s,si)=>{if(recordMatches(s,conds,combine,sameMorph))out.push({si});});}
   else{segs.forEach((s,si)=>{flatMorphs(s).forEach((m,mi)=>{if(morphMatchesAt(s,mi,conds,combine))out.push({si,mi});});});}
   renderSearchResults(unit,out);
 }
@@ -4557,10 +4588,12 @@ function srchSpan(val,op,q){
 }
 function kwicTrunc(str,keepEnd,max){str=String(str||'');if(str.length<=max)return escHtml(str);return keepEnd?'…'+escHtml(str.slice(str.length-max)):escHtml(str.slice(0,max))+'…';}
 function srchNeighbor(si,delta,layer){const t=segs[si+delta];if(!t)return '';return layer==='__text'?(t.text||''):srchSegVal(t,layer);}
-function kwicRow(si,id,prev,left,key,right,next,sub,mi){
+// コーパス用：同じセッションの中だけで前後を見る（別セッションの発話を文脈に混ぜない）
+function srchNeighborIn(sess,li,delta,layer){const t=sess.segs[li+delta];if(!t)return '';return layer==='__text'?(t.text||''):srchSegVal(t,layer);}
+function kwicRow(si,id,prev,left,key,right,next,sub,mi,noJump){
   const L=(prev?'<span class="kctx">'+kwicTrunc(prev,true,22)+' </span>':'')+kwicTrunc(left,true,42);
   const R=kwicTrunc(right,false,42)+(next?'<span class="kctx"> '+kwicTrunc(next,false,22)+'</span>':'');
-  return '<tr class="kwic-row srch-jump" data-si="'+si+'"'+(mi!=null?' data-mi="'+mi+'"':'')+'>'
+  return '<tr class="kwic-row'+(noJump?'':' srch-jump')+'" data-si="'+si+'"'+(mi!=null?' data-mi="'+mi+'"':'')+'>'
     +'<td class="kwic-id">'+escHtml(id||'')+'</td>'
     +'<td class="kwic-l">'+L+'</td>'
     +'<td class="kwic-k">'+(key?'<mark>'+escHtml(key)+'</mark>':'')+'</td>'
@@ -4573,13 +4606,21 @@ function renderSearchResults(unit,res,msg){
   if(msg&&!res.length){box.innerHTML='<span class="note">'+escHtml(msg)+'</span>';return;}
   if(!res.length){box.innerHTML='<span class="note">該当なし</span>';return;}
   const conds=srchGetConds();
-  const rows=res.map(r=>{
-    const s=segs[r.si];
+  const recs=corpusOn()?(corpusRecs||buildCorpusRecs()):null;
+  const rows=res.map(r=>recs?withSession(recs[r.si].sess,()=>srchRowHtml(unit,r,conds,recs[r.si])):srchRowHtml(unit,r,conds,null));
+  box.innerHTML='<div class="kwic-wrap"><table class="kwic-tbl"><tbody>'+rows.join('')+'</tbody></table></div>';
+}
+// 1行分のKWIC。rec があればコーパス（出典つき・ジャンプなし・前後は同一セッション内）
+function srchRowHtml(unit,r,conds,rec){
+    const s=rec?rec.s:segs[r.si];
+    const li=rec?rec.si:r.si;
+    const idTxt=rec?(rec.sess.name+' › '+(s.id||('#'+(li+1)))):s.id;
+    const nb=(d,layer)=>rec?srchNeighborIn(rec.sess,li,d,layer):srchNeighbor(r.si,d,layer);
     if(unit==='morph'){
       const ms=flatMorphs(s).map(dispMorph);
       const left=ms.slice(0,r.mi).join(' '), key=ms[r.mi]||'', right=ms.slice(r.mi+1).join(' ');
       const sub=morphTiers().map(t=>{const v=((s.tv||{})[t.name]||[])[r.mi]||'';return v?(t.name+'='+v):'';}).filter(Boolean).join(' / ');
-      return kwicRow(r.si,s.id,srchNeighbor(r.si,-1,'__text'),left,key,right,srchNeighbor(r.si,1,'__text'),sub,r.mi);
+      return kwicRow(r.si,idTxt,nb(-1,'__text'),left,key,right,nb(1,'__text'),sub,r.mi,!!rec);
     }
     // record単位：ハイライト可能な最初の条件を主役に
     const c=conds.find(c=>['contains','exact','regex'].includes(c.op)&&c.q!=='');
@@ -4588,20 +4629,18 @@ function renderSearchResults(unit,res,msg){
       let idx=vals.findIndex(v=>srchMatch(v,c.op,c.q));
       const left=idx>=0?ms.slice(0,idx).join(' '):ms.join(' '), key=idx>=0?ms[idx]:'', right=idx>=0?ms.slice(idx+1).join(' '):'';
       const sub=idx>=0?(c.layer+'='+(vals[idx]||'')):'';
-      return kwicRow(r.si,s.id,srchNeighbor(r.si,-1,'__text'),left,key,right,srchNeighbor(r.si,1,'__text'),sub,idx>=0?idx:null);
+      return kwicRow(r.si,idTxt,nb(-1,'__text'),left,key,right,nb(1,'__text'),sub,idx>=0?idx:null,!!rec);
     }
     const layer=(c&&c.level==='seg')?c.layer:'text', val=srchSegVal(s,layer), sp=c?srchSpan(val,c.op,c.q):null;
     const before=sp?val.slice(0,sp.s):val, key=sp?val.slice(sp.s,sp.e):'', after=sp?val.slice(sp.e):'';
     const sub=(layer!=='text')?layer:'';
-    return kwicRow(r.si,s.id,srchNeighbor(r.si,-1,layer),before,key,after,srchNeighbor(r.si,1,layer),sub,null);
-  });
-  box.innerHTML='<div class="kwic-wrap"><table class="kwic-tbl"><tbody>'+rows.join('')+'</tbody></table></div>';
+    return kwicRow(r.si,idTxt,nb(-1,layer),before,key,after,nb(1,layer),sub,null,!!rec);
 }
 $('srchAdd').addEventListener('click',addSearchCond);
 $('srchRun').addEventListener('click',runSearch);
 $('srchConds').addEventListener('click',e=>{const d=e.target.closest('.s-del');if(d){const r=d.closest('.srow');if(r)r.remove();}});
 $('srchConds').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();runSearch();}});
-$('srchResults').addEventListener('click',e=>{const b=e.target.closest('.srch-jump');if(!b)return;const si=+b.dataset.si,s=segs[si];switchTab('anno');sel=si;if(typeof setActiveSpk==='function')setActiveSpk(s.spk);afterSelChange();focusSeg(si);});
+$('srchResults').addEventListener('click',e=>{const b=e.target.closest('.srch-jump');if(!b||corpusOn())return;const si=+b.dataset.si,s=segs[si];switchTab('anno');sel=si;if(typeof setActiveSpk==='function')setActiveSpk(s.spk);afterSelChange();focusSeg(si);});
 
 /* ---------- 辞書HTML＋音声ZIPの書き出し ---------- */
 // 用例レンダリング用に、各レコードの形態素・グロス・語境界をまとめる

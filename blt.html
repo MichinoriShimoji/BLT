@@ -651,8 +651,9 @@ html[data-skin="tech"] .tierchip,html[data-skin="tech"] .spkchip,html[data-skin=
     <div class="filebox">
       <button id="btnStartNew" class="primary">🆕 新規に始める</button>
       <button id="btnStartResume">📂 既存の作業を再開する</button>
+      <button id="btnStartCorpus" title="保存済みの .json を複数選んで、音声なしで横断の集計・検索・辞書を見ます（原本は変更されません）">📚 複数プロジェクトを横断で見る</button>
     </div>
-    <div class="note" style="margin-top:8px"><b>新規</b>＝音声（WAV）を読み込んで自動区切り→注釈。<b>既存再開</b>＝音声を読み込んでから、以前の保存（.json）や ELAN（.eaf）を読み込み。</div>
+    <div class="note" style="margin-top:8px"><b>新規</b>＝音声（WAV）を読み込んで自動区切り→注釈。<b>既存再開</b>＝音声を読み込んでから、以前の保存（.json）や ELAN（.eaf）を読み込み。<b>横断</b>＝複数の保存（.json）を音声なしでまとめて読み、集計・検索・辞書をコーパスとして見る（読み取り専用）。</div>
   </div>
   <!-- 共通フロー（モード選択後に表示） -->
   <div id="startFlow" class="hidden">
@@ -1111,6 +1112,7 @@ function onWavLoaded(){
   // IPAパレットは自動では出さない（「特殊記号の入力補助」カードから明示的に開く）
 }
 $('btnStartNew').addEventListener('click',()=>setStartMode('new'));
+$('btnStartCorpus').addEventListener('click',()=>{switchTab('analysis');setTimeout(()=>{try{$('corpusInput').click()}catch(e){}},150);});
 $('btnStartResume').addEventListener('click',()=>setStartMode('resume'));
 $('btnStartBack').addEventListener('click',()=>setStartMode(null));
 $('projInput').addEventListener('change',async ev=>{
@@ -5486,7 +5488,7 @@ $('dlDict').addEventListener('click',async()=>{
     "注釈":"Annotate","検索":"Search","分析・辞書":"Analyze / Lexicon","🧭 使い方ツアー":"🧭 Guided tour","💬 フィードバック":"💬 Feedback",
     // パネル1（開始）
     "作業を始める":"Get started","どちらから始めますか？":"How would you like to start?",
-    "🆕 新規に始める":"🆕 Start new","📂 既存の作業を再開する":"📂 Resume existing work",
+    "🆕 新規に始める":"🆕 Start new","📂 既存の作業を再開する":"📂 Resume existing work","📚 複数プロジェクトを横断で見る":"📚 Browse projects as a corpus",
     "新規":"New","既存再開":"Resume",
     "＝音声（WAV）を読み込んで自動区切り→注釈。":"= load audio (WAV), auto-segment, then annotate.",
     "＝音声を読み込んでから、以前の保存（.json）や ELAN（.eaf）を読み込み。":"= load the audio first, then a saved project (.json) or ELAN (.eaf).",

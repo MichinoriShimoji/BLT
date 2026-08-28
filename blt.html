@@ -1190,6 +1190,43 @@ function importEaf(xmlText){
   // 時間スロット
   const slot={};
   doc.querySelectorAll('TIME_ORDER > TIME_SLOT').forEach(s=>{const v=s.getAttribute('TIME_VALUE');if(v!=null)slot[s.getAttribute('TIME_SLOT_ID')]=+v});
+  // ---- 時間基準のズレ対応 ----
+  // ELANのTIME_ORIGIN（注釈時刻0＝元メディアのこの位置、ms）があるか、注釈が読み込んだ音声の長さを
+  // はみ出しているときは、時間基準が合っていない可能性が高い（例: 元の長尺録音基準のeafを、
+  // 切り出したクリップと組み合わせた場合）。全注釈に足す補正秒数を利用者に確認する。
+  {
+    const vals=Object.values(slot);
+    if(vals.length){
+      const minT=Math.min(...vals), maxT=Math.max(...vals);
+      const md=doc.querySelector('MEDIA_DESCRIPTOR');
+      const origin=md?+(md.getAttribute('TIME_ORIGIN')||0):0;
+      const durMs=env?env.dur*1000:Infinity;
+      const overrun=maxT>durMs+500;
+      if(origin>0||overrun){
+        const lines=['この .eaf は、読み込んだ音声と時間の基準が合っていない可能性があります。'];
+        if(origin>0)lines.push('・ELANのオフセット（TIME_ORIGIN）: '+(origin/1000).toFixed(3)+' 秒（注釈時刻0＝元メディアのこの位置）');
+        lines.push('・注釈の範囲: '+(minT/1000).toFixed(3)+'〜'+(maxT/1000).toFixed(3)+' 秒 ／ 読み込んだ音声の長さ: '+(durMs===Infinity?'?':(durMs/1000).toFixed(3))+' 秒'+(overrun?' ←はみ出しあり':''));
+        lines.push('');
+        lines.push('全注釈の時刻に足す補正を入力してください:');
+        lines.push('  0 ＝ 補正しない（そのまま読み込む）');
+        lines.push('  -1.48 のような負の数 ＝ その秒数だけ早める');
+        lines.push('  f ＝ 最初の注釈が 0 秒になるように合わせる（音声が最初の注釈の頭から切り出されている場合）');
+        const sug=overrun&&minT>200?(-minT/1000).toFixed(3):'0';
+        const ans=prompt(lines.join('\n'),sug);
+        if(ans==null)throw new Error('読み込みを中止しました');
+        let shiftMs=0;
+        const a=ans.trim().toLowerCase();
+        if(a==='f')shiftMs=-minT;
+        else{
+          const v=parseFloat(a);
+          if(isNaN(v))throw new Error('補正の指定（'+ans+'）を数値として読めませんでした');
+          shiftMs=Math.round(v*1000);
+        }
+        if(shiftMs!==0)for(const k in slot)slot[k]=Math.max(0,slot[k]+shiftMs);
+        if(maxT+shiftMs>durMs+500)alert('注意: 補正後も注釈（〜'+((maxT+shiftMs)/1000).toFixed(3)+'秒）が音声の長さ（'+(durMs/1000).toFixed(3)+'秒）をはみ出しています。\n時間基準がまだ合っていない可能性があります（末尾の注釈は音声の外になります）。');
+      }
+    }
+  }
   // 言語タイプ（時間整列か・制約）
   const ltype={};
   doc.querySelectorAll('LINGUISTIC_TYPE').forEach(t=>ltype[t.getAttribute('LINGUISTIC_TYPE_ID')]={align:t.getAttribute('TIME_ALIGNABLE')==='true',cons:t.getAttribute('CONSTRAINTS')||''});

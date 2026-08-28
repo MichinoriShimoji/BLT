@@ -908,6 +908,8 @@ html[data-skin="tech"] .tierchip,html[data-skin="tech"] .spkchip,html[data-skin=
       <button type="button" id="btnCorpusClear" hidden>コーパスを解除</button>
       <span class="note" id="corpusList">いま作業中のプロジェクトだけを集計しています</span>
     </div>
+    <div id="corpusSessions" class="hidden" style="margin-top:9px"></div>
+    <input type="file" id="corpusWavInput" accept=".wav,audio/wav,audio/x-wav" multiple hidden>
     <div class="note hidden" id="corpusNote" style="margin-top:7px;color:var(--warn)">読み取り専用モードです（原本は変更されません／語義の編集と音声つき書き出しは無効）。形態素の切り出しは<b>各セッション自身の設定</b>で行っています。</div>
   </div>
   <div class="card">
@@ -4411,8 +4413,9 @@ function corpusRefresh(){
     if(corpusOn())sn.textContent='コーパス横断で検索中（'+corpus.length+'件: '+corpus.map(c=>c.name).join(' / ')+'）。結果には出典を表示します（読み取り専用のため注釈タブへは移動しません）。';}
   $('btnCorpusClear').hidden=!corpusOn();
   $('corpusNote').classList.toggle('hidden',!corpusOn());
-  $('dlDict').disabled=corpusOn();
-  $('dlDict').title=corpusOn()?'コーパス表示中は音声つき書き出しはできません（音声は各セッションのWAVにあるため）':'';
+  $('dlDict').disabled=false;
+  $('dlDict').title=corpusOn()?'読み込んだ全セッションをまとめた辞書を書き出します（音声は添付したWAVから切り出します）':'';
+  corpusRenderSessions();
   $('corpusList').textContent=corpusOn()
     ? corpus.length+'件のセッションを横断集計中: '+corpus.map(c=>c.name).join(' / ')
     : 'いま作業中のプロジェクトだけを集計しています';
@@ -4433,6 +4436,9 @@ function corpusAddProject(name,p){
     morphSeps:Array.isArray(p.morphSeps)?p.morphSeps.slice():[...String(p.morphSeps||'-=+')],
     bdrSeps:Array.isArray(p.bdrSeps)?p.bdrSeps.slice():[...String(p.bdrSeps||'.。!?！？')],
     lexicon:(p.lexicon&&typeof p.lexicon==='object')?p.lexicon:{},
+    audio:(p.audio&&typeof p.audio==='object')?p.audio:null,
+    multiCh:!!p.multiCh, trackFiles:Array.isArray(p.trackFiles)?p.trackFiles:[],
+    wav:null, tracks:{},   // 添付されたWAV（辞書ZIPの音声切り出しに使う。単一=wav / 複数ch=tracks[話者]）
     segs:p.segs.map(x=>{
       const o={t0:+x.t0,t1:+x.t1,id:x.id||'',spk:x.spk||'A',text:x.text||'',note:x.note||'',
                tv:(x.tv&&typeof x.tv==='object')?x.tv:{}};
@@ -4441,6 +4447,58 @@ function corpusAddProject(name,p){
     })
   });
   return {added:name};
+}
+// セッション一覧（音声の添付状況つき）。辞書ZIPは添付したWAVから音声を切り出す
+function corpusSessionsHtml(){
+  return corpus.map((c,i)=>{
+    const need=c.multiCh?(c.trackFiles.length||c.speakers.length):1;
+    const got=c.multiCh?Object.keys(c.tracks).length:(c.wav?1:0);
+    const ok=got>=need&&need>0;
+    return '<div class="optrow" style="gap:8px;margin:3px 0;align-items:center">'
+      +'<span class="rid" style="min-width:150px">'+escHtml(c.name)+'</span>'
+      +'<span class="note" style="min-width:150px">'+c.segs.length+'レコード'+(c.multiCh?(' / '+need+'チャンネル'):'')+'</span>'
+      +'<button type="button" class="rowbtn" data-wav="'+i+'">'+(ok?'✓ 音声あり':'♪ WAVを添付')+'</button>'
+      +'<span class="note" style="color:'+(ok?'var(--done)':'var(--muted)')+'">'
+        +(ok?escHtml(c.multiCh?Object.keys(c.tracks).map(k=>k+'='+c.tracks[k].file.name).join(' / '):c.wav.file.name)
+            :(c.multiCh?('未添付（'+need+'つのWAVが必要）'):'未添付＝辞書に音声が入りません'))
+      +'</span></div>';
+  }).join('');
+}
+let corpusWavTarget=-1;
+$('corpusSessions').addEventListener('click',e=>{
+  const b=e.target.closest('[data-wav]'); if(!b)return;
+  corpusWavTarget=+b.dataset.wav; $('corpusWavInput').click();
+});
+$('corpusWavInput').addEventListener('change',async ev=>{
+  const files=[...ev.target.files]; ev.target.value='';
+  const c=corpus[corpusWavTarget]; if(!c||!files.length)return;
+  const notes=[];
+  try{
+    if(c.multiCh){
+      // 保存時のトラック名でファイル名を突き合わせる（合わないものは順番で補う）
+      const rest=files.slice();
+      (c.trackFiles.length?c.trackFiles:c.speakers.map(spk=>({spk,name:''}))).forEach(t=>{
+        let k=rest.findIndex(f=>f.name===t.name);
+        if(k<0&&rest.length)k=0;
+        if(k>=0){const f=rest.splice(k,1)[0];c.tracks[t.spk]={file:f,info:null};if(t.name&&f.name!==t.name)notes.push(t.spk+': 保存時は '+t.name+' → '+f.name);}
+      });
+      for(const spk in c.tracks)c.tracks[spk].info=await parseWav(c.tracks[spk].file);
+    }else{
+      const f=files[0], info=await parseWav(f);
+      const dur=info.dataSize/info.block/info.rate;
+      const last=c.segs.reduce((m,x)=>Math.max(m,+x.t1||0),0);
+      if(c.audio&&c.audio.name&&c.audio.name!==f.name)notes.push('保存時のWAV名は '+c.audio.name);
+      if(last>dur+0.5)notes.push('⚠ このWAVは '+dur.toFixed(1)+'秒ですが、注釈は '+last.toFixed(1)+'秒まであります（別の音声の可能性）');
+      c.wav={file:f,info};
+    }
+  }catch(e){alert('WAVを読めません：'+e.message);return}
+  corpusRenderSessions();
+  if(notes.length)alert(c.name+'\n'+notes.join('\n'));
+});
+function corpusRenderSessions(){
+  const box=$('corpusSessions');
+  box.classList.toggle('hidden',!corpusOn());
+  if(corpusOn())box.innerHTML='<div class="note" style="margin-bottom:4px">辞書ZIPに音声を入れるには、各セッションのWAVを添付してください（添付しない分は再生ボタンなしで書き出されます）。</div>'+corpusSessionsHtml();
 }
 $('btnCorpusAdd').addEventListener('click',()=>$('corpusInput').click());
 $('corpusInput').addEventListener('change',async ev=>{
@@ -4646,23 +4704,43 @@ $('srchResults').addEventListener('click',e=>{const b=e.target.closest('.srch-ju
 // 用例レンダリング用に、各レコードの形態素・グロス・語境界をまとめる
 function dictData(){
   const a=anIndexCache||buildAnalysis();
-  const base=(wavFile?wavFile.name.replace(/\.wav$/i,''):'dictionary').replace(/[\\\/:*?"<>|\s]+/g,'_');
-  const records=segs.map((s,i)=>{
-    const info=morphInfo(s), before=morphDelims(s);
-    return {i, clip:base+'_'+String(i+1).padStart(3,'0')+'.wav', id:s.id, spk:s.spk||'',
-      t0:+s.t0.toFixed(3), t1:+s.t1.toFixed(3), text:s.text||'', trans:s.note||'',
-      morphs:info.map(m=>m.form), gloss:info.map(m=>m.gloss),
-      wb:info.map((m,k)=>k===0||/[\s=]/.test(before[k]||''))};
-  });
+  const san=x=>String(x||'').replace(/[\\\/:*?"<>|\s]+/g,'_');
+  const base=corpusOn()?'corpus':san(wavFile?wavFile.name.replace(/\.wav$/i,''):'dictionary');
+  const records=corpusOn()
+    ? (corpusRecs||buildCorpusRecs()).map((rec,i)=>{
+        const s=rec.s, sp=rec.sess.multiCh?rec.sess.tracks[s.spk]:rec.sess.wav;
+        return {i, clip:sp?(san(rec.sess.name)+'_'+String(rec.si+1).padStart(3,'0')+'.wav'):'',
+          sess:rec.sess.name, id:s.id, spk:s.spk||'',
+          t0:+(+s.t0).toFixed(3), t1:+(+s.t1).toFixed(3), text:s.text||'', trans:s.note||'',
+          morphs:rec.info.map(m=>m.form), gloss:rec.info.map(m=>m.gloss),
+          wb:rec.info.map((m,k)=>k===0||/[\s=]/.test(rec.before[k]||''))};
+      })
+    : segs.map((s,i)=>{
+        const info=morphInfo(s), before=morphDelims(s);
+        return {i, clip:base+'_'+String(i+1).padStart(3,'0')+'.wav', id:s.id, spk:s.spk||'',
+          t0:+s.t0.toFixed(3), t1:+s.t1.toFixed(3), text:s.text||'', trans:s.note||'',
+          morphs:info.map(m=>m.form), gloss:info.map(m=>m.gloss),
+          wb:info.map((m,k)=>k===0||/[\s=]/.test(before[k]||''))};
+      });
   const entries=Object.values(a.idx).map(e=>({
     head:e.head, type:dominantType(e), types:Object.keys(e.types),
     count:e.count, pos:dominantPos(e),
     glosses:Object.entries(e.glosses).sort((x,y)=>y[1]-x[1]).map(([g,n])=>[g,n]),
-    def:(lexicon[e.head]!=null?lexicon[e.head]:glossDefault(e)),
+    def:(corpusOn()?corpusDef(e):(lexicon[e.head]!=null?lexicon[e.head]:glossDefault(e))),
     occ:e.occ.map(o=>[o.si,o.k])
   })).sort((x,y)=>y.count-x.count||x.head.localeCompare(y.head));
-  return {title:base, generated:new Date().toISOString().slice(0,10), multiSpk:speakers.length>1,
+  return {title:base, generated:new Date().toISOString().slice(0,10),
+    multiSpk:corpusOn()?corpus.some(c=>c.speakers.length>1):speakers.length>1,
+    corpus:corpusOn()?corpus.map(c=>c.name):null,
     stats:a.stats, records, entries};
+}
+// コーパスの語義: セッションごとの記述を集め、食い違うときは出典つきで併記する（勝手に1つへ潰さない）
+function corpusDef(e){
+  const defs=[];
+  corpus.forEach(c=>{const v=(c.lexicon&&c.lexicon[e.head]!=null)?String(c.lexicon[e.head]).trim():'';if(v)defs.push({n:c.name,v})});
+  if(!defs.length)return glossDefault(e);
+  const uniq=[...new Set(defs.map(d=>d.v))];
+  return uniq.length===1?uniq[0]:defs.map(d=>d.n+': '+d.v).join(' ／ ');
 }
 function buildDictHtml(d){
   const json=JSON.stringify(d).replace(/<\//g,'<\\/');
@@ -4697,6 +4775,7 @@ main{display:flex;gap:16px;align-items:flex-start;padding:14px 18px 50px;max-wid
 <header>
   <h1>${d.title} <span style="font-size:13px;color:var(--muted);font-weight:400">辞書</span></h1>
   <div class="sub">${d.entries.length} 見出し / ${d.stats.records} レコード・${d.stats.sentences} 文・${d.stats.words} 語・${d.stats.morphs} 形態素　（BLT で生成 ${d.generated}）</div>
+  ${d.corpus?`<div class="sub">コーパス ${d.corpus.length} セッション: ${d.corpus.map(x=>String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;')).join(' / ')}</div>`:''}
   <div class="abase">音声の場所：<input id="abase" value="./audio/"> <span>← ローカルは <code>./audio/</code>、Zenodo等に置いた場合はファイルのベースURL（例: https://zenodo.org/records/XXXX/files/）を入力</span></div>
 </header>
 <main>
@@ -4734,7 +4813,8 @@ function renderDetail(h){sel=h;var e=null;for(var j=0;j<D.entries.length;j++)if(
     +'<div class="dmeta"><b>gloss層:</b> '+(gl||'（なし）')+'</div>'
     +'<div class="dmeta"><b>用例（'+e.occ.length+'）</b></div>';
   html+=e.occ.map(function(o){var ri=o[0],r=D.records[ri];
-    return '<div class="ex"><div class="eh"><button class="play" onclick="play('+ri+')">▶ 再生</button><span class="rid">#'+(ri+1)+(D.multiSpk?(' '+esc(r.spk)):'')+'</span></div>'
+    return '<div class="ex"><div class="eh">'+(r.clip?'<button class="play" onclick="play('+ri+')">▶ 再生</button>':'')
+      +'<span class="rid">'+(r.sess?esc(r.sess)+' › '+esc(r.id||('#'+(ri+1))):('#'+(ri+1)))+(D.multiSpk?(' '+esc(r.spk)):'')+'</span></div>'
       +igHtml(ri,o[1])+(r.trans?'<div class="tr">‘'+esc(r.trans)+'’</div>':'')+'</div>'}).join('');
   document.getElementById('detail').innerHTML=html}
 function renderIdx(){var q=document.getElementById('q').value.trim().toLowerCase(),ty=document.getElementById('ty').value,so=document.getElementById('so').value;
@@ -4750,19 +4830,30 @@ renderIdx();
 <\/script></body></html>`;
 }
 $('dlDict').addEventListener('click',async()=>{
-  if(!segs.length){alert('注釈データがありません');return}
-  if(!wavInfo){alert('音声（WAV）が読み込まれていません');return}
+  const inCorpus=corpusOn();
+  if(!inCorpus&&!segs.length){alert('注釈データがありません');return}
+  if(!inCorpus&&!wavInfo){alert('音声（WAV）が読み込まれていません');return}
+  if(inCorpus){
+    const noAudio=corpus.filter(c=>c.multiCh?Object.keys(c.tracks).length===0:!c.wav);
+    if(noAudio.length&&!confirm('音声が添付されていないセッションがあります：\n'+noAudio.map(c=>'・'+c.name).join('\n')
+      +'\n\nこれらのレコードは再生ボタンなしで書き出されます。このまま続けますか？'))return;
+  }
   const btn=$('dlDict');btn.disabled=true;const orig=btn.textContent;
   try{
     const d=dictData();
     const html=buildDictHtml(d);
     const zip=new ZipWriter();
     zip.add(d.title+'_dictionary.html',new TextEncoder().encode(html));
-    // 各レコードの音声をaudio/フォルダに
+    // 各レコードの音声をaudio/フォルダに（コーパスは出典セッションのWAVから切り出す）
+    const recs=inCorpus?(corpusRecs||buildCorpusRecs()):null;
     for(let i=0;i<d.records.length;i++){
       const r=d.records[i];
-      const wi=multiCh?(trackOf(r.spk)&&trackOf(r.spk).wavInfo):wavInfo;
-      zip.add('audio/'+r.clip,await clipWav(wi||wavInfo,r.t0,r.t1));
+      if(!r.clip)continue;   // 音声が添付されていないセッション＝音声なしで書き出す
+      let wi;
+      if(inCorpus){const sess=recs[i].sess; const holder=sess.multiCh?sess.tracks[r.spk]:sess.wav; wi=holder&&holder.info;}
+      else wi=multiCh?(trackOf(r.spk)&&trackOf(r.spk).wavInfo):wavInfo;
+      if(!wi){r.clip='';continue}
+      zip.add('audio/'+r.clip,await clipWav(wi,r.t0,r.t1));
       btn.textContent='音声切り出し中… '+(i+1)+'/'+d.records.length;
       if(i%10===0)await new Promise(res=>setTimeout(res,0));
     }

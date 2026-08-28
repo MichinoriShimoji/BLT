@@ -4725,6 +4725,7 @@ function dictData(){
   const entries=Object.values(a.idx).map(e=>({
     head:e.head, type:dominantType(e), types:Object.keys(e.types),
     count:e.count, pos:dominantPos(e),
+    poss:Object.entries(e.poss).sort((x,y)=>y[1]-x[1]).map(([p,n])=>[p,n]),
     glosses:Object.entries(e.glosses).sort((x,y)=>y[1]-x[1]).map(([g,n])=>[g,n]),
     def:(corpusOn()?corpusDef(e):(lexicon[e.head]!=null?lexicon[e.head]:glossDefault(e))),
     occ:e.occ.map(o=>[o.si,o.k])
@@ -4808,7 +4809,8 @@ function renderDetail(h){sel=h;var e=null;for(var j=0;j<D.entries.length;j++)if(
   if(!e){document.getElementById('detail').innerHTML='';return}
   var gl=e.glosses.map(function(g){return esc(g[0])+'（'+g[1]+'）'}).join('　');
   var html='<div class="dhw">'+esc(e.head)+'</div>'
-    +'<div class="dmeta">'+e.types.map(function(t){return TY[t]}).join('・')+' / '+e.count+'例'+(e.pos?' / 品詞: '+esc(e.pos):'')+'</div>'
+    +'<div class="dmeta">'+e.types.map(function(t){return TY[t]}).join('・')+' / '+e.count+'例'
+      +((e.poss&&e.poss.length)?' / 品詞: '+e.poss.map(function(p){return esc(p[0])+'（'+p[1]+'）'}).join('　'):(e.pos?' / 品詞: '+esc(e.pos):''))+'</div>'
     +'<div class="ddef">'+esc(e.def||'')+'</div>'
     +'<div class="dmeta"><b>gloss層:</b> '+(gl||'（なし）')+'</div>'
     +'<div class="dmeta"><b>用例（'+e.occ.length+'）</b></div>';

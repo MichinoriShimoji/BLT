@@ -298,6 +298,12 @@ code{background:var(--accent-soft);padding:1px 5px;border-radius:4px;font-size:1
 #palKeyList .kitem .k{font-family:var(--mono);font-size:11px;color:var(--muted)}
 #palKeyList .kitem button{border:none;background:none;color:var(--muted);cursor:pointer;font-size:11px;padding:0 3px}
 #palKeyList .kitem button:hover{color:var(--warn)}
+/* 辞書のバリアント整理（gloss・品詞の値ごとのチップ＋統一/書き換え/消去） */
+.vchip{display:inline-flex;align-items:center;gap:3px;border:1px solid var(--line);border-radius:12px;padding:1px 4px 1px 9px;margin:0 4px 4px 0;font-size:12.5px;background:var(--surface)}
+.vchip .vn{color:var(--muted);font-size:11px}
+.vchip button{border:none;background:none;cursor:pointer;font-size:11px;color:var(--muted);padding:0 3px}
+.vchip button:hover{color:var(--accent)}
+.vchip button.v-del:hover{color:var(--danger)}
 #palKeyDone{font-size:12px;padding:3px 14px;border-radius:14px;background:var(--accent);border:1px solid var(--accent);color:#fff;font-weight:700;cursor:pointer}
 /* 特殊記号入力補助カード（注釈表の直上で目立たせる） */
 #cardSymHelp{border:2px solid var(--accent);padding:13px 16px}
@@ -4353,11 +4359,20 @@ function renderDict(head){
   const a=anIndexCache, e=a&&a.idx[head];
   if(!e){$('anDict').innerHTML='<div class="note">左の形態素を選んでください。</div>';return}
   const types=Object.keys(e.types).map(t=>TYLABEL[t]).join('・');
-  const glosses=Object.entries(e.glosses).sort((x,y)=>y[1]-x[1]).map(([g,n])=>escHtml(g)+'（'+n+'）').join('　');
-  const poss=Object.entries(e.poss).sort((x,y)=>y[1]-x[1]).map(([p,n])=>escHtml(p)+'（'+n+'）').join('　');
+  const vrow=(field,obj)=>{
+    const pairs=Object.entries(obj).sort((x,y)=>y[1]-x[1]);
+    if(!pairs.length)return '（なし）';
+    return pairs.map(([v,n])=>'<span class="vchip" data-f="'+field+'" data-v="'+escHtml(v)+'">'+escHtml(v)+'<span class="vn">（'+n+'）</span>'
+      +(pairs.length>1?'<button type="button" class="v-uni" title="ほかの値をすべてこの値に統一します">⇐統一</button>':'')
+      +'<button type="button" class="v-ren" title="この値をまとめて書き換えます（別の値に合わせれば統一になります）">✎</button>'
+      +'<button type="button" class="v-del" title="この値をまとめて消します（該当箇所は空欄になります）">✕</button></span>').join('');
+  };
+  const glosses=vrow('gloss',e.glosses);
+  const poss=vrow('pos',e.poss);
   let html='<div class="dhead"><span class="dhw">'+escHtml(head)+'</span>'
-    +'<span class="note">'+types+' / '+e.count+'例'+(poss?' / 品詞: '+poss:'')+'</span></div>'
-    +'<div class="dglosses"><b>gloss層から:</b> '+(glosses||'（なし）')+'</div>'
+    +'<span class="note">'+types+' / '+e.count+'例</span></div>'
+    +'<div class="dglosses"><b>gloss層から:</b> '+glosses+'</div>'
+    +(Object.keys(e.poss).length?'<div class="dglosses"><b>品詞（pos層）:</b> '+poss+'</div>':'')
     +(corpusOn()
       ? (()=>{   // コーパスは読み取り専用。語義が食い違うときは自動でまとめず、セッションごとに並べる
           const defs=corpus.map(se=>({n:se.name,v:(se.lexicon&&se.lexicon[head]!=null)?String(se.lexicon[head]).trim():''})).filter(x=>x.v);
@@ -4378,6 +4393,61 @@ function renderDict(head){
     $('anDefReset').addEventListener('click',()=>{const v=glossDefault(e);$('anDef').value=v;lexicon[head]=v});
   }
 }
+/* ---- バリアント整理: この見出しの gloss/pos の値をまとめて書き換え・消去する ----
+   コーパスでは読み込んだ複製に反映し、そのセッションを「未保存の修正あり」にする（原本ファイルは不変。
+   「⬇ 修正版を保存」で新しい .json を書き出す）。通常モードでは作業中データに直接反映される。      */
+function curateVariant(head,field,matchVal,newVal){
+  const a=anIndexCache, e=a&&a.idx[head]; if(!e)return {n:0,where:[]};
+  const recs=corpusOn()?(corpusRecs||buildCorpusRecs()):null;
+  let n=0; const per={};
+  e.occ.forEach(o=>{
+    const s=recs?recs[o.si].s:segs[o.si], sess=recs?recs[o.si].sess:null;
+    const tv=s.tv||(s.tv={}), arr=tv[field]||(tv[field]=[]);
+    if(String(arr[o.k]||'')===matchVal){
+      arr[o.k]=newVal; n++;
+      const key=sess?sess.name:'（このプロジェクト）'; per[key]=(per[key]||0)+1;
+      if(sess)sess.dirty=true;
+    }
+  });
+  return {n,where:Object.entries(per).map(([k,v])=>k+' '+v+'件')};
+}
+function afterCurate(head){
+  if(corpusOn()){buildCorpusRecs();corpusRenderSessions();}
+  anIndexCache=null; buildAnalysis(); renderStats(); renderIndex();
+  if(!corpusOn()){renderTable(); if(typeof renderContext==='function')renderContext();}
+  renderDict(head);
+}
+$('anDict').addEventListener('click',e=>{
+  const chip=e.target.closest&&e.target.closest('.vchip'); if(!chip)return;
+  const head=anSel, field=chip.dataset.f, val=chip.dataset.v;
+  const a=anIndexCache, entry=a&&a.idx[head]; if(!entry)return;
+  const obj=field==='gloss'?entry.glosses:entry.poss;
+  if(e.target.classList.contains('v-uni')){
+    const others=Object.keys(obj).filter(v=>v!==val);
+    if(!others.length)return;
+    const total=others.reduce((m,v)=>m+obj[v],0);
+    if(!confirm('「'+head+'」の '+field+' を「'+val+'」に統一します。\n書き換え: '+others.map(v=>'「'+v+'」'+obj[v]+'件').join('・')+'（計'+total+'件）\nよろしいですか？'))return;
+    const where=[]; others.forEach(v=>{where.push(...curateVariant(head,field,v,val).where)});
+    afterCurate(head);
+    if(corpusOn())alert('統一しました（'+where.join(' / ')+'）。\n各セッションの「⬇ 修正版を保存」で書き出してください（元のファイルは変わっていません）。');
+    return;
+  }
+  if(e.target.classList.contains('v-ren')){
+    const nv=prompt('「'+val+'」（'+obj[val]+'件）をまとめて書き換えます。新しい値：',val);
+    if(nv==null||nv===val)return;
+    const r=curateVariant(head,field,val,nv.trim());
+    afterCurate(head);
+    if(corpusOn()&&r.n)alert('書き換えました（'+r.where.join(' / ')+'）。「⬇ 修正版を保存」で書き出してください。');
+    return;
+  }
+  if(e.target.classList.contains('v-del')){
+    if(!confirm('「'+head+'」の '+field+'「'+val+'」（'+obj[val]+'件）をまとめて消します（該当箇所は空欄になります）。\n注釈そのもの（形態素）は消えません。よろしいですか？'))return;
+    const r=curateVariant(head,field,val,'');
+    afterCurate(head);
+    if(corpusOn()&&r.n)alert('消しました（'+r.where.join(' / ')+'）。「⬇ 修正版を保存」で書き出してください。');
+    return;
+  }
+});
 function exampleHtml(si,hitK){
   const rec=corpusOn()?(corpusRecs||buildCorpusRecs())[si]:null;
   const s=rec?rec.s:segs[si]; if(!s)return '';
@@ -4430,6 +4500,7 @@ function corpusAddProject(name,p){
   if(!sid&&corpus.some(c=>c.name===name))return {skipped:name+'（同名を追加済み）'};
   const tiers=Array.isArray(p.tiersDef)?p.tiersDef.filter(t=>t&&t.name):[];
   corpus.push({
+    raw:p, dirty:false,
     name:name.replace(/\.json$/i,''), sessionId:sid||('file:'+name),
     wavName:p.wavName||'', speakers:(Array.isArray(p.speakers)&&p.speakers.length)?p.speakers.slice():['A'],
     tiersDef:tiers, morphSrc:(typeof p.morphSrc==='string'?p.morphSrc:'text'),
@@ -4458,6 +4529,7 @@ function corpusSessionsHtml(){
       +'<span class="rid" style="min-width:150px">'+escHtml(c.name)+'</span>'
       +'<span class="note" style="min-width:150px">'+c.segs.length+'レコード'+(c.multiCh?(' / '+need+'チャンネル'):'')+'</span>'
       +'<button type="button" class="rowbtn" data-wav="'+i+'">'+(ok?'✓ 音声あり':'♪ WAVを添付')+'</button>'
+      +(c.dirty?'<button type="button" class="rowbtn" data-save="'+i+'" style="color:var(--accent);border:1px solid var(--accent);border-radius:6px" title="整理（統一・書き換え・消去）を反映した新しい .json を書き出します。元のファイルは変わりません">⬇ 修正版を保存</button><span class="note" style="color:var(--warn)">● 未保存の修正あり</span>':'')
       +'<span class="note" style="color:'+(ok?'var(--done)':'var(--muted)')+'">'
         +(ok?escHtml(c.multiCh?Object.keys(c.tracks).map(k=>k+'='+c.tracks[k].file.name).join(' / '):c.wav.file.name)
             :(c.multiCh?('未添付（'+need+'つのWAVが必要）'):'未添付＝辞書に音声が入りません'))
@@ -4466,6 +4538,15 @@ function corpusSessionsHtml(){
 }
 let corpusWavTarget=-1;
 $('corpusSessions').addEventListener('click',e=>{
+  const sv=e.target.closest('[data-save]');
+  if(sv){
+    const c=corpus[+sv.dataset.save]; if(!c)return;
+    const out=Object.assign({},c.raw,{sessionId:(c.sessionId&&!c.sessionId.startsWith('file:'))?c.sessionId:newSessionId(),
+      segs:c.segs, lexicon:c.lexicon});
+    dl(c.name+'_project.json',JSON.stringify(out,null,1),'application/json');
+    c.dirty=false; corpusRenderSessions();
+    return;
+  }
   const b=e.target.closest('[data-wav]'); if(!b)return;
   corpusWavTarget=+b.dataset.wav; $('corpusWavInput').click();
 });

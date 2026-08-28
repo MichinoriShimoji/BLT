@@ -1812,7 +1812,14 @@ function isDirty(){
   return workSnapshot()!==savedSnap;
 }
 window.addEventListener('beforeunload',e=>{
-  if(!wsAnyDirty())return;   // どのタブかを問わず未保存があれば警告
+  // 編集中のセル（フォーカスが残ったまま＝未確定）があれば、先に確定させてから判定する
+  try{
+    const ae=document.activeElement;
+    if(ae&&ae.isContentEditable)ae.dispatchEvent(new FocusEvent('focusout',{bubbles:true}));
+  }catch(_){}
+  let dirty=true;   // 判定自体に失敗したら安全側（＝警告を出す）
+  try{dirty=wsAnyDirty()}catch(_){}
+  if(!dirty)return;   // どのタブかを問わず未保存があれば警告
   e.preventDefault();
   e.returnValue='';   // 一部ブラウザで必要。実際の文言はブラウザ既定（カスタム不可）
 });

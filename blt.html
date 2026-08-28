@@ -902,6 +902,13 @@ html[data-skin="tech"] .tierchip,html[data-skin="tech"] .spkchip,html[data-skin=
       <button class="primary" id="dlDict" style="margin-left:auto">辞書をHTML＋音声でダウンロード（ZIP）</button>
     </div>
     <div id="anStats" class="note">まず「注釈」タブで音声・注釈を読み込んでください。</div>
+    <div id="corpusBar" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px;padding-top:10px;border-top:1px solid var(--line)">
+      <button type="button" id="btnCorpusAdd" title="保存した .json を複数選んで、横断で集計・辞書を見ます（原本は変更されません）">📚 プロジェクトを追加（.json・複数可）</button>
+      <input type="file" id="corpusInput" accept=".json,application/json" multiple hidden>
+      <button type="button" id="btnCorpusClear" hidden>コーパスを解除</button>
+      <span class="note" id="corpusList">いま作業中のプロジェクトだけを集計しています</span>
+    </div>
+    <div class="note hidden" id="corpusNote" style="margin-top:7px;color:var(--warn)">読み取り専用モードです（原本は変更されません／語義の編集と音声つき書き出しは無効）。形態素の切り出しは<b>各セッション自身の設定</b>で行っています。</div>
   </div>
   <div class="card">
     <div id="anCols">
@@ -1129,6 +1136,7 @@ $('projInput').addEventListener('change',async ev=>{
     refreshTierUI();
     ignoredMiss=(p.ignoredMiss||[]).map(g=>({t0:+g.t0,t1:+g.t1}));
     lexicon=(p.lexicon&&typeof p.lexicon==='object')?p.lexicon:{};
+    sessionId=(typeof p.sessionId==='string'&&p.sessionId)?p.sessionId:newSessionId();
     applyProjPalette(p.palette);   // 保存されたパレット構成を復元し、パレットは畳んだ状態で待機させる
     sel=-1;afterSegChange();
     hideSetup();   // 復元した区間を自動区切りで上書きしないよう、検出パネルは隠す
@@ -4181,7 +4189,9 @@ $('dlJson').addEventListener('click',()=>{
 $('dlProj').addEventListener('click',()=>{
   const multi=multiCh?{multiCh:true,trackFiles:tracks.map(t=>({spk:t.spk,name:t.name||(t.file&&t.file.name)||''}))}:{};
   const palette={keep:[...palKeep],made:palMade.slice(),freq:palFreq,keys:palKeysMap};   // パレット構成も一緒に保存（再開時に復元）
-  dl(baseName()+'_project.json',JSON.stringify(Object.assign({wavName:wavFile?wavFile.name:'',glossOn,morphSrc,morphSeps,bdrSeps,tiersDef,speakers,segs,ignoredMiss,lexicon,palette},multi),null,1),'application/json');
+  if(!sessionId)sessionId=newSessionId();
+  const audio=env?{name:(wavFile?wavFile.name:''),dur:+env.dur.toFixed(3),rate:(wavInfo?wavInfo.rate:0),bytes:(wavFile?wavFile.size:0)}:null;
+  dl(baseName()+'_project.json',JSON.stringify(Object.assign({sessionId,audio,wavName:wavFile?wavFile.name:'',glossOn,morphSrc,morphSeps,bdrSeps,tiersDef,speakers,segs,ignoredMiss,lexicon,palette},multi),null,1),'application/json');
   markSaved();   // プロジェクト保存＝この状態を「保存済み」基準に
 });
 // ヘッダーの保存バー（隠した書き出しカードと同じ処理を呼ぶ）
@@ -4217,7 +4227,36 @@ $('dlZip').addEventListener('click',async()=>{
 /* ====================== 分析・辞書タブ ====================== */
 let lexicon={};        // 形態素見出し -> {def:語義}
 let anSel=null;        // 選択中の見出し
+let sessionId='';   // このプロジェクトの識別子（保存に埋め、コーパスでの重複検出に使う）
+function newSessionId(){try{return crypto.randomUUID()}catch(e){return 'S'+Date.now().toString(36)+Math.random().toString(36).slice(2,8)}}
 let anIndexCache=null; // 形態素インデックス
+/* ---------- コーパス（複数プロジェクトの横断集計・読み取り専用） ----------
+   1プロジェクト=1音声という前提は崩さず、各セッションを原本のまま保持する。
+   形態素の切り出しは必ず「そのセッション自身の設定（morphSrc/区切り記号）」で行う＝規則の取り違えを防ぐ。 */
+let corpus=[];        // [{name,sessionId,wavName,segs,tiersDef,morphSrc,morphSeps,bdrSeps,speakers,lexicon}]
+let corpusRecs=null;  // 平坦化ビュー [{sess,si,s,info,before}]（occ の si はこの配列の添字）
+const corpusOn=()=>corpus.length>0;
+// セッションの設定を一時的に適用して評価する（評価中だけグローバルを差し替え、必ず戻す）
+function withSession(sess,fn){
+  const sv={segs,morphSrc,tiersDef,glossOn,speakers,lexicon,
+            mseps:morphSeps.join(''),bseps:bdrSeps.join('')};
+  try{
+    segs=sess.segs; morphSrc=sess.morphSrc; tiersDef=sess.tiersDef; speakers=sess.speakers; lexicon=sess.lexicon;
+    glossOn=tiersDef.some(t=>t.parent==='morph');
+    applyMorphSeps(sess.morphSeps.join('')); applyBdrSeps(sess.bdrSeps.join(''));
+    return fn();
+  } finally {
+    segs=sv.segs; morphSrc=sv.morphSrc; tiersDef=sv.tiersDef; glossOn=sv.glossOn; speakers=sv.speakers; lexicon=sv.lexicon;
+    applyMorphSeps(sv.mseps); applyBdrSeps(sv.bseps);
+  }
+}
+function buildCorpusRecs(){
+  corpusRecs=[];
+  corpus.forEach(sess=>withSession(sess,()=>{
+    sess.segs.forEach((s,si)=>corpusRecs.push({sess,si,s,info:morphInfo(s),before:morphDelims(s)}));
+  }));
+  return corpusRecs;
+}
 
 // 形態素ごとの {form, head, type, gloss, pos} を返す
 function morphInfo(s){
@@ -4236,8 +4275,10 @@ function morphInfo(s){
 function buildAnalysis(){
   const idx={}, posSet=new Set();
   let nMorph=0, nWord=0, nSent=0;
-  segs.forEach((s,si)=>{
-    const info=morphInfo(s), before=morphDelims(s);
+  // コーパス読込中はセッション横断（各セッション自身の規則で切り出し済みの平坦化ビュー）を数える
+  const recs=corpusOn()?(corpusRecs||buildCorpusRecs()).map((r,ri)=>({s:r.s,si:ri,info:r.info,before:r.before,sess:r.sess}))
+                       :segs.map((s,si)=>({s,si,info:morphInfo(s),before:morphDelims(s)}));
+  recs.forEach(({s,si,info,before,sess})=>{
     nMorph+=info.length;
     info.forEach((mi,k)=>{
       if(!mi.head)return;
@@ -4250,11 +4291,12 @@ function buildAnalysis(){
       const wb=/[\s=]/.test(before[k]||'');
       if(k===0||wb)nWord++;
     });
-    // 文数: ピリオドで終わる形態素の数
-    nSent+=info.filter(mi=>isEosMorph(mi.form)).length;
+    // 文数: ピリオドで終わる形態素の数（文末記号はセッションごとに違いうるので、その設定で判定）
+    nSent+=sess?withSession(sess,()=>info.filter(mi=>isEosMorph(mi.form)).length)
+               :info.filter(mi=>isEosMorph(mi.form)).length;
   });
   anIndexCache={idx,posSet:[...posSet].sort(),
-    stats:{records:segs.length,sentences:nSent,words:nWord,morphs:nMorph,unique:Object.keys(idx).length,
+    stats:{records:recs.length,sessions:corpusOn()?corpus.length:1,sentences:nSent,words:nWord,morphs:nMorph,unique:Object.keys(idx).length,
       roots:Object.values(idx).filter(e=>dominantType(e)==='root').length,
       affixes:Object.values(idx).filter(e=>dominantType(e)==='affix').length,
       clitics:Object.values(idx).filter(e=>dominantType(e)==='clitic').length}};
@@ -4266,10 +4308,11 @@ function glossDefault(e){return Object.entries(e.glosses).sort((a,b)=>b[1]-a[1])
 const TYLABEL={root:'語根',affix:'接辞',clitic:'接語'};
 function renderStats(){
   const a=anIndexCache||buildAnalysis(), s=a.stats;
-  if(!segs.length){$('anStats').innerHTML='まず「注釈」タブで音声・注釈を読み込んでください。';return}
+  if(!corpusOn()&&!segs.length){$('anStats').innerHTML='まず「注釈」タブで音声・注釈を読み込んでください。（下の「プロジェクトを追加」で保存済みの .json を横断集計することもできます）';return}
   $('anStats').innerHTML='<div style="display:flex;gap:26px;flex-wrap:wrap;font-size:13px">'
-    +[['レコード',s.records],['文',s.sentences],['語',s.words],['形態素',s.morphs],
-      ['異なり形態素',s.unique],['語根',s.roots],['接辞',s.affixes],['接語',s.clitics]]
+    +(corpusOn()?[['セッション',s.sessions]]:[]).concat(
+      [['レコード',s.records],['文',s.sentences],['語',s.words],['形態素',s.morphs],
+      ['異なり形態素',s.unique],['語根',s.roots],['接辞',s.affixes],['接語',s.clitics]])
       .map(([k,v])=>'<span><b style="font-size:21px;font-family:var(--jp-serif);color:var(--accent-ink)">'+v+'</b> <span class="note">'+k+'</span></span>').join('')
     +'</div>';
 }
@@ -4312,24 +4355,38 @@ function renderDict(head){
   let html='<div class="dhead"><span class="dhw">'+escHtml(head)+'</span>'
     +'<span class="note">'+types+' / '+e.count+'例'+(poss?' / 品詞: '+poss:'')+'</span></div>'
     +'<div class="dglosses"><b>gloss層から:</b> '+(glosses||'（なし）')+'</div>'
-    +'<div style="display:flex;align-items:baseline;gap:8px"><label class="note">語義（辞書用・自由に編集可）</label>'
-    +'<button type="button" id="anDefReset" class="rowbtn" title="この欄をgloss層の値で上書きします">↺ glossから取り込み直す</button>'
-    +'<span class="note" style="margin-left:auto;color:var(--done)">※ここの編集は gloss層には反映されません（辞書だけに保存）</span></div>'
-    +'<textarea class="ddef" id="anDef" placeholder="この形態素の語義・説明を記入（既定は gloss層から取り込み）">'+escHtml(lexicon[head]!=null?lexicon[head]:glossDefault(e))+'</textarea>'
+    +(corpusOn()
+      ? (()=>{   // コーパスは読み取り専用。語義が食い違うときは自動でまとめず、セッションごとに並べる
+          const defs=corpus.map(se=>({n:se.name,v:(se.lexicon&&se.lexicon[head]!=null)?String(se.lexicon[head]).trim():''})).filter(x=>x.v);
+          return '<div class="note" style="margin:6px 0 4px"><b>語義（各セッションの辞書から・読み取り専用）</b></div>'
+            +(defs.length?defs.map(d=>'<div class="note" style="margin-bottom:3px"><span class="rid">'+escHtml(d.n)+'</span> '+escHtml(d.v)+'</div>').join('')
+                         :'<div class="note" style="margin-bottom:4px">（各セッションに語義の記入はありません）</div>')
+            +(new Set(defs.map(d=>d.v)).size>1?'<div class="note" style="color:var(--warn)">※ セッション間で語義が異なります（自動では統合しません）</div>':'');
+        })()
+      : '<div style="display:flex;align-items:baseline;gap:8px"><label class="note">語義（辞書用・自由に編集可）</label>'
+        +'<button type="button" id="anDefReset" class="rowbtn" title="この欄をgloss層の値で上書きします">↺ glossから取り込み直す</button>'
+        +'<span class="note" style="margin-left:auto;color:var(--done)">※ここの編集は gloss層には反映されません（辞書だけに保存）</span></div>'
+        +'<textarea class="ddef" id="anDef" placeholder="この形態素の語義・説明を記入（既定は gloss層から取り込み）">'+escHtml(lexicon[head]!=null?lexicon[head]:glossDefault(e))+'</textarea>')
     +'<div class="note" style="margin-bottom:5px"><b>用例（'+e.occ.length+'）</b></div>';
   html+=e.occ.map(o=>exampleHtml(o.si,o.k)).join('');
   $('anDict').innerHTML=html;
-  // 語義の編集は lexicon[head] にのみ保存（gloss層 seg.tv.gloss は不変）
-  $('anDef').addEventListener('input',()=>{lexicon[head]=$('anDef').value});
-  $('anDefReset').addEventListener('click',()=>{const v=glossDefault(e);$('anDef').value=v;lexicon[head]=v});
+  if(!corpusOn()){   // 語義の編集は lexicon[head] にのみ保存（gloss層 seg.tv.gloss は不変）
+    $('anDef').addEventListener('input',()=>{lexicon[head]=$('anDef').value});
+    $('anDefReset').addEventListener('click',()=>{const v=glossDefault(e);$('anDef').value=v;lexicon[head]=v});
+  }
 }
 function exampleHtml(si,hitK){
-  const s=segs[si]; if(!s)return '';
-  const info=morphInfo(s), before=morphDelims(s);
-  // 単語ごとにまとめて表示
-  let html='<div class="exitem"><div class="exhead"><button type="button" class="explay" data-si="'+si+'">▶</button>'
-    +'<span class="rid">#'+(si+1)+(speakers.length>1?(' '+escHtml(s.spk)):'')+'</span>'
-    +'<button type="button" class="explay anjump" data-si="'+si+'" style="margin-left:auto" title="注釈タブでこのレコードを開く">注釈で開く</button></div>'
+  const rec=corpusOn()?(corpusRecs||buildCorpusRecs())[si]:null;
+  const s=rec?rec.s:segs[si]; if(!s)return '';
+  const info=rec?rec.info:morphInfo(s), before=rec?rec.before:morphDelims(s);
+  // 単語ごとにまとめて表示。コーパスでは音声を持たないので再生・ジャンプは出さず、出典を示す
+  let html='<div class="exitem"><div class="exhead">'
+    +(rec?'<span class="rid">'+escHtml(rec.sess.name)+' › '+escHtml(s.id||('#'+(rec.si+1)))
+          +(rec.sess.speakers.length>1?(' '+escHtml(s.spk)):'')+'</span>'
+        :'<button type="button" class="explay" data-si="'+si+'">▶</button>'
+         +'<span class="rid">#'+(si+1)+(speakers.length>1?(' '+escHtml(s.spk)):'')+'</span>'
+         +'<button type="button" class="explay anjump" data-si="'+si+'" style="margin-left:auto" title="注釈タブでこのレコードを開く">注釈で開く</button>')
+    +'</div>'
     +'<div class="exig">';
   let cur='';
   info.forEach((mi,k)=>{
@@ -4344,6 +4401,60 @@ function exampleHtml(si,hitK){
   return html;
 }
 function refreshAnalysis(){buildAnalysis();renderStats();renderIndex();if(anSel)renderDict(anSel);}
+/* ---- コーパスの読み込み（読み取り専用・原本は不変） ---- */
+function corpusRefresh(){
+  corpusRecs=null; anIndexCache=null; anSel=null;
+  $('btnCorpusClear').hidden=!corpusOn();
+  $('corpusNote').classList.toggle('hidden',!corpusOn());
+  $('dlDict').disabled=corpusOn();
+  $('dlDict').title=corpusOn()?'コーパス表示中は音声つき書き出しはできません（音声は各セッションのWAVにあるため）':'';
+  $('corpusList').textContent=corpusOn()
+    ? corpus.length+'件のセッションを横断集計中: '+corpus.map(c=>c.name).join(' / ')
+    : 'いま作業中のプロジェクトだけを集計しています';
+  if(corpusOn())buildCorpusRecs();
+  $('anDict').innerHTML='<div class="note">左の形態素を選んでください。</div>';
+  refreshAnalysis();
+}
+function corpusAddProject(name,p){
+  if(!p||!Array.isArray(p.segs))throw new Error('プロジェクトファイルではありません');
+  const sid=(typeof p.sessionId==='string'&&p.sessionId)?p.sessionId:'';
+  if(sid&&corpus.some(c=>c.sessionId===sid))return {skipped:name+'（同じセッションを追加済み）'};
+  if(!sid&&corpus.some(c=>c.name===name))return {skipped:name+'（同名を追加済み）'};
+  const tiers=Array.isArray(p.tiersDef)?p.tiersDef.filter(t=>t&&t.name):[];
+  corpus.push({
+    name:name.replace(/\.json$/i,''), sessionId:sid||('file:'+name),
+    wavName:p.wavName||'', speakers:(Array.isArray(p.speakers)&&p.speakers.length)?p.speakers.slice():['A'],
+    tiersDef:tiers, morphSrc:(typeof p.morphSrc==='string'?p.morphSrc:'text'),
+    morphSeps:Array.isArray(p.morphSeps)?p.morphSeps.slice():[...String(p.morphSeps||'-=+')],
+    bdrSeps:Array.isArray(p.bdrSeps)?p.bdrSeps.slice():[...String(p.bdrSeps||'.。!?！？')],
+    lexicon:(p.lexicon&&typeof p.lexicon==='object')?p.lexicon:{},
+    segs:p.segs.map(x=>{
+      const o={t0:+x.t0,t1:+x.t1,id:x.id||'',spk:x.spk||'A',text:x.text||'',note:x.note||'',
+               tv:(x.tv&&typeof x.tv==='object')?x.tv:{}};
+      if(Array.isArray(x.morphs))o.morphs=x.morphs.map(y=>String(y==null?'':y));
+      return o;
+    })
+  });
+  return {added:name};
+}
+$('btnCorpusAdd').addEventListener('click',()=>$('corpusInput').click());
+$('corpusInput').addEventListener('change',async ev=>{
+  const files=[...ev.target.files]; ev.target.value='';
+  if(!files.length)return;
+  const added=[],skipped=[],failed=[];
+  for(const f of files){
+    try{ const r=corpusAddProject(f.name,JSON.parse(await f.text()));
+      if(r.added)added.push(r.added); else skipped.push(r.skipped);
+    }catch(e){ failed.push(f.name+'（'+e.message+'）'); }
+  }
+  corpusRefresh();
+  const msg=[added.length?'追加: '+added.join(', '):'',skipped.length?'スキップ: '+skipped.join(', '):'',failed.length?'読めません: '+failed.join(', '):''].filter(Boolean).join('\n');
+  if(skipped.length||failed.length)alert(msg);
+});
+$('btnCorpusClear').addEventListener('click',()=>{
+  if(corpus.length&&!confirm('コーパス表示を解除し、いま作業中のプロジェクトだけの集計に戻します。よろしいですか？（読み込んだ原本には何も起きません）'))return;
+  corpus=[]; corpusRefresh();
+});
 // イベント
 $('anSearch').addEventListener('input',renderIndex);
 ['anType','anPos','anSort'].forEach(id=>$(id).addEventListener('change',renderIndex));   // selectはchangeで（Safari対策）

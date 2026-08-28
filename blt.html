@@ -619,6 +619,7 @@ html[data-skin="tech"] .tierchip,html[data-skin="tech"] .spkchip,html[data-skin=
     <button type="button" id="langToggle" data-i18n-skip title="Switch language / 言語切替">English</button>
   </div>
 </header>
+<div id="wsBar"></div>
 <main>
 
 <div id="tabAnno">
@@ -1774,6 +1775,7 @@ function afterSegChange(){
   if(typeof computeBoundaries==='function')computeBoundaries();
   renderSpkBar();
   renderTable();renderContext();draw();drawOvw();updateInfo();
+  if(typeof wsRenderTabs==='function')try{wsRenderTabs()}catch(e){}   // タブ名・未保存●を追従
 }
 function updateInfo(){
   $('segInfo').textContent=segs.length+'区間'+(sel>=0&&segs[sel]?('　選択: #'+(sel+1)+' '+segs[sel].t0.toFixed(3)+'–'+segs[sel].t1.toFixed(3)+'s'):'');
@@ -1786,16 +1788,145 @@ let savedSnap='';
 function workSnapshot(){
   try{return JSON.stringify({glossOn,morphSrc,morphSeps,bdrSeps,tiersDef,speakers,segs,ignoredMiss,lexicon});}catch(e){return '';}
 }
-function markSaved(){savedSnap=workSnapshot();}   // 保存／読み込みの直後に呼ぶ＝この状態を「保存済み」基準にする
+function markSaved(){savedSnap=workSnapshot();if(typeof wsRenderTabs==='function')try{wsRenderTabs()}catch(e){}}   // 保存／読み込みの直後に呼ぶ＝この状態を「保存済み」基準にする
 function isDirty(){
   if(!segs.length&&(typeof tiersDef==='undefined'||!tiersDef.length))return false;   // 何も作業していなければ警告しない
   return workSnapshot()!==savedSnap;
 }
 window.addEventListener('beforeunload',e=>{
-  if(!isDirty())return;
+  if(!wsAnyDirty())return;   // どのタブかを問わず未保存があれば警告
   e.preventDefault();
   e.returnValue='';   // 一部ブラウザで必要。実際の文言はブラウザ既定（カスタム不可）
 });
+
+/* ---------- マルチプロジェクト（タブ） ----------
+   各タブ＝独立したワークスペース。切替時は現在のグローバル状態を丸ごと退避し、切替先を復元して全再描画する。
+   データは決して混ぜない（時刻・ID・話者・分割規則はタブに閉じる）。検索・分析の串刺しはコーパス機構が担う。 */
+let wsList=[], wsCur=0, wsSeq=0;
+function wsBlank(){
+  return {n:++wsSeq, customName:'',
+    wavFile:null,wavInfo:null,env:null,multiCh:false,tracks:[],speakers:['A'],activeSpk:'A',
+    segs:[],sel:-1,view:{t0:0,t1:1},missed:[],ignoredMiss:[],cursorT:null,
+    glossOn:false,tiersDef:[],morphSrc:'text',mseps:'-=+',bseps:'.。!?！？',
+    page:0,viewLayer:'all',ctxLayer:'text',lexicon:{},sessionId:'',savedSnap:'',startMode:null,
+    playerSrc:'',
+    ui:{cardFile:false,cardSeg:true,cardBrand:false,startChooser:false,startFlow:true,resumeStep2:true,
+        flowMsg:'',wavName:'未選択',wavOk:false,waveMin:false}};
+}
+function wsName(w){
+  if(w.customName)return w.customName;
+  if(w.multiCh&&w.tracks&&w.tracks.length&&w.tracks[0].file)return w.tracks[0].file.name.replace(/\.wav$/i,'')+' ほか';
+  if(w.wavFile)return w.wavFile.name.replace(/\.wav$/i,'');
+  return 'プロジェクト'+w.n;
+}
+function wsCapture(){
+  const w=wsList[wsCur]; if(!w)return;
+  Object.assign(w,{wavFile,wavInfo,env,multiCh,tracks,speakers,activeSpk,
+    segs,sel,view,missed,ignoredMiss,cursorT,
+    glossOn,tiersDef,morphSrc,mseps:morphSeps.join(''),bseps:bdrSeps.join(''),
+    page,viewLayer,ctxLayer,lexicon,sessionId,savedSnap,startMode,
+    playerSrc:($('player')?$('player').src:'')});
+  w.ui={cardFile:$('cardFile').classList.contains('hidden'),
+    cardSeg:$('cardSeg').classList.contains('hidden'),
+    cardBrand:$('cardBrand').classList.contains('hidden'),
+    startChooser:$('startChooser').classList.contains('hidden'),
+    startFlow:$('startFlow').classList.contains('hidden'),
+    resumeStep2:$('resumeStep2').classList.contains('hidden'),
+    flowMsg:$('flowMsg').innerHTML,
+    wavName:$('wavName').textContent, wavOk:$('wavName').classList.contains('ok'),
+    waveMin:$('waveCol').classList.contains('min')};
+}
+function wsSnapshotOf(w){
+  try{return JSON.stringify({glossOn:w.glossOn,morphSrc:w.morphSrc,morphSeps:[...w.mseps],bdrSeps:[...w.bseps],
+    tiersDef:w.tiersDef,speakers:w.speakers,segs:w.segs,ignoredMiss:w.ignoredMiss,lexicon:w.lexicon});}catch(e){return '';}
+}
+function wsIsDirty(w,i){
+  if(i===wsCur)return isDirty();
+  if(!w.segs.length&&!w.tiersDef.length)return false;
+  return wsSnapshotOf(w)!==w.savedSnap;
+}
+function wsAnyDirty(){return wsList.some((w,i)=>wsIsDirty(w,i));}
+function wsActivate(i,skipCapture){
+  if(i===wsCur&&!skipCapture)return;
+  try{stopAll()}catch(e){}
+  try{if(typeof corpusPlayer!=='undefined'&&corpusPlayer)corpusPlayer.pause()}catch(e){}
+  if(!skipCapture)wsCapture();
+  wsCur=i; const w=wsList[i];
+  wavFile=w.wavFile; wavInfo=w.wavInfo; env=w.env; multiCh=w.multiCh; tracks=w.tracks||[];
+  speakers=w.speakers; activeSpk=w.activeSpk; segs=w.segs; sel=w.sel;
+  view=w.view&&w.view.t1>w.view.t0?w.view:{t0:0,t1:env?Math.min(15,env.dur):1};
+  missed=w.missed||[]; ignoredMiss=w.ignoredMiss||[]; cursorT=(w.cursorT!=null)?w.cursorT:null;
+  glossOn=w.glossOn; tiersDef=w.tiersDef; morphSrc=w.morphSrc;
+  applyMorphSeps(w.mseps); if(typeof syncMorphSepInput==='function')try{syncMorphSepInput()}catch(e){}
+  applyBdrSeps(w.bseps); if(typeof syncBdrSepInput==='function')try{syncBdrSepInput()}catch(e){}
+  page=w.page||0; viewLayer=w.viewLayer||'all'; ctxLayer=w.ctxLayer||'text';
+  lexicon=w.lexicon||{}; sessionId=w.sessionId||''; savedSnap=w.savedSnap||''; startMode=w.startMode||null;
+  drag=null; pend=null; anIndexCache=null; anSel=null;
+  if(typeof corpusRecs!=='undefined')corpusRecs=null;
+  // ---- UI 復元 ----
+  const u=w.ui||{};
+  if($('player'))$('player').src=w.playerSrc||'';
+  const setH=(id,h)=>$(id).classList.toggle('hidden',!!h);
+  setH('cardFile',u.cardFile); setH('cardSeg',u.cardSeg);
+  setH('cardBrand',u.cardBrand); setH('startChooser',u.startChooser);
+  setH('startFlow',u.startFlow); setH('resumeStep2',u.resumeStep2);
+  $('flowMsg').innerHTML=u.flowMsg||'';
+  $('wavName').textContent=u.wavName||'未選択'; $('wavName').classList.toggle('ok',!!u.wavOk);
+  const work=!!env;
+  ['cardWave','cardAnnoCtl','cardTable','cardSymHelp'].forEach(id=>setH(id,!work));
+  setWaveMin(!!u.waveMin);
+  document.querySelectorAll('#saveBar button').forEach(b=>b.disabled=!(work||segs.length));
+  refreshTierUI();
+  renderSpkBar();
+  if(env){applyWaveHeight();draw();drawOvw();}
+  renderTable();renderContext();updateInfo();
+  if(typeof refreshSearch==='function')try{refreshSearch()}catch(e){}
+  if(!$('tabAnalysis').classList.contains('hidden'))try{refreshAnalysis()}catch(e){}
+  syncStickyTop();
+  wsRenderTabs();
+}
+function wsAdd(){
+  wsCapture();
+  wsList.push(wsBlank());
+  wsActivate(wsList.length-1,true);
+}
+function wsClose(i){
+  const w=wsList[i];
+  if(wsIsDirty(w,i)&&!confirm('「'+wsName(w)+'」には未保存の変更があります。保存せずに閉じますか？'))return;
+  try{if(w.playerSrc)URL.revokeObjectURL(w.playerSrc)}catch(e){}
+  (w.tracks||[]).forEach(t=>{try{if(t.audio&&t.audio.src)URL.revokeObjectURL(t.audio.src)}catch(e){}});
+  wsList.splice(i,1);
+  if(!wsList.length){wsList.push(wsBlank());wsActivate(0,true);return;}
+  if(i===wsCur){wsActivate(Math.max(0,i-1),true);}
+  else{if(i<wsCur)wsCur--;wsRenderTabs();}
+}
+function wsRenderTabs(){
+  const bar=$('wsBar'); if(!bar)return;
+  bar.innerHTML=wsList.map((w,i)=>{
+    const nm=(i===wsCur)?wsName(Object.assign({},w,{wavFile,multiCh,tracks,customName:w.customName})):wsName(w);
+    return '<span class="wstab'+(i===wsCur?' cur':'')+'" data-ws="'+i+'" title="クリックで切替／ダブルクリックで名前を変更">'
+      +(wsIsDirty(w,i)?'<span class="dot" title="未保存の変更あり">●</span>':'')
+      +'<span class="nm">'+escHtml(nm)+'</span>'
+      +'<button type="button" class="x" data-close="'+i+'" title="このプロジェクトを閉じる">✕</button></span>';
+  }).join('')
+  +'<button type="button" id="wsAdd" title="プロジェクトを追加で開く（音声・注釈は混ざりません。検索・分析は自動で串刺しになります）">＋</button>'
+  +(wsList.length>1?'<span class="wshint">検索・分析・辞書は開いている全プロジェクトを串刺しで見ます</span>':'');
+}
+$('wsBar').addEventListener('click',e=>{
+  const x=e.target.closest('[data-close]');
+  if(x){wsClose(+x.dataset.close);return;}
+  if(e.target.id==='wsAdd'){wsAdd();return;}
+  const t=e.target.closest('[data-ws]');
+  if(t)wsActivate(+t.dataset.ws);
+});
+$('wsBar').addEventListener('dblclick',e=>{
+  const t=e.target.closest('[data-ws]'); if(!t)return;
+  const w=wsList[+t.dataset.ws];
+  const nm=prompt('このプロジェクトタブの名前：',w.customName||wsName(w));
+  if(nm!=null){w.customName=nm.trim();wsRenderTabs();}
+});
+wsList=[wsBlank()];   // 起動時＝空のワークスペース1つ（グローバル初期値と一致）
+setTimeout(wsRenderTabs,0);
 
 /* ---------- 波形描画 ---------- */
 const wave=$('wave'), ovw=$('ovw');
@@ -3195,7 +3326,7 @@ $('tb').addEventListener('focusout',e=>{
   }
 });
 // セル編集後に文脈ウィンドウを更新（値更新ハンドラの後に走らせる）
-$('tb').addEventListener('focusout',()=>setTimeout(renderContext,0));
+$('tb').addEventListener('focusout',()=>setTimeout(()=>{renderContext();if(typeof wsRenderTabs==='function')wsRenderTabs();},0));
 $('tb').addEventListener('keydown',e=>{
   if(e.isComposing||e.keyCode===229)return;   // 日本語入力（IME）の変換確定Enterは無視
   // morph系のセル: Enter＝次の形態素の同じ欄へ／区間系のセル: Enter＝次の区間の同じ層へ
@@ -4246,7 +4377,31 @@ let anIndexCache=null; // 形態素インデックス
    形態素の切り出しは必ず「そのセッション自身の設定（morphSrc/区切り記号）」で行う＝規則の取り違えを防ぐ。 */
 let corpus=[];        // [{name,sessionId,wavName,segs,tiersDef,morphSrc,morphSeps,bdrSeps,speakers,lexicon}]
 let corpusRecs=null;  // 平坦化ビュー [{sess,si,s,info,before}]（occ の si はこの配列の添字）
-const corpusOn=()=>corpus.length>0;
+// 開いているタブをコーパスのセッションとして扱うアダプタ（アクティブなタブは生きているグローバルを参照）
+function wsAsSession(w,i){
+  const live=i===wsCur;
+  const sg=live?segs:w.segs;
+  const sess={name:wsName(live?Object.assign({},w,{wavFile,multiCh,tracks}):w),
+    sessionId:(live?sessionId:w.sessionId)||('ws:'+w.n),
+    segs:sg, tiersDef:live?tiersDef:w.tiersDef, morphSrc:live?morphSrc:w.morphSrc,
+    morphSeps:live?morphSeps.slice():[...(w.mseps||'-=+')], bdrSeps:live?bdrSeps.slice():[...(w.bseps||'.。!?！？')],
+    speakers:live?speakers:w.speakers, lexicon:live?lexicon:w.lexicon,
+    multiCh:live?multiCh:w.multiCh, live:true, wsIndex:i, wav:null, tracks:{}};
+  const wi=live?wavInfo:w.wavInfo;
+  if(sess.multiCh)(live?tracks:(w.tracks||[])).forEach(t=>{if(t.spk&&t.wavInfo)sess.tracks[t.spk]={file:t.file,info:t.wavInfo}});
+  else if(wi)sess.wav={file:wi.file,info:wi};
+  return sess;
+}
+function crossSessions(){
+  const ws=wsList.map((w,i)=>({w,i})).filter(x=>(x.i===wsCur?segs:x.w.segs).length>0).map(x=>wsAsSession(x.w,x.i));
+  return ws.concat(corpus);
+}
+// 串刺しモード＝タブが2つ以上にデータがある、または .json 複製を読み込んでいる
+const corpusOn=()=>{
+  if(corpus.length>0)return true;
+  let n=0; wsList.forEach((w,i)=>{if((i===wsCur?segs:w.segs).length>0)n++});
+  return n>1;
+};
 // セッションの設定を一時的に適用して評価する（評価中だけグローバルを差し替え、必ず戻す）
 function withSession(sess,fn){
   const sv={segs,morphSrc,tiersDef,glossOn,speakers,lexicon,
@@ -4263,7 +4418,7 @@ function withSession(sess,fn){
 }
 function buildCorpusRecs(){
   corpusRecs=[];
-  corpus.forEach(sess=>withSession(sess,()=>{
+  crossSessions().forEach(sess=>withSession(sess,()=>{
     sess.segs.forEach((s,si)=>corpusRecs.push({sess,si,s,info:morphInfo(s),before:morphDelims(s)}));
   }));
   return corpusRecs;
@@ -4307,7 +4462,7 @@ function buildAnalysis(){
                :info.filter(mi=>isEosMorph(mi.form)).length;
   });
   anIndexCache={idx,posSet:[...posSet].sort(),
-    stats:{records:recs.length,sessions:corpusOn()?corpus.length:1,sentences:nSent,words:nWord,morphs:nMorph,unique:Object.keys(idx).length,
+    stats:{records:recs.length,sessions:corpusOn()?crossSessions().length:1,sentences:nSent,words:nWord,morphs:nMorph,unique:Object.keys(idx).length,
       roots:Object.values(idx).filter(e=>dominantType(e)==='root').length,
       affixes:Object.values(idx).filter(e=>dominantType(e)==='affix').length,
       clitics:Object.values(idx).filter(e=>dominantType(e)==='clitic').length}};
@@ -4377,7 +4532,7 @@ function renderDict(head){
     +(Object.keys(e.poss).length?'<div class="dglosses"><b>品詞（pos層）:</b> '+poss+'</div>':'')
     +(corpusOn()
       ? (()=>{   // コーパスは読み取り専用。語義が食い違うときは自動でまとめず、セッションごとに並べる
-          const defs=corpus.map(se=>({n:se.name,v:(se.lexicon&&se.lexicon[head]!=null)?String(se.lexicon[head]).trim():''})).filter(x=>x.v);
+          const defs=crossSessions().map(se=>({n:se.name,v:(se.lexicon&&se.lexicon[head]!=null)?String(se.lexicon[head]).trim():''})).filter(x=>x.v);
           return '<div class="note" style="margin:6px 0 4px"><b>語義（各セッションの辞書から・読み取り専用）</b></div>'
             +(defs.length?defs.map(d=>'<div class="note" style="margin-bottom:3px"><span class="rid">'+escHtml(d.n)+'</span> '+escHtml(d.v)+'</div>').join('')
                          :'<div class="note" style="margin-bottom:4px">（各セッションに語義の記入はありません）</div>')
@@ -4401,22 +4556,23 @@ function renderDict(head){
 function curateVariant(head,field,matchVal,newVal){
   const a=anIndexCache, e=a&&a.idx[head]; if(!e)return {n:0,where:[]};
   const recs=corpusOn()?(corpusRecs||buildCorpusRecs()):null;
-  let n=0; const per={};
+  let n=0, imp=false; const per={};
   e.occ.forEach(o=>{
     const s=recs?recs[o.si].s:segs[o.si], sess=recs?recs[o.si].sess:null;
     const tv=s.tv||(s.tv={}), arr=tv[field]||(tv[field]=[]);
     if(String(arr[o.k]||'')===matchVal){
       arr[o.k]=newVal; n++;
       const key=sess?sess.name:'（このプロジェクト）'; per[key]=(per[key]||0)+1;
-      if(sess)sess.dirty=true;
+      if(sess){sess.dirty=true; if(!sess.live)imp=true;}   // imp＝読み込んだ.json複製に触れた（修正版保存が必要）
     }
   });
-  return {n,where:Object.entries(per).map(([k,v])=>k+' '+v+'件')};
+  return {n,imp,where:Object.entries(per).map(([k,v])=>k+' '+v+'件')};
 }
 function afterCurate(head){
   if(corpusOn()){buildCorpusRecs();corpusRenderSessions();}
   anIndexCache=null; buildAnalysis(); renderStats(); renderIndex();
-  if(!corpusOn()){renderTable(); if(typeof renderContext==='function')renderContext();}
+  renderTable(); if(typeof renderContext==='function')renderContext();   // アクティブタブに整理を即反映
+  if(typeof wsRenderTabs==='function')wsRenderTabs();
   renderDict(head);
 }
 $('anDict').addEventListener('click',e=>{
@@ -4429,9 +4585,10 @@ $('anDict').addEventListener('click',e=>{
     if(!others.length)return;
     const total=others.reduce((m,v)=>m+obj[v],0);
     if(!confirm('「'+head+'」の '+field+' を「'+val+'」に統一します。\n書き換え: '+others.map(v=>'「'+v+'」'+obj[v]+'件').join('・')+'（計'+total+'件）\nよろしいですか？'))return;
-    const where=[]; others.forEach(v=>{where.push(...curateVariant(head,field,v,val).where)});
+    const where=[]; let imp=false;
+    others.forEach(v=>{const r=curateVariant(head,field,v,val);where.push(...r.where);imp=imp||r.imp});
     afterCurate(head);
-    if(corpusOn())alert('統一しました（'+where.join(' / ')+'）。\n各セッションの「⬇ 修正版を保存」で書き出してください（元のファイルは変わっていません）。');
+    if(imp)alert('統一しました（'+where.join(' / ')+'）。\n読み込んだ .json のセッションは「⬇ 修正版を保存」で書き出してください（元のファイルは変わっていません）。');
     return;
   }
   if(e.target.classList.contains('v-ren')){
@@ -4439,14 +4596,14 @@ $('anDict').addEventListener('click',e=>{
     if(nv==null||nv===val)return;
     const r=curateVariant(head,field,val,nv.trim());
     afterCurate(head);
-    if(corpusOn()&&r.n)alert('書き換えました（'+r.where.join(' / ')+'）。「⬇ 修正版を保存」で書き出してください。');
+    if(r.imp&&r.n)alert('書き換えました（'+r.where.join(' / ')+'）。読み込んだ .json のセッションは「⬇ 修正版を保存」で書き出してください。');
     return;
   }
   if(e.target.classList.contains('v-del')){
     if(!confirm('「'+head+'」の '+field+'「'+val+'」（'+obj[val]+'件）をまとめて消します（該当箇所は空欄になります）。\n注釈そのもの（形態素）は消えません。よろしいですか？'))return;
     const r=curateVariant(head,field,val,'');
     afterCurate(head);
-    if(corpusOn()&&r.n)alert('消しました（'+r.where.join(' / ')+'）。「⬇ 修正版を保存」で書き出してください。');
+    if(r.imp&&r.n)alert('消しました（'+r.where.join(' / ')+'）。読み込んだ .json のセッションは「⬇ 修正版を保存」で書き出してください。');
     return;
   }
 });
@@ -4459,6 +4616,7 @@ function exampleHtml(si,hitK){
     +(rec?(corpusAudioOf(rec)?'<button type="button" class="explay cplay" data-ri="'+si+'">▶</button>':'')
           +'<span class="rid">'+escHtml(rec.sess.name)+' › '+escHtml(s.id||('#'+(rec.si+1)))
           +(rec.sess.speakers.length>1?(' '+escHtml(s.spk)):'')+'</span>'
+          +(rec.sess.live?'<button type="button" class="explay wsjump" data-ri="'+si+'" style="margin-left:auto" title="そのプロジェクトのタブに切り替えて、このレコードを開きます">開く</button>':'')
         :'<button type="button" class="explay" data-si="'+si+'">▶</button>'
          +'<span class="rid">#'+(si+1)+(speakers.length>1?(' '+escHtml(s.spk)):'')+'</span>'
          +'<button type="button" class="explay anjump" data-si="'+si+'" style="margin-left:auto" title="注釈タブでこのレコードを開く">注釈で開く</button>')
@@ -4622,8 +4780,17 @@ $('btnCorpusClear').addEventListener('click',()=>{
 $('anSearch').addEventListener('input',renderIndex);
 ['anType','anPos','anSort'].forEach(id=>$(id).addEventListener('change',renderIndex));   // selectはchangeで（Safari対策）
 $('anIndex').addEventListener('click',e=>{const r=e.target.closest('.anrow');if(r)renderDict(r.dataset.h)});
+// 串刺し結果から、そのタブへ切り替えてレコードを開く
+function wsJumpToRec(ri){
+  const rec=(corpusRecs||buildCorpusRecs())[ri]; if(!rec||!rec.sess.live)return;
+  const li=rec.si;
+  wsActivate(rec.sess.wsIndex);
+  switchTab('anno');
+  if(segs[li]){sel=li;setActiveSpk(segs[li].spk);afterSelChange();focusSeg(li);}
+}
 $('anDict').addEventListener('click',e=>{
   const pl=e.target.closest('.explay');if(!pl)return;
+  if(pl.classList.contains('wsjump')){wsJumpToRec(+pl.dataset.ri);return;}
   if(pl.classList.contains('cplay')){corpusPlayRec(+pl.dataset.ri);return;}
   const si=+pl.dataset.si, s=segs[si];if(!s)return;
   if(pl.classList.contains('anjump')){switchTab('anno');sel=si;setActiveSpk(s.spk);afterSelChange();focusSeg(si);}
@@ -4635,8 +4802,18 @@ function switchTab(name){
   $('tabAnno').classList.toggle('hidden',name!=='anno');
   $('tabAnalysis').classList.toggle('hidden',name!=='analysis');
   $('tabSearch').classList.toggle('hidden',name!=='search');
+  if(name!=='anno'&&corpusOn()){wsCapture();corpusRecs=null;anIndexCache=null;}   // タブの最新状態で串刺しを引き直す
   if(name==='analysis')refreshAnalysis();
-  if(name==='search')refreshSearch();
+  if(name==='search'){refreshSearch();refreshSearchNote();}
+}
+// 検索タブの串刺し表示（読み込んだ複製＋開いているタブの内訳）
+function refreshSearchNote(){
+  const sn=$('srchCorpusNote'); if(!sn)return;
+  sn.classList.toggle('hidden',!corpusOn());
+  if(corpusOn()){
+    const cs=crossSessions();
+    sn.textContent='串刺しで検索中（'+cs.length+'件: '+cs.map(c=>c.name).join(' / ')+'）。開いているタブの結果はクリックでそのレコードへ移動できます。';
+  }
 }
 document.getElementById('tabbar').addEventListener('click',e=>{const b=e.target.closest('.tab');if(b)switchTab(b.dataset.tab)});
 
@@ -4646,7 +4823,7 @@ function searchLayers(){
   if(corpusOn()){   // 横断検索では全セッションの層の和集合を出す（どれかにあれば選べる）
     const seen=new Set(L.map(x=>x.name)); seen.add('morph');
     const seg=[],mor=[];
-    corpus.forEach(sess=>sess.tiersDef.forEach(t=>{
+    crossSessions().forEach(sess=>sess.tiersDef.forEach(t=>{
       if(seen.has(t.name))return; seen.add(t.name);
       (t.parent==='morph'||sess.tiersDef.some(p=>p.name===t.parent&&p.parent==='morph')?mor:seg).push(t.name);
     }));
@@ -4724,7 +4901,7 @@ function runSearch(){
     // セッションごとに、そのセッション自身の設定で判定する（形態素の切れ方を取り違えない）
     const recs=corpusRecs||buildCorpusRecs();
     let base=0;
-    corpus.forEach(sess=>{
+    crossSessions().forEach(sess=>{
       const off=base; base+=sess.segs.length;
       withSession(sess,()=>{
         sess.segs.forEach((s,si)=>{
@@ -4749,10 +4926,10 @@ function kwicTrunc(str,keepEnd,max){str=String(str||'');if(str.length<=max)retur
 function srchNeighbor(si,delta,layer){const t=segs[si+delta];if(!t)return '';return layer==='__text'?(t.text||''):srchSegVal(t,layer);}
 // コーパス用：同じセッションの中だけで前後を見る（別セッションの発話を文脈に混ぜない）
 function srchNeighborIn(sess,li,delta,layer){const t=sess.segs[li+delta];if(!t)return '';return layer==='__text'?(t.text||''):srchSegVal(t,layer);}
-function kwicRow(si,id,prev,left,key,right,next,sub,mi,noJump,playRi){
+function kwicRow(si,id,prev,left,key,right,next,sub,mi,noJump,playRi,jumpRi){
   const L=(prev?'<span class="kctx">'+kwicTrunc(prev,true,22)+' </span>':'')+kwicTrunc(left,true,42);
   const R=kwicTrunc(right,false,42)+(next?'<span class="kctx"> '+kwicTrunc(next,false,22)+'</span>':'');
-  return '<tr class="kwic-row'+(noJump?'':' srch-jump')+'" data-si="'+si+'"'+(mi!=null?' data-mi="'+mi+'"':'')+'>'
+  return '<tr class="kwic-row'+(noJump?(jumpRi!=null?' srch-jump-ws':''):' srch-jump')+'" data-si="'+si+'"'+(jumpRi!=null?' data-ri="'+jumpRi+'"':'')+(mi!=null?' data-mi="'+mi+'"':'')+'>'
     +'<td class="kwic-id">'+(playRi!=null?'<button type="button" class="explay kplay" data-ri="'+playRi+'" title="このレコードを再生">▶</button> ':'')+escHtml(id||'')+'</td>'
     +'<td class="kwic-l">'+L+'</td>'
     +'<td class="kwic-k">'+(key?'<mark>'+escHtml(key)+'</mark>':'')+'</td>'
@@ -4775,12 +4952,13 @@ function srchRowHtml(unit,r,conds,rec){
     const li=rec?rec.si:r.si;
     const idTxt=rec?(rec.sess.name+' › '+(s.id||('#'+(li+1)))):s.id;
     const playRi=(rec&&corpusAudioOf(rec))?r.si:null;
+    const jumpRi=(rec&&rec.sess.live)?r.si:null;
     const nb=(d,layer)=>rec?srchNeighborIn(rec.sess,li,d,layer):srchNeighbor(r.si,d,layer);
     if(unit==='morph'){
       const ms=flatMorphs(s).map(dispMorph);
       const left=ms.slice(0,r.mi).join(' '), key=ms[r.mi]||'', right=ms.slice(r.mi+1).join(' ');
       const sub=morphTiers().map(t=>{const v=((s.tv||{})[t.name]||[])[r.mi]||'';return v?(t.name+'='+v):'';}).filter(Boolean).join(' / ');
-      return kwicRow(r.si,idTxt,nb(-1,'__text'),left,key,right,nb(1,'__text'),sub,r.mi,!!rec,playRi);
+      return kwicRow(r.si,idTxt,nb(-1,'__text'),left,key,right,nb(1,'__text'),sub,r.mi,!!rec,playRi,jumpRi);
     }
     // record単位：ハイライト可能な最初の条件を主役に
     const c=conds.find(c=>['contains','exact','regex'].includes(c.op)&&c.q!=='');
@@ -4789,12 +4967,12 @@ function srchRowHtml(unit,r,conds,rec){
       let idx=vals.findIndex(v=>srchMatch(v,c.op,c.q));
       const left=idx>=0?ms.slice(0,idx).join(' '):ms.join(' '), key=idx>=0?ms[idx]:'', right=idx>=0?ms.slice(idx+1).join(' '):'';
       const sub=idx>=0?(c.layer+'='+(vals[idx]||'')):'';
-      return kwicRow(r.si,idTxt,nb(-1,'__text'),left,key,right,nb(1,'__text'),sub,idx>=0?idx:null,!!rec,playRi);
+      return kwicRow(r.si,idTxt,nb(-1,'__text'),left,key,right,nb(1,'__text'),sub,idx>=0?idx:null,!!rec,playRi,jumpRi);
     }
     const layer=(c&&c.level==='seg')?c.layer:'text', val=srchSegVal(s,layer), sp=c?srchSpan(val,c.op,c.q):null;
     const before=sp?val.slice(0,sp.s):val, key=sp?val.slice(sp.s,sp.e):'', after=sp?val.slice(sp.e):'';
     const sub=(layer!=='text')?layer:'';
-    return kwicRow(r.si,idTxt,nb(-1,layer),before,key,after,nb(1,layer),sub,null,!!rec,playRi);
+    return kwicRow(r.si,idTxt,nb(-1,layer),before,key,after,nb(1,layer),sub,null,!!rec,playRi,jumpRi);
 }
 $('srchAdd').addEventListener('click',addSearchCond);
 $('srchRun').addEventListener('click',runSearch);
@@ -4802,6 +4980,7 @@ $('srchConds').addEventListener('click',e=>{const d=e.target.closest('.s-del');i
 $('srchConds').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();runSearch();}});
 $('srchResults').addEventListener('click',e=>{
   const kp=e.target.closest('.kplay'); if(kp){corpusPlayRec(+kp.dataset.ri);return;}
+  const wj=e.target.closest('.srch-jump-ws'); if(wj){wsJumpToRec(+wj.dataset.ri);return;}
   const b=e.target.closest('.srch-jump');if(!b||corpusOn())return;const si=+b.dataset.si,s=segs[si];switchTab('anno');sel=si;if(typeof setActiveSpk==='function')setActiveSpk(s.spk);afterSelChange();focusSeg(si);});
 
 /* ---------- 辞書HTML＋音声ZIPの書き出し ---------- */
@@ -4836,13 +5015,13 @@ function dictData(){
   })).sort((x,y)=>y.count-x.count||x.head.localeCompare(y.head));
   return {title:base, generated:new Date().toISOString().slice(0,10),
     multiSpk:corpusOn()?corpus.some(c=>c.speakers.length>1):speakers.length>1,
-    corpus:corpusOn()?corpus.map(c=>c.name):null,
+    corpus:corpusOn()?crossSessions().map(c=>c.name):null,
     stats:a.stats, records, entries};
 }
 // コーパスの語義: セッションごとの記述を集め、食い違うときは出典つきで併記する（勝手に1つへ潰さない）
 function corpusDef(e){
   const defs=[];
-  corpus.forEach(c=>{const v=(c.lexicon&&c.lexicon[e.head]!=null)?String(c.lexicon[e.head]).trim():'';if(v)defs.push({n:c.name,v})});
+  crossSessions().forEach(c=>{const v=(c.lexicon&&c.lexicon[e.head]!=null)?String(c.lexicon[e.head]).trim():'';if(v)defs.push({n:c.name,v})});
   if(!defs.length)return glossDefault(e);
   const uniq=[...new Set(defs.map(d=>d.v))];
   return uniq.length===1?uniq[0]:defs.map(d=>d.n+': '+d.v).join(' ／ ');
@@ -4940,7 +5119,7 @@ $('dlDict').addEventListener('click',async()=>{
   if(!inCorpus&&!segs.length){alert('注釈データがありません');return}
   if(!inCorpus&&!wavInfo){alert('音声（WAV）が読み込まれていません');return}
   if(inCorpus){
-    const noAudio=corpus.filter(c=>c.multiCh?Object.keys(c.tracks).length===0:!c.wav);
+    const noAudio=crossSessions().filter(c=>c.multiCh?Object.keys(c.tracks).length===0:!c.wav);
     if(noAudio.length&&!confirm('音声が添付されていないセッションがあります：\n'+noAudio.map(c=>'・'+c.name).join('\n')
       +'\n\nこれらのレコードは再生ボタンなしで書き出されます。このまま続けますか？'))return;
   }

@@ -731,7 +731,7 @@ html[data-skin="tech"] .tierchip,html[data-skin="tech"] .spkchip,html[data-skin=
 <div class="card hidden" id="cardWave">
   <h2><span class="steplabel">3</span>波形（区切りの確認・修正）<button type="button" class="helpbtn" data-help="helpWave" data-title="波形の操作方法">?</button><span class="waveminhint">▶ クリックで波形をひらく</span><span class="pipbtns"><button type="button" id="btnWaveSize" title="波形を折りたたむ（見出しだけ残す）">－ 折りたたむ</button></span></h2>
   <div class="helpsrc" id="helpWave">
-    <div class="note"><b>話者（オーバーラップ対応）：</b>「＋話者」で話者を追加し、チップで選んだ話者が「アクティブ話者」になります。新しく作る区間はアクティブ話者のものになり、<b>別話者どうしの区間は時刻が重なってもOK</b>です（同じ話者内の重なりは不可）。波形下部に話者ごとのレーンが並び、各レコードは自分の話者のレーンに表示されます。レーンのブロックをクリックするとその話者・レコードが選べます。spk列でも話者を変更できます。<br><br><b>複数チャンネル（マイク別録音）：</b>パネル1の「🎙 複数チャンネル」から話者ごとのWAVを読み込むと、話者ごとに専用の波形が縦に並びます（すべて同時スタートの前提）。各波形バンド内をドラッグして区間を作る・端を動かすと、その話者の区間になります。「自動検出を実行」は各話者を自分のチャンネルで検出するため、他の話者の声（クロストーク）が混ざりません。再生・切り出しもその話者のチャンネルから行います。EAFは話者ごとに <code>text@話者</code> などのレイヤー（PARTICIPANT付き）に分けて書き出すので、ELANで重複発話が正しく開けます。<br><br><b>赤い帯</b>＝どの区間にも入っていない有音（取りこぼし候補）。◀ ▶で候補へジャンプすると仮選択になるので、「確認再生」で聞いて<b>「✓ 区間に追加」でレコード化</b>（Enterでも可）、対象外なら<b>「無視」で件数から除外</b>できます（無視はプロジェクト保存に記録されます）。<br><br><b>区間をクリック＝その区間を再生</b>。<b>区間をダブルクリック＝編集</b>（その行の text 欄にカーソルが入ります）。<br>何もない所をクリック＝再生カーソルを置く（<b>Space＝カーソルから再生／一時停止</b>）<br>何もない所をドラッグ＝範囲を選択 → <b>Enterで区間として確定</b>（Escで取消。確定前も端の調整や▶試聴ができます）<br>区間の端をドラッグ＝境界の移動（選択中はオレンジのつまみ）<br><b>Alt＋ダブルクリック＝区間を分割</b><br>横スクロール（またはShift＋ホイール）＝横移動、縦ホイール＝ズーム<br><br>下のボタン：<b>◀ 前の区間／次の区間 ▶</b>で区間を順に再生、<b>選択を再生／カーソルから／停止</b>で再生操作、<b>🗑 選択を削除</b>は区間の指定と注釈を削除するだけで音声データは変更されません。</div>
+    <div class="note"><b>話者（オーバーラップ対応）：</b>「＋話者」で話者を追加し、チップで選んだ話者が「アクティブ話者」になります。新しく作る区間はアクティブ話者のものになり、<b>別話者どうしの区間は時刻が重なってもOK</b>です（同じ話者内の重なりは不可）。波形下部に話者ごとのレーンが並び、各レコードは自分の話者のレーンに表示されます。レーンのブロックをクリックするとその話者・レコードが選べます。spk列でも話者を変更できます。<br><br><b>複数チャンネル（マイク別録音）：</b>パネル1の「🎙 複数チャンネル」から話者ごとのWAVを読み込むと、話者ごとに専用の波形が縦に並びます（すべて同時スタートの前提）。各波形バンド内をドラッグして区間を作る・端を動かすと、その話者の区間になります。「自動検出を実行」は各話者を自分のチャンネルで検出するため、他の話者の声（クロストーク）が混ざりません。再生・切り出しもその話者のチャンネルから行います。EAFは話者ごとに <code>text@話者</code> などのレイヤー（PARTICIPANT付き）に分けて書き出すので、ELANで重複発話が正しく開けます。<br><br><b>赤い帯</b>＝どの区間にも入っていない有音（取りこぼし候補）。◀ ▶で候補へジャンプすると仮選択になるので、「確認再生」で聞いて<b>「✓ 区間に追加」でレコード化</b>（Enterでも可）、対象外なら<b>「無視」で件数から除外</b>できます（無視はプロジェクト保存に記録されます）。<br><br><b>区間をクリック＝その区間を再生</b>。<b>区間をダブルクリック＝編集</b>（その行の text 欄にカーソルが入ります）。<br>何もない所をクリック＝再生カーソルを置く（<b>Space＝カーソルから再生／一時停止</b>）<br>何もない所をドラッグ＝範囲を選択 → <b>Enterで区間として確定</b>（Escで取消。確定前も端の調整や▶試聴ができます）<br>区間の端をドラッグ＝境界の移動（選択中はオレンジのつまみ）<br><b>Alt＋ダブルクリック＝区間を分割</b><br>ホイール／2本指スワイプ＝横移動、ズームは＋/−ボタンかピンチ（Ctrl＋ホイール）<br><br>下のボタン：<b>◀ 前の区間／次の区間 ▶</b>で区間を順に再生、<b>選択を再生／カーソルから／停止</b>で再生操作、<b>🗑 選択を削除</b>は区間の指定と注釈を削除するだけで音声データは変更されません。</div>
   </div>
   <div id="missNote" class="hidden"><span id="missNoteText"></span><button type="button" id="missNoteClose" title="閉じる">✕</button></div>
   <canvas id="ovw"></canvas>
@@ -2347,11 +2347,21 @@ window.addEventListener('keydown',e=>{
 // spk を指定するとその話者のレコードだけを対象に当たり判定（メイン領域はアクティブ話者のみ）
 function hitTest(x,spk){
   const idxs=segs.map((s,i)=>i).filter(i=>spk==null||segs[i].spk===spk);
+  // 端の判定は「最初に見つかった端」ではなく「最も近い端」。隣接区間の共有境界では、
+  // カーソルが載っている側の区間の端を優先する（境界のわずかに右＝右区間の開始端、
+  // わずかに左＝左区間の終了端）。これで左区間の終端に隣の開始端が食われなくなる。
+  let best=null;
   for(const i of idxs){
     const x0=tx(segs[i].t0),x1=tx(segs[i].t1);
-    if(Math.abs(x-x0)<=6)return {mode:'edge0',i};
-    if(Math.abs(x-x1)<=6)return {mode:'edge1',i};
+    for(const c of [{mode:'edge0',ex:x0},{mode:'edge1',ex:x1}]){
+      const d=Math.abs(x-c.ex);
+      if(d>6)continue;
+      const inside=x>=x0-0.5&&x<=x1+0.5;
+      const score=d-(inside?0.75:0);   // 同距離なら載っている側を勝たせる
+      if(!best||score<best.score)best={mode:c.mode,i,score};
+    }
   }
+  if(best)return {mode:best.mode,i:best.i};
   for(const i of idxs){
     if(x>=tx(segs[i].t0)&&x<=tx(segs[i].t1))return {mode:'inside',i};
   }
@@ -2456,19 +2466,21 @@ wave.addEventListener('dblclick',e=>{
 wave.addEventListener('wheel',e=>{
   if(!env)return;e.preventDefault();
   const span=view.t1-view.t0;
-  const horiz=Math.abs(e.deltaX)>Math.abs(e.deltaY);
-  if(horiz||e.shiftKey){
-    // 横スクロール（トラックパッドの横スワイプ／Shift＋ホイール）＝横移動
-    const d=span*((horiz?e.deltaX:e.deltaY)/wave.clientWidth)*1.5;
-    const t0=Math.max(0,Math.min(env.dur-span,view.t0+d));
-    view={t0,t1:t0+span};
-  }else{
-    // 縦ホイールのみズーム
+  if(e.ctrlKey){
+    // ピンチ（トラックパッドのつまみ操作はブラウザが ctrlKey 付き wheel で届ける）／
+    // Ctrl＋ホイール＝明示的なズームだけ受け付ける
     const c=xt(evX(e,wave)), f=e.deltaY>0?1.25:0.8;
     let ns=Math.min(env.dur,Math.max(0.05,span*f));
     let t0=c-(c-view.t0)*ns/span;
     t0=Math.max(0,Math.min(env.dur-ns,t0));
     view={t0,t1:t0+ns};
+  }else{
+    // ホイール／2本指スワイプ＝常に横移動（斜めに動いてもズームに化けない。
+    // ズームは＋/−ボタン・全体表示・ピンチで）
+    const horiz=Math.abs(e.deltaX)>=Math.abs(e.deltaY);
+    const d=span*((horiz?e.deltaX:e.deltaY)/wave.clientWidth)*1.5;
+    const t0=Math.max(0,Math.min(env.dur-span,view.t0+d));
+    view={t0,t1:t0+span};
   }
   draw();drawOvw();
 },{passive:false});
@@ -5875,7 +5887,7 @@ $('dlDict').addEventListener('click',async()=>{
     bdrSepLbl:'<b>Sentence-end marks (bdr)</b> (type symbols in a row; a morpheme ending in one of these is treated as sentence-final = EOS)',
     helpFile:'<div class="note">Audio is expected to be uncompressed WAV (PCM). Files are never sent outside your browser — everything is processed locally, and the audio file itself is never modified.<br><br>To use “Load a project (.json)”, <b>load the matching WAV first</b> (the project does not contain the audio itself).</div>',
     helpSeg:'<div class="note"><b>Manual:</b> drag over an empty part of the waveform to select a range, then <b>press Enter</b> to make it a segment. <b>Auto:</b> detects runs of speech (allowing very short silences) and segments them at once (you can fix them by hand afterwards).<br><br>Auto-detect estimates a threshold from the noise floor and speech level and uses a dual threshold (hysteresis) to find speech runs. Silences shorter than “Min. silence” are bridged into one segment (default: only runs ≥ 0.5 s). Re-running carries over your annotations by time overlap.</div>',
-    helpWave:'<div class="note"><b>Speakers (overlap-ready):</b> add one with “+ Speaker”; the selected chip is the “active speaker”. New segments belong to it, and <b>different speakers may overlap in time</b> (overlap within one speaker is not allowed). Per-speaker lanes appear below the waveform. EAF is exported split per speaker (e.g. <code>text@speaker</code> with PARTICIPANT) so overlaps open correctly in ELAN.<br><br><b>Multi-channel (one mic per speaker):</b> load a separate WAV per speaker via “🎙 Multi-channel” in Panel 1 and each speaker gets its own stacked waveform (all assumed to start at the same instant). Drag inside a speaker’s band to create/adjust segments for that speaker. “Run auto-detect” detects each speaker on their own channel, so no cross-talk leaks in; playback and clipping also use that speaker’s channel.<br><br><b>Red bands</b> = speech not inside any segment (possible “missed” audio). Use ◀ ▶ to jump, “Preview” to listen, <b>“✓ Add as segment”</b> to keep it, or <b>“Ignore”</b> to drop it from the count.<br><br><b>Click a segment = play it</b>. <b>Double-click a segment = edit</b> (cursor lands in that row\'s text cell).<br>Click empty space = drop the playback cursor (<b>Space = play/pause from cursor</b>)<br>Drag empty space = select a range → <b>Enter to confirm as a segment</b> (Esc to cancel)<br>Drag a segment edge = move the boundary<br><b>Alt + double-click = split the segment</b><br>Horizontal scroll (or Shift + wheel) = pan, vertical wheel = zoom<br><br>Buttons below: <b>◀ Prev / Next ▶</b> step through and play segments; <b>Play selection / From cursor / Stop</b> control playback; <b>🗑 Delete selected</b> only removes the segment and its annotation — the audio is never changed.</div>',
+    helpWave:'<div class="note"><b>Speakers (overlap-ready):</b> add one with “+ Speaker”; the selected chip is the “active speaker”. New segments belong to it, and <b>different speakers may overlap in time</b> (overlap within one speaker is not allowed). Per-speaker lanes appear below the waveform. EAF is exported split per speaker (e.g. <code>text@speaker</code> with PARTICIPANT) so overlaps open correctly in ELAN.<br><br><b>Multi-channel (one mic per speaker):</b> load a separate WAV per speaker via “🎙 Multi-channel” in Panel 1 and each speaker gets its own stacked waveform (all assumed to start at the same instant). Drag inside a speaker’s band to create/adjust segments for that speaker. “Run auto-detect” detects each speaker on their own channel, so no cross-talk leaks in; playback and clipping also use that speaker’s channel.<br><br><b>Red bands</b> = speech not inside any segment (possible “missed” audio). Use ◀ ▶ to jump, “Preview” to listen, <b>“✓ Add as segment”</b> to keep it, or <b>“Ignore”</b> to drop it from the count.<br><br><b>Click a segment = play it</b>. <b>Double-click a segment = edit</b> (cursor lands in that row\'s text cell).<br>Click empty space = drop the playback cursor (<b>Space = play/pause from cursor</b>)<br>Drag empty space = select a range → <b>Enter to confirm as a segment</b> (Esc to cancel)<br>Drag a segment edge = move the boundary<br><b>Alt + double-click = split the segment</b><br>Wheel / two-finger swipe = pan; zoom with the ＋/− buttons or pinch (Ctrl + wheel)<br><br>Buttons below: <b>◀ Prev / Next ▶</b> step through and play segments; <b>Play selection / From cursor / Stop</b> control playback; <b>🗑 Delete selected</b> only removes the segment and its annotation — the audio is never changed.</div>',
     helpAnno:'<div class="note">Click a cell to edit. The <b>IPA palette is docked at the bottom</b> (it no longer pops in and out); click a symbol to insert it at the caret. “↓ Minimize” collapses it to just the frequent-symbols strip. With <b>“✎ Choose symbols” you pick just the symbols you use</b> (click to select/deselect; none selected = all shown; Reset shows all again), and your most-used symbols line up in the strip automatically. <b>While typing you can replay the segment’s audio with the palette’s “▶ Play this segment” button or Shift+Space</b> (your cursor stays put). On the palette’s <b>mini waveform</b>, click to play from that point or drag to play just that range — <b>freely hear any spot or span inside the segment</b>. Enter in the text field = next row. Start/end (seconds) are editable too.<br><br>With a morph layer, hyphen (-), equals (=) and plus (+) in the text <b>split it into morphemes</b>, and you fill layers under morph (gloss · pos by default) per morpheme (Enter = next morpheme). Add layers freely: parent “segment” gives one field per segment; “morph” or its children give one field per morpheme.<br><br>When surface and underlying forms differ (e.g. text <code>kaita</code> / underlying <code>kak-ta</code>), add a segment-level layer for the underlying form (e.g. <code>udl</code>) and set “morph split source” to it.<br><br>“Show layer” focuses on one layer (data is kept). Records show 5 at a time; use ◀ ▶ to move.</div>',
     helpExport:'<div class="note">EAF exports <code>ID</code>, <code>text</code>, <code>trans</code> plus your layers with ELAN\'s parent-child structure (<code>trans</code> = Symbolic Association of text, <code>morph</code> = Symbolic Subdivision of text/udl, other layers = Symbolic Association to the chosen parent; type and constraint declarations included). Put it beside the WAV to open in ELAN.<br><br>TSV / JSON include every layer (morph layers merged into a gloss line, e.g. <code>go-EP-PST</code>). The ZIP holds a WAV per segment plus <code>manifest.csv</code>.<br><br>“Save project” stores segments, annotations, layer setup and the ignore list as JSON. To resume, load the same WAV first, then this JSON.</div>'
   };

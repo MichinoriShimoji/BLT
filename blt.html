@@ -4456,7 +4456,8 @@ function exampleHtml(si,hitK){
   const info=rec?rec.info:morphInfo(s), before=rec?rec.before:morphDelims(s);
   // 単語ごとにまとめて表示。コーパスでは音声を持たないので再生・ジャンプは出さず、出典を示す
   let html='<div class="exitem"><div class="exhead">'
-    +(rec?'<span class="rid">'+escHtml(rec.sess.name)+' › '+escHtml(s.id||('#'+(rec.si+1)))
+    +(rec?(corpusAudioOf(rec)?'<button type="button" class="explay cplay" data-ri="'+si+'">▶</button>':'')
+          +'<span class="rid">'+escHtml(rec.sess.name)+' › '+escHtml(s.id||('#'+(rec.si+1)))
           +(rec.sess.speakers.length>1?(' '+escHtml(s.spk)):'')+'</span>'
         :'<button type="button" class="explay" data-si="'+si+'">▶</button>'
          +'<span class="rid">#'+(si+1)+(speakers.length>1?(' '+escHtml(s.spk)):'')+'</span>'
@@ -4576,12 +4577,28 @@ $('corpusWavInput').addEventListener('change',async ev=>{
     }
   }catch(e){alert('WAVを読めません：'+e.message);return}
   corpusRenderSessions();
+  if(anSel)renderDict(anSel);   // 開いている見出しの用例に▶を即反映
   if(notes.length)alert(c.name+'\n'+notes.join('\n'));
 });
+// コーパスのレコードを再生（そのセッションに添付されたWAVから切り出す）
+let corpusPlayer=null;
+function corpusAudioOf(rec){const sess=rec.sess,s=rec.s;const h=sess.multiCh?sess.tracks[s.spk]:sess.wav;return (h&&h.info)?h.info:null;}
+async function corpusPlayRec(ri){
+  const rec=(corpusRecs||buildCorpusRecs())[ri]; if(!rec)return;
+  const wi=corpusAudioOf(rec);
+  if(!wi){alert('このセッションの音声（WAV）が添付されていません。「分析・辞書」タブの集計カード（セッション一覧）で添付すると再生できます。');return;}
+  try{
+    const bytes=await clipWav(wi,+rec.s.t0,+rec.s.t1);
+    if(corpusPlayer){try{corpusPlayer.pause();URL.revokeObjectURL(corpusPlayer.src);}catch(e){}}
+    corpusPlayer=new Audio(URL.createObjectURL(new Blob([bytes],{type:'audio/wav'})));
+    corpusPlayer.onended=()=>{try{URL.revokeObjectURL(corpusPlayer.src)}catch(e){}};
+    await corpusPlayer.play();
+  }catch(e){if(e&&e.name!=='NotAllowedError')alert('再生できません：'+e.message);}
+}
 function corpusRenderSessions(){
   const box=$('corpusSessions');
   box.classList.toggle('hidden',!corpusOn());
-  if(corpusOn())box.innerHTML='<div class="note" style="margin-bottom:4px">辞書ZIPに音声を入れるには、各セッションのWAVを添付してください（添付しない分は再生ボタンなしで書き出されます）。</div>'+corpusSessionsHtml();
+  if(corpusOn())box.innerHTML='<div class="note" style="margin-bottom:4px">各セッションのWAVを添付すると、<b>用例・検索結果の再生</b>と<b>辞書ZIPの音声</b>に使われます（添付しない分は再生ボタンなしになります）。</div>'+corpusSessionsHtml();
 }
 $('btnCorpusAdd').addEventListener('click',()=>$('corpusInput').click());
 $('corpusInput').addEventListener('change',async ev=>{
@@ -4607,6 +4624,7 @@ $('anSearch').addEventListener('input',renderIndex);
 $('anIndex').addEventListener('click',e=>{const r=e.target.closest('.anrow');if(r)renderDict(r.dataset.h)});
 $('anDict').addEventListener('click',e=>{
   const pl=e.target.closest('.explay');if(!pl)return;
+  if(pl.classList.contains('cplay')){corpusPlayRec(+pl.dataset.ri);return;}
   const si=+pl.dataset.si, s=segs[si];if(!s)return;
   if(pl.classList.contains('anjump')){switchTab('anno');sel=si;setActiveSpk(s.spk);afterSelChange();focusSeg(si);}
   else playRange(s.t0,s.t1,s.spk);
@@ -4731,11 +4749,11 @@ function kwicTrunc(str,keepEnd,max){str=String(str||'');if(str.length<=max)retur
 function srchNeighbor(si,delta,layer){const t=segs[si+delta];if(!t)return '';return layer==='__text'?(t.text||''):srchSegVal(t,layer);}
 // コーパス用：同じセッションの中だけで前後を見る（別セッションの発話を文脈に混ぜない）
 function srchNeighborIn(sess,li,delta,layer){const t=sess.segs[li+delta];if(!t)return '';return layer==='__text'?(t.text||''):srchSegVal(t,layer);}
-function kwicRow(si,id,prev,left,key,right,next,sub,mi,noJump){
+function kwicRow(si,id,prev,left,key,right,next,sub,mi,noJump,playRi){
   const L=(prev?'<span class="kctx">'+kwicTrunc(prev,true,22)+' </span>':'')+kwicTrunc(left,true,42);
   const R=kwicTrunc(right,false,42)+(next?'<span class="kctx"> '+kwicTrunc(next,false,22)+'</span>':'');
   return '<tr class="kwic-row'+(noJump?'':' srch-jump')+'" data-si="'+si+'"'+(mi!=null?' data-mi="'+mi+'"':'')+'>'
-    +'<td class="kwic-id">'+escHtml(id||'')+'</td>'
+    +'<td class="kwic-id">'+(playRi!=null?'<button type="button" class="explay kplay" data-ri="'+playRi+'" title="このレコードを再生">▶</button> ':'')+escHtml(id||'')+'</td>'
     +'<td class="kwic-l">'+L+'</td>'
     +'<td class="kwic-k">'+(key?'<mark>'+escHtml(key)+'</mark>':'')+'</td>'
     +'<td class="kwic-r">'+R+'</td>'
@@ -4756,12 +4774,13 @@ function srchRowHtml(unit,r,conds,rec){
     const s=rec?rec.s:segs[r.si];
     const li=rec?rec.si:r.si;
     const idTxt=rec?(rec.sess.name+' › '+(s.id||('#'+(li+1)))):s.id;
+    const playRi=(rec&&corpusAudioOf(rec))?r.si:null;
     const nb=(d,layer)=>rec?srchNeighborIn(rec.sess,li,d,layer):srchNeighbor(r.si,d,layer);
     if(unit==='morph'){
       const ms=flatMorphs(s).map(dispMorph);
       const left=ms.slice(0,r.mi).join(' '), key=ms[r.mi]||'', right=ms.slice(r.mi+1).join(' ');
       const sub=morphTiers().map(t=>{const v=((s.tv||{})[t.name]||[])[r.mi]||'';return v?(t.name+'='+v):'';}).filter(Boolean).join(' / ');
-      return kwicRow(r.si,idTxt,nb(-1,'__text'),left,key,right,nb(1,'__text'),sub,r.mi,!!rec);
+      return kwicRow(r.si,idTxt,nb(-1,'__text'),left,key,right,nb(1,'__text'),sub,r.mi,!!rec,playRi);
     }
     // record単位：ハイライト可能な最初の条件を主役に
     const c=conds.find(c=>['contains','exact','regex'].includes(c.op)&&c.q!=='');
@@ -4770,18 +4789,20 @@ function srchRowHtml(unit,r,conds,rec){
       let idx=vals.findIndex(v=>srchMatch(v,c.op,c.q));
       const left=idx>=0?ms.slice(0,idx).join(' '):ms.join(' '), key=idx>=0?ms[idx]:'', right=idx>=0?ms.slice(idx+1).join(' '):'';
       const sub=idx>=0?(c.layer+'='+(vals[idx]||'')):'';
-      return kwicRow(r.si,idTxt,nb(-1,'__text'),left,key,right,nb(1,'__text'),sub,idx>=0?idx:null,!!rec);
+      return kwicRow(r.si,idTxt,nb(-1,'__text'),left,key,right,nb(1,'__text'),sub,idx>=0?idx:null,!!rec,playRi);
     }
     const layer=(c&&c.level==='seg')?c.layer:'text', val=srchSegVal(s,layer), sp=c?srchSpan(val,c.op,c.q):null;
     const before=sp?val.slice(0,sp.s):val, key=sp?val.slice(sp.s,sp.e):'', after=sp?val.slice(sp.e):'';
     const sub=(layer!=='text')?layer:'';
-    return kwicRow(r.si,idTxt,nb(-1,layer),before,key,after,nb(1,layer),sub,null,!!rec);
+    return kwicRow(r.si,idTxt,nb(-1,layer),before,key,after,nb(1,layer),sub,null,!!rec,playRi);
 }
 $('srchAdd').addEventListener('click',addSearchCond);
 $('srchRun').addEventListener('click',runSearch);
 $('srchConds').addEventListener('click',e=>{const d=e.target.closest('.s-del');if(d){const r=d.closest('.srow');if(r)r.remove();}});
 $('srchConds').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();runSearch();}});
-$('srchResults').addEventListener('click',e=>{const b=e.target.closest('.srch-jump');if(!b||corpusOn())return;const si=+b.dataset.si,s=segs[si];switchTab('anno');sel=si;if(typeof setActiveSpk==='function')setActiveSpk(s.spk);afterSelChange();focusSeg(si);});
+$('srchResults').addEventListener('click',e=>{
+  const kp=e.target.closest('.kplay'); if(kp){corpusPlayRec(+kp.dataset.ri);return;}
+  const b=e.target.closest('.srch-jump');if(!b||corpusOn())return;const si=+b.dataset.si,s=segs[si];switchTab('anno');sel=si;if(typeof setActiveSpk==='function')setActiveSpk(s.spk);afterSelChange();focusSeg(si);});
 
 /* ---------- 辞書HTML＋音声ZIPの書き出し ---------- */
 // 用例レンダリング用に、各レコードの形態素・グロス・語境界をまとめる
